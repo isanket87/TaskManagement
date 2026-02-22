@@ -1,0 +1,397 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                     String                  @id @default(uuid())
+  name                   String
+  email                  String                  @unique
+  password               String?
+  avatar                 String?
+  role                   String                  @default("user")
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  ownedProjects          Project[]               @relation("ProjectOwner")
+  memberOf               ProjectMember[]
+  assignedTasks          Task[]                  @relation("TaskAssignee")
+  createdTasks           Task[]                  @relation("TaskCreator")
+  comments               Comment[]
+  notifications          Notification[]
+  activities             ActivityLog[]
+  // Chat
+  channelMemberships     ChannelMember[]
+  messages               Message[]
+  reactions              Reaction[]
+  messageMentions        MessageMention[]
+  // Time Tracking
+  timeEntries            TimeEntry[]
+  // File Management
+  uploadedFiles          File[]                  @relation("FileUploader")
+  fileVersions           FileVersion[]
+  // Notifications
+  notificationPreference NotificationPreference?
+
+  // Workspace
+  activeWorkspaceId      String?
+  ownedWorkspaces        Workspace[]             @relation("WorkspaceOwner")
+  workspaces             WorkspaceMember[]
+  sentInvites            WorkspaceInvite[]
+  invitedMembers         WorkspaceMember[]       @relation("InvitedBy")
+}
+
+model Project {
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  color       String          @default("#6366f1")
+  status      String          @default("active")
+  dueDate     DateTime?
+  ownerId     String
+  owner       User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members     ProjectMember[]
+  tasks       Task[]
+  activities  ActivityLog[]
+  channels    Channel[]
+  timeEntries TimeEntry[]
+  files       File[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  workspaceId String
+  workspace   Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  projectId String
+  userId    String
+  role      String   @default("member")
+  joinedAt  DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+model Task {
+  id               String      @id @default(uuid())
+  title            String
+  description      String?
+  status           String      @default("todo")
+  priority         String      @default("medium")
+  position         Int         @default(0)
+  tags             String[]    @default([])
+  dueDate          DateTime?
+  hasDueTime       Boolean     @default(false)
+  dueDateStatus    String?
+  lastReminderSent DateTime?
+  remindersSent    String[]    @default([])
+  snoozedUntil     DateTime?
+  projectId        String
+  assigneeId       String?
+  createdById      String
+  project          Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee         User?       @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy        User        @relation("TaskCreator", fields: [createdById], references: [id])
+  comments         Comment[]
+  attachments      Attachment[]
+  timeEntries      TimeEntry[]
+  activities       ActivityLog[]
+  files            File[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([dueDate])
+  @@index([projectId, dueDate])
+  @@index([assigneeId, dueDate])
+  @@index([dueDateStatus, assigneeId])
+  @@index([projectId, status])
+  @@index([assigneeId, status])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  text      String
+  taskId    String
+  authorId  String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  name      String
+  url       String
+  type      String
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String
+  type        String
+  message     String
+  read        Boolean  @default(false)
+  link        String?
+  taskId      String?
+  projectId   String?
+  projectName String?
+  taskTitle   String?
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([userId, read])
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  projectId String
+  taskId    String?
+  userId    String
+  type      String
+  message   String
+  metadata  Json?
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  task      Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+// ─── Chat & Messaging ───────────────────────────────────────────────────────
+
+model Channel {
+  id          String          @id @default(uuid())
+  name        String
+  description String?
+  type        String          @default("project") // project | general | direct
+  projectId   String?
+  project     Project?        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  members     ChannelMember[]
+  messages    Message[]
+  createdById String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([projectId])
+}
+
+model ChannelMember {
+  id         String   @id @default(uuid())
+  channelId  String
+  userId     String
+  role       String   @default("member") // admin | member
+  lastReadAt DateTime @default(now())
+  channel    Channel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([channelId, userId])
+}
+
+model Message {
+  id          String              @id @default(uuid())
+  content     String
+  type        String              @default("text") // text | file | system
+  channelId   String
+  authorId    String
+  parentId    String?
+  editedAt    DateTime?
+  deletedAt   DateTime?
+  channel     Channel             @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  author      User                @relation(fields: [authorId], references: [id])
+  parent      Message?            @relation("ThreadReplies", fields: [parentId], references: [id])
+  replies     Message[]           @relation("ThreadReplies")
+  reactions   Reaction[]
+  mentions    MessageMention[]
+  attachments MessageAttachment[]
+  createdAt   DateTime            @default(now())
+
+  @@index([channelId, createdAt])
+  @@index([parentId])
+}
+
+model Reaction {
+  id        String   @id @default(uuid())
+  emoji     String
+  messageId String
+  userId    String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([messageId, userId, emoji])
+}
+
+model MessageMention {
+  id        String   @id @default(uuid())
+  messageId String
+  userId    String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model MessageAttachment {
+  id        String   @id @default(uuid())
+  messageId String
+  fileId    String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  file      File     @relation(fields: [fileId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+// ─── Time Tracking ──────────────────────────────────────────────────────────
+
+model TimeEntry {
+  id          String    @id @default(uuid())
+  description String?
+  startTime   DateTime
+  endTime     DateTime?
+  duration    Int? // seconds, computed on stop
+  billable    Boolean   @default(false)
+  hourlyRate  Float?
+  taskId      String?
+  projectId   String
+  userId      String
+  task        Task?     @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId, startTime])
+  @@index([userId, endTime])   // active timer poll: WHERE userId=? AND endTime IS NULL
+  @@index([projectId, startTime])
+  @@index([taskId])
+}
+
+// ─── File Management ─────────────────────────────────────────────────────────
+
+model File {
+  id                 String              @id @default(uuid())
+  name               String
+  originalName       String
+  mimeType           String
+  size               Int
+  url                String
+  storageKey         String
+  thumbnailUrl       String?
+  type               String // image | document | video | audio | other
+  projectId          String?
+  taskId             String?
+  uploadedById       String
+  deletedAt          DateTime?
+  project            Project?            @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  task               Task?               @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  uploadedBy         User                @relation("FileUploader", fields: [uploadedById], references: [id])
+  versions           FileVersion[]
+  messageAttachments MessageAttachment[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  @@index([projectId])
+  @@index([taskId])
+}
+
+model FileVersion {
+  id           String   @id @default(uuid())
+  fileId       String
+  version      Int
+  url          String
+  storageKey   String
+  size         Int
+  uploadedById String
+  file         File     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+}
+
+// ─── Notification Preferences ────────────────────────────────────────────────
+
+model NotificationPreference {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  emailEnabled    Boolean  @default(true)
+  slackEnabled    Boolean  @default(false)
+  slackWebhookUrl String?
+  slackUserId     String?
+  digestEnabled   Boolean  @default(true)
+  digestFrequency String   @default("daily")
+  taskAssigned    Boolean  @default(true)
+  taskDueSoon     Boolean  @default(true)
+  taskOverdue     Boolean  @default(true)
+  commentAdded    Boolean  @default(true)
+  mentionedInChat Boolean  @default(true)
+  projectUpdates  Boolean  @default(true)
+  user            User     @relation(fields: [userId], references: [id])
+  updatedAt       DateTime @updatedAt
+}
+
+// ─── Workspace System ────────────────────────────────────────────────────────
+
+model Workspace {
+  id          String             @id @default(uuid())
+  name        String
+  slug        String             @unique
+  logo        String?
+  description String?
+  ownerId     String
+  owner       User               @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members     WorkspaceMember[]
+  invites     WorkspaceInvite[]
+  projects    Project[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([slug])
+  @@index([ownerId])
+}
+
+model WorkspaceMember {
+  id          String    @id @default(uuid())
+  workspaceId String
+  userId      String
+  role        String    @default("member") // owner | admin | member
+  joinedAt    DateTime  @default(now())
+  invitedById String?
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id])
+  invitedBy   User?     @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  @@unique([workspaceId, userId])
+  @@index([workspaceId])
+  @@index([userId])
+}
+
+model WorkspaceInvite {
+  id          String    @id @default(uuid())
+  workspaceId String
+  email       String
+  role        String    @default("member")
+  token       String    @unique @default(uuid())
+  invitedById String
+  acceptedAt  DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy   User      @relation(fields: [invitedById], references: [id])
+
+  @@index([token])
+  @@index([email])
+  @@index([workspaceId])
+}
