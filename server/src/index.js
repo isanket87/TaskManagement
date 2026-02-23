@@ -1,30 +1,50 @@
-require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
-const express = require('express');
-const { createServer } = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
-const compression = require('compression');
-const helmet = require('helmet');
-const path = require('path');
-const morgan = require('morgan');
-const cookieParser = require('cookie-parser');
+import express from 'express'
+import { createServer } from 'http'
+import { Server } from 'socket.io'
+import cors from 'cors'
+import compression from 'compression'
+import helmet from 'helmet'
+import path from 'path'
+import { fileURLToPath } from 'url'
+import cookieParser from 'cookie-parser'
+import morgan from 'morgan'
+import dotenv from 'dotenv'
 
-const { generalLimiter } = require('./middleware/rateLimiter');
-const errorHandler = require('./middleware/errorHandler');
+// Load environment variables
+dotenv.config()
 
-// ── Existing Route Imports ──
-const authRoutes = require('./routes/auth');
-const workspaceRoutes = require('./routes/workspaces');
-const fileRoutes = require('./routes/files');
-const auth = require('./middleware/auth');
-const { getTimesheet, exportTimesheet } = require('./controllers/timeEntryController');
+// ── Import ALL existing routes ──
+import authRoutes from './routes/auth.js'
+import workspaceRoutes from './routes/workspaces.js'
+import projectRoutes from './routes/projects.js'
+import taskRoutes from './routes/tasks.js'
+import commentRoutes from './routes/comments.js'
+import notificationRoutes from './routes/notifications.js'
+import timeRoutes from './routes/timeEntries.js'
+import fileRoutes from './routes/files.js'
+import channelRoutes from './routes/channels.js'
+import attachmentRoutes from './routes/attachments.js'
+import notificationPrefRoutes from './routes/notificationPreferences.js'
 
-const prisma = require('./utils/prisma');
+// Middleware and Utils
+import prisma from './utils/prisma.js'
+import auth from './middleware/auth.js'
+import errorHandler from './middleware/errorHandler.js'
+import { getTimesheet, exportTimesheet } from './controllers/timeEntryController.js'
+import { getOrCreateDM } from './controllers/channelController.js'
+import { setSocketIO } from './services/notificationService.js'
 
-const app = express();
-const httpServer = createServer(app);
+// Jobs
+import { startDueDateReminderJob } from './jobs/dueDateReminder.js'
+import { startDailyDigest } from './jobs/dailyDigest.js'
+import { startWeeklyDigest } from './jobs/weeklyDigest.js'
 
-// ── SOCKET.IO (supports WebSockets on Railway) ──
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const app = express()
+const httpServer = createServer(app)
+
+// ── SOCKET.IO ──
 const io = new Server(httpServer, {
     cors: {
         origin: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -32,16 +52,17 @@ const io = new Server(httpServer, {
         credentials: true
     },
     transports: ['websocket', 'polling']
-});
+})
 
 // Make io available in route handlers
-app.set('io', io);
+app.set('io', io)
+setSocketIO(io)
 
 // ── SECURITY ──
 app.use(helmet({
     contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false
-}));
+}))
 
 // ── CORS ──
 app.use(cors({
@@ -49,30 +70,25 @@ app.use(cors({
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
-}));
+}))
 
-// ── COMPRESSION ──
-app.use(compression({ level: 6, threshold: 1024 }));
+// ── MIDDLEWARE ──
+app.use(compression({ level: 6, threshold: 1024 }))
+app.use(express.json({ limit: '10mb' }))
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
+app.use(cookieParser())
+app.use(morgan('dev'))
 
-// ── BODY PARSING ──
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(cookieParser());
-app.use(morgan('dev'));
-app.use(generalLimiter);
-
-// ── RESPONSE TIMING ──
+// ── RESPONSE TIMER ──
 app.use((req, res, next) => {
-    const start = process.hrtime.bigint();
+    const start = process.hrtime.bigint()
     res.on('finish', () => {
-        const ms = Number(process.hrtime.bigint() - start) / 1_000_000;
-        res.setHeader('X-Response-Time', `${ms.toFixed(1)}ms`);
-        if (ms > 1000) {
-            console.warn(`🐢 SLOW API: ${req.method} ${req.path} ${ms.toFixed(0)}ms`);
-        }
-    });
-    next();
-});
+        const ms = Number(process.hrtime.bigint() - start) / 1_000_000
+        res.setHeader('X-Response-Time', `${ms.toFixed(1)}ms`)
+        if (ms > 1000) console.warn(`🐢 SLOW: ${req.method} ${req.path} ${ms.toFixed(0)}ms`)
+    })
+    next()
+})
 
 // ── HEALTH CHECK ──
 app.get('/health', (req, res) => {
@@ -81,154 +97,139 @@ app.get('/health', (req, res) => {
         timestamp: new Date().toISOString(),
         uptime: Math.floor(process.uptime()),
         environment: process.env.NODE_ENV,
-        version: process.env.npm_package_version || '1.0.0'
-    });
-});
+        memory: process.memoryUsage()
+    })
+})
 
-// ── EXISTING ROUTES ──
+// ── API ROUTES ──
 app.get('/api/users/search', auth, async (req, res, next) => {
     try {
-        const { q } = req.query;
+        const { q } = req.query
         const users = await prisma.user.findMany({
-            where: { OR: [{ email: { contains: q, mode: 'insensitive' } }, { name: { contains: q, mode: 'insensitive' } }] },
+            where: {
+                OR: [
+                    { email: { contains: q, mode: 'insensitive' } },
+                    { name: { contains: q, mode: 'insensitive' } }
+                ]
+            },
             select: { id: true, name: true, email: true, avatar: true },
-            take: 10,
-        });
-        res.json({ success: true, data: { users } });
-    } catch (err) { next(err); }
-});
+            take: 10
+        })
+        res.json({ success: true, data: { users } })
+    } catch (err) {
+        next(err)
+    }
+})
 
-app.use('/api/auth', authRoutes);
-app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/auth', authRoutes)
+app.use('/api/workspaces', workspaceRoutes)
+app.use('/api/projects', projectRoutes)
+app.use('/api/tasks', taskRoutes)
+app.use('/api/comments', commentRoutes)
+app.use('/api/notifications', notificationRoutes)
+app.use('/api/time-entries', timeRoutes)
+app.use('/api/files', fileRoutes)
+app.use('/api/channels', channelRoutes)
+app.use('/api/attachments', attachmentRoutes)
+app.use('/api/notification-preferences', notificationPrefRoutes)
 
-app.get('/api/direct-messages/:userId', auth, require('./controllers/channelController').getOrCreateDM);
-app.get('/api/timesheets', auth, getTimesheet);
-app.get('/api/timesheets/export', auth, exportTimesheet);
-app.use('/api/files', fileRoutes);
-app.get('/api/health', (req, res) => res.json({ success: true, message: 'Server running' }));
+app.get('/api/direct-messages/:userId', auth, getOrCreateDM)
+app.get('/api/timesheets', auth, getTimesheet)
+app.get('/api/timesheets/export', auth, exportTimesheet)
 
 // ── SERVE REACT IN PRODUCTION ──
 if (process.env.NODE_ENV === 'production') {
-    const clientDist = path.join(__dirname, '../../client/dist');
+    const clientDist = path.join(__dirname, '../../client/dist')
     app.use(express.static(clientDist, {
         maxAge: '1y',
         etag: false
-    }));
+    }))
     app.get('*', (req, res) => {
-        res.sendFile(path.join(clientDist, 'index.html'));
-    });
+        res.sendFile(path.join(clientDist, 'index.html'))
+    })
 }
 
-// ── GLOBAL ERROR HANDLER ──
+// ── ERROR HANDLER ──
 app.use((err, req, res, next) => {
-    const isDev = process.env.NODE_ENV !== 'production';
-    console.error(`❌ Error [${err.statusCode || 500}]:`, err.message);
-
+    const isDev = process.env.NODE_ENV !== 'production'
+    console.error(`❌ [${err.statusCode || 500}] ${err.message}`)
     res.status(err.statusCode || 500).json({
         success: false,
         message: isDev ? err.message : 'Something went wrong',
         ...(isDev && { stack: err.stack })
-    });
-});
-app.use(errorHandler);
+    })
+})
+app.use(errorHandler)
 
-// ── SOCKET.IO EVENT HANDLERS (merged with existing) ──
-const socketHandler = require('./socket/socketHandler');
-socketHandler(io); // Existing handlers
-const { setSocketIO } = require('./services/notificationService');
-setSocketIO(io);
-
+// ── SOCKET.IO HANDLERS ──
 io.on('connection', (socket) => {
-    // Join rooms
-    socket.on('join:workspace', (id) => socket.join(`workspace:${id}`));
-    socket.on('join:project', (id) => socket.join(`project:${id}`));
-    socket.on('join:channel', (id) => socket.join(`channel:${id}`));
+    socket.on('join:workspace', (id) => socket.join(`workspace:${id}`))
+    socket.on('join:project', (id) => socket.join(`project:${id}`))
+    socket.on('join:channel', (id) => socket.join(`channel:${id}`))
 
-    // Task events
-    socket.on('task:updated', (data) => socket.to(`project:${data.projectId}`).emit('task:updated', data));
-    socket.on('task:moved', (data) => socket.to(`project:${data.projectId}`).emit('task:moved', data));
-    socket.on('task:created', (data) => socket.to(`project:${data.projectId}`).emit('task:created', data));
-    socket.on('task:deleted', (data) => socket.to(`project:${data.projectId}`).emit('task:deleted', data));
+    socket.on('task:updated', (d) => socket.to(`project:${d.projectId}`).emit('task:updated', d))
+    socket.on('task:moved', (d) => socket.to(`project:${d.projectId}`).emit('task:moved', d))
+    socket.on('task:created', (d) => socket.to(`project:${d.projectId}`).emit('task:created', d))
+    socket.on('task:deleted', (d) => socket.to(`project:${d.projectId}`).emit('task:deleted', d))
 
-    // Chat events
-    socket.on('message:new', (data) => socket.to(`channel:${data.channelId}`).emit('message:new', data));
-    socket.on('message:updated', (data) => socket.to(`channel:${data.channelId}`).emit('message:updated', data));
-    socket.on('message:deleted', (data) => socket.to(`channel:${data.channelId}`).emit('message:deleted', data));
-    socket.on('message:reaction', (data) => socket.to(`channel:${data.channelId}`).emit('message:reaction', data));
+    socket.on('message:new', (d) => socket.to(`channel:${d.channelId}`).emit('message:new', d))
+    socket.on('message:updated', (d) => socket.to(`channel:${d.channelId}`).emit('message:updated', d))
+    socket.on('message:deleted', (d) => socket.to(`channel:${d.channelId}`).emit('message:deleted', d))
+    socket.on('message:reaction', (d) => socket.to(`channel:${d.channelId}`).emit('message:reaction', d))
 
-    // Typing indicators
-    socket.on('typing:start', ({ channelId, user }) => socket.to(`channel:${channelId}`).emit('typing:start', { user }));
-    socket.on('typing:stop', ({ channelId, userId }) => socket.to(`channel:${channelId}`).emit('typing:stop', { userId }));
+    socket.on('typing:start', ({ channelId, user }) => socket.to(`channel:${channelId}`).emit('typing:start', { user }))
+    socket.on('typing:stop', ({ channelId, userId }) => socket.to(`channel:${channelId}`).emit('typing:stop', { userId }))
 
-    // Presence
-    socket.on('presence:update', (data) => socket.to(`workspace:${data.workspaceId}`).emit('presence:update', data));
+    socket.on('presence:update', (data) => socket.to(`workspace:${data.workspaceId}`).emit('presence:update', data))
 
-    socket.on('disconnect', () => console.log('Socket disconnected:', socket.id));
-});
+    socket.on('disconnect', () => console.log('Socket disconnected:', socket.id))
+})
 
-module.exports.io = io;
+export { io }
 
-// ── START SERVER ──
-const PORT = parseInt(process.env.PORT) || 5000;
-
-const { startDueDateReminderJob } = require('./jobs/dueDateReminder');
-const { startDailyDigest } = require('./jobs/dailyDigest');
-const { startWeeklyDigest } = require('./jobs/weeklyDigest');
+// ── START ──
+const PORT = parseInt(process.env.PORT) || 5000
 
 const start = async () => {
     try {
-        if (process.env.NODE_ENV === 'production' && process.env.RAILWAY_ENVIRONMENT) {
-            const { execSync } = require('child_process');
-            execSync('npx prisma migrate deploy', { stdio: 'inherit' });
-        }
+        await prisma.$connect()
+        console.log('[Server] Database connected')
 
-        await prisma.$connect();
-        console.log('[Server] Database connected');
-        startDueDateReminderJob(io);
-        startDailyDigest();
-        startWeeklyDigest();
+        startDueDateReminderJob(io)
+        startDailyDigest()
+        startWeeklyDigest()
 
         httpServer.listen(PORT, '0.0.0.0', () => {
             console.log(`
-          ┌─────────────────────────────────────────┐
-          │          🚀 TaskFlow Server             │
-          ├─────────────────────────────────────────┤
-          │  Port:        ${PORT}                      │
-          │  Environment: ${process.env.NODE_ENV || 'development'}            │
-          │  Health:      http://localhost:${PORT}/health│
-          └─────────────────────────────────────────┘
-          `);
-        });
+  ┌─────────────────────────────────────────┐
+  │          🚀 TaskFlow Server             │
+  ├─────────────────────────────────────────┤
+  │  Port:     ${PORT}                         │
+  │  Env:      ${process.env.NODE_ENV}             │
+  │  Health:   /health                      │
+  │  PID:      ${process.pid}                    │
+  └─────────────────────────────────────────┘
+  `)
+        })
     } catch (err) {
-        console.error('Failed to start:', err);
-        process.exit(1);
+        console.error('Failed to start:', err)
+        process.exit(1)
     }
-};
+}
 
-start();
+start()
 
 // ── GRACEFUL SHUTDOWN ──
 const shutdown = async (signal) => {
-    console.log(`\n${signal} received — shutting down gracefully...`);
+    console.log(`\n${signal} — shutting down gracefully...`)
     httpServer.close(async () => {
-        try {
-            await prisma.$disconnect();
-            console.log('✅ Database disconnected cleanly');
-        } catch (e) {
-            console.error('Error during shutdown:', e);
-        }
-        process.exit(0);
-    });
-    setTimeout(() => {
-        console.error('⚠️ Force shutdown after timeout');
-        process.exit(1);
-    }, 10000);
-};
-
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('unhandledRejection', (reason) => console.error('Unhandled Rejection:', reason));
-process.on('uncaughtException', (error) => {
-    console.error('Uncaught Exception:', error);
-    process.exit(1);
-});
+        await prisma.$disconnect()
+        console.log('✅ Shutdown complete')
+        process.exit(0)
+    })
+    setTimeout(() => process.exit(1), 10000)
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))
+process.on('unhandledRejection', (r) => console.error('Unhandled Rejection:', r))
+process.on('uncaughtException', (e) => { console.error('Uncaught Exception:', e); process.exit(1) })

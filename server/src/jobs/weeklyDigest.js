@@ -1,29 +1,29 @@
-const cron = require('node-cron');
-const prisma = require('../utils/prisma');
-const { emailService } = require('../services/emailService');
-const { startOfWeek, endOfWeek, subWeeks, format } = require('date-fns');
+import cron from 'node-cron'
+import prisma from '../utils/prisma.js'
+import { emailService } from '../services/emailService.js'
+import { startOfWeek, endOfWeek, subWeeks, format } from 'date-fns'
 
 const runWeeklyDigest = async () => {
-  console.log('[WeeklyDigest] Running...');
+  console.log('[WeeklyDigest] Running...')
   try {
-    const now = new Date();
-    const lastWeekStart = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
-    const lastWeekEnd = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 });
+    const now = new Date()
+    const lastWeekStart = startOfWeek(subWeeks(now, 1), { weekStartsOn: 1 })
+    const lastWeekEnd = endOfWeek(subWeeks(now, 1), { weekStartsOn: 1 })
 
-    const users = await prisma.user.findMany({ select: { id: true, name: true, email: true } });
+    const users = await prisma.user.findMany({ select: { id: true, name: true, email: true } })
 
     for (const user of users) {
-      const prefs = await prisma.notificationPreference.findUnique({ where: { userId: user.id } });
-      if (!prefs?.emailEnabled || !prefs?.digestEnabled) continue;
+      const prefs = await prisma.notificationPreference.findUnique({ where: { userId: user.id } })
+      if (!prefs?.emailEnabled || !prefs?.digestEnabled) continue
 
       const [completedTasks, timeEntries, overdueCount] = await Promise.all([
         prisma.task.count({ where: { assigneeId: user.id, status: 'done', updatedAt: { gte: lastWeekStart, lte: lastWeekEnd } } }),
         prisma.timeEntry.findMany({ where: { userId: user.id, startTime: { gte: lastWeekStart, lte: lastWeekEnd }, endTime: { not: null } } }),
-        prisma.task.count({ where: { assigneeId: user.id, dueDate: { lt: now }, status: { not: 'done' } } }),
-      ]);
+        prisma.task.count({ where: { assigneeId: user.id, dueDate: { lt: now }, status: { not: 'done' } } })
+      ])
 
-      const totalSeconds = timeEntries.reduce((s, e) => s + (e.duration || 0), 0);
-      const hours = Math.round(totalSeconds / 3600 * 10) / 10;
+      const totalSeconds = timeEntries.reduce((s, e) => s + (e.duration || 0), 0)
+      const hours = Math.round(totalSeconds / 3600 * 10) / 10
 
       await emailService.sendRaw({
         to: user.email,
@@ -44,20 +44,20 @@ const runWeeklyDigest = async () => {
     </div>
     <a href="${process.env.CLIENT_URL}/dashboard" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Go to Dashboard →</a>
   </div>
-</div></body></html>`,
-      });
+</div></body></html>`
+      })
     }
 
-    console.log('[WeeklyDigest] Done');
+    console.log('[WeeklyDigest] Done')
   } catch (err) {
-    console.error('[WeeklyDigest] Error:', err.message);
+    console.error('[WeeklyDigest] Error:', err.message)
   }
-};
+}
 
 // Run at 8 AM every Monday
-const startWeeklyDigest = () => {
-  cron.schedule('0 8 * * 1', runWeeklyDigest, { timezone: 'UTC' });
-  console.log('[WeeklyDigest] Scheduled at 08:00 UTC every Monday');
-};
+export const startWeeklyDigest = () => {
+  cron.schedule('0 8 * * 1', runWeeklyDigest, { timezone: 'UTC' })
+  console.log('[WeeklyDigest] Scheduled at 08:00 UTC every Monday')
+}
 
-module.exports = { startWeeklyDigest, runWeeklyDigest };
+export { runWeeklyDigest }

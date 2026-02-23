@@ -3,20 +3,12 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig(({ mode }) => ({
     plugins: [react()],
-
     server: {
         proxy: mode === 'development' ? {
-            '/api': {
-                target: 'http://localhost:5000',
-                changeOrigin: true
-            },
-            '/socket.io': {
-                target: 'http://localhost:5000',
-                ws: true
-            }
+            '/api': { target: 'http://localhost:5000', changeOrigin: true },
+            '/socket.io': { target: 'http://localhost:5000', ws: true }
         } : {}
     },
-
     build: {
         outDir: 'dist',
         sourcemap: false,

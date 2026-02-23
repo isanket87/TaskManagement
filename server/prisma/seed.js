@@ -1,42 +1,42 @@
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
+import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient()
 
 const addDays = (date, days) => {
-    const d = new Date(date);
-    d.setDate(d.getDate() + days);
-    return d;
-};
+    const d = new Date(date)
+    d.setDate(d.getDate() + days)
+    return d
+}
 
 const computeStatus = (dueDate, taskStatus) => {
-    if (taskStatus === 'done') return 'completed';
-    if (!dueDate) return 'none';
-    const now = new Date();
-    const due = new Date(dueDate);
-    if (due < now) return 'overdue';
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
-    if (due <= todayEnd) return 'due_today';
-    if (due <= addDays(now, 3)) return 'due_soon';
-    return 'on_track';
-};
+    if (taskStatus === 'done') return 'completed'
+    if (!dueDate) return 'none'
+    const now = new Date()
+    const due = new Date(dueDate)
+    if (due < now) return 'overdue'
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
+    if (due <= todayEnd) return 'due_today'
+    if (due <= addDays(now, 3)) return 'due_soon'
+    return 'on_track'
+}
 
 async function main() {
-    console.log('🌱 Seeding database...');
+    console.log('🌱 Seeding database...')
 
-    await prisma.activityLog.deleteMany();
-    await prisma.notification.deleteMany();
-    await prisma.comment.deleteMany();
-    await prisma.attachment.deleteMany();
-    await prisma.task.deleteMany();
-    await prisma.projectMember.deleteMany();
-    await prisma.project.deleteMany();
-    await prisma.workspaceInvite.deleteMany();
-    await prisma.workspaceMember.deleteMany();
-    await prisma.workspace.deleteMany();
-    await prisma.user.deleteMany();
+    await prisma.activityLog.deleteMany()
+    await prisma.notification.deleteMany()
+    await prisma.comment.deleteMany()
+    await prisma.attachment.deleteMany()
+    await prisma.task.deleteMany()
+    await prisma.projectMember.deleteMany()
+    await prisma.project.deleteMany()
+    await prisma.workspaceInvite.deleteMany()
+    await prisma.workspaceMember.deleteMany()
+    await prisma.workspace.deleteMany()
+    await prisma.user.deleteMany()
 
-    const hashedPassword = await bcrypt.hash('Demo@123', 12);
+    const hashedPassword = await bcrypt.hash('Demo@123', 12)
 
     // Create users
     const admin = await prisma.user.create({
@@ -45,29 +45,29 @@ async function main() {
             email: 'admin@demo.com',
             password: hashedPassword,
             role: 'admin',
-            avatar: null,
-        },
-    });
+            avatar: null
+        }
+    })
 
     const member = await prisma.user.create({
         data: {
             name: 'Morgan Member',
             email: 'member@demo.com',
             password: hashedPassword,
-            role: 'user',
-        },
-    });
+            role: 'user'
+        }
+    })
 
     const viewer = await prisma.user.create({
         data: {
             name: 'Victor Viewer',
             email: 'viewer@demo.com',
             password: hashedPassword,
-            role: 'user',
-        },
-    });
+            role: 'user'
+        }
+    })
 
-    console.log('✅ Users created');
+    console.log('✅ Users created')
 
     // Create 1 workspace
     const workspace = await prisma.workspace.create({
@@ -79,11 +79,11 @@ async function main() {
                 create: [
                     { userId: admin.id, role: 'owner' },
                     { userId: member.id, role: 'admin' },
-                    { userId: viewer.id, role: 'member' },
-                ],
-            },
-        },
-    });
+                    { userId: viewer.id, role: 'member' }
+                ]
+            }
+        }
+    })
 
     // Create 1 pending invite
     await prisma.workspaceInvite.create({
@@ -92,14 +92,14 @@ async function main() {
             email: 'pending@demo.com',
             role: 'member',
             invitedById: admin.id,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        },
-    });
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        }
+    })
 
-    console.log('✅ Workspace created');
+    console.log('✅ Workspace created')
 
     // Create projects
-    const now = new Date();
+    const now = new Date()
     const project1 = await prisma.project.create({
         data: {
             name: 'Website Redesign',
@@ -112,11 +112,11 @@ async function main() {
                 create: [
                     { userId: admin.id, role: 'owner' },
                     { userId: member.id, role: 'member' },
-                    { userId: viewer.id, role: 'viewer' },
-                ],
-            },
-        },
-    });
+                    { userId: viewer.id, role: 'viewer' }
+                ]
+            }
+        }
+    })
 
     const project2 = await prisma.project.create({
         data: {
@@ -129,11 +129,11 @@ async function main() {
             members: {
                 create: [
                     { userId: admin.id, role: 'owner' },
-                    { userId: member.id, role: 'admin' },
-                ],
-            },
-        },
-    });
+                    { userId: member.id, role: 'admin' }
+                ]
+            }
+        }
+    })
 
     const project3 = await prisma.project.create({
         data: {
@@ -146,11 +146,11 @@ async function main() {
             members: {
                 create: [
                     { userId: member.id, role: 'owner' },
-                    { userId: admin.id, role: 'member' },
-                ],
-            },
-        },
-    });
+                    { userId: admin.id, role: 'member' }
+                ]
+            }
+        }
+    })
 
     const project4 = await prisma.project.create({
         data: {
@@ -161,12 +161,12 @@ async function main() {
             status: 'active',
             ownerId: admin.id,
             members: {
-                create: [{ userId: admin.id, role: 'owner' }, { userId: member.id, role: 'member' }],
-            },
-        },
-    });
+                create: [{ userId: admin.id, role: 'owner' }, { userId: member.id, role: 'member' }]
+            }
+        }
+    })
 
-    console.log('✅ Projects created');
+    console.log('✅ Projects created')
 
     // Create tasks with varied due dates
     const taskDefs = [
@@ -203,13 +203,13 @@ async function main() {
         { title: 'Project kickoff meeting', status: 'done', priority: 'low', dueDate: addDays(now, -14), projectId: project3.id, assigneeId: member.id, tags: [] },
         { title: 'Database schema design', status: 'done', priority: 'high', dueDate: addDays(now, -8), projectId: project4.id, assigneeId: admin.id, tags: ['database'] },
         { title: 'App store listing', status: 'in_review', priority: 'medium', dueDate: addDays(now, 6), projectId: project2.id, assigneeId: admin.id, tags: ['mobile'] },
-        { title: 'Competitor analysis report', status: 'in_review', priority: 'medium', dueDate: addDays(now, 4), projectId: project3.id, assigneeId: viewer.id, tags: ['research'] },
-    ];
+        { title: 'Competitor analysis report', status: 'in_review', priority: 'medium', dueDate: addDays(now, 4), projectId: project3.id, assigneeId: viewer.id, tags: ['research'] }
+    ]
 
-    const createdTasks = [];
+    const createdTasks = []
     for (let i = 0; i < taskDefs.length; i++) {
-        const def = taskDefs[i];
-        const dueDateStatus = computeStatus(def.dueDate, def.status);
+        const def = taskDefs[i]
+        const dueDateStatus = computeStatus(def.dueDate, def.status)
         const task = await prisma.task.create({
             data: {
                 title: def.title,
@@ -223,13 +223,13 @@ async function main() {
                 createdById: admin.id,
                 position: i + 1,
                 tags: def.tags || [],
-                description: `This is the description for "${def.title}". Contains detailed implementation notes and acceptance criteria.`,
-            },
-        });
-        createdTasks.push(task);
+                description: `This is the description for "${def.title}". Contains detailed implementation notes and acceptance criteria.`
+            }
+        })
+        createdTasks.push(task)
     }
 
-    console.log(`✅ ${createdTasks.length} tasks created`);
+    console.log(`✅ ${createdTasks.length} tasks created`)
 
     // Create comments
     await prisma.comment.createMany({
@@ -238,11 +238,11 @@ async function main() {
             { text: 'This is blocking the release, please prioritize.', taskId: createdTasks[0].id, authorId: member.id },
             { text: 'I have the hotfix ready, just needs review.', taskId: createdTasks[3].id, authorId: admin.id },
             { text: 'Slides look great, minor tweaks needed on slide 5.', taskId: createdTasks[4].id, authorId: viewer.id },
-            { text: 'Payment flow tested successfully in sandbox.', taskId: createdTasks[8].id, authorId: admin.id },
-        ],
-    });
+            { text: 'Payment flow tested successfully in sandbox.', taskId: createdTasks[8].id, authorId: admin.id }
+        ]
+    })
 
-    console.log('✅ Comments created');
+    console.log('✅ Comments created')
 
     // Create activity logs
     await prisma.activityLog.createMany({
@@ -252,9 +252,9 @@ async function main() {
             { projectId: project1.id, userId: admin.id, type: 'task_created', message: 'Created task "Fix login page bug"' },
             { projectId: project2.id, userId: admin.id, type: 'project_created', message: 'Created the project' },
             { projectId: project3.id, userId: member.id, type: 'project_created', message: 'Created the project' },
-            { projectId: project4.id, userId: admin.id, type: 'task_updated', message: 'Updated task priority to Critical' },
-        ],
-    });
+            { projectId: project4.id, userId: admin.id, type: 'task_updated', message: 'Updated task priority to Critical' }
+        ]
+    })
 
     // Create notifications
     await prisma.notification.createMany({
@@ -263,20 +263,25 @@ async function main() {
             { userId: admin.id, type: 'overdue', message: 'Task "Update API documentation" is overdue', taskId: createdTasks[1].id, projectId: project2.id, taskTitle: 'Update API documentation', projectName: 'Mobile App v2', read: false },
             { userId: member.id, type: 'overdue', message: 'Task "Security audit report" is overdue', taskId: createdTasks[2].id, projectId: project4.id, taskTitle: 'Security audit report', projectName: 'API Integration', read: false },
             { userId: admin.id, type: 'due_today', message: 'Task "Deploy hotfix to production" is due today', taskId: createdTasks[3].id, projectId: project1.id, taskTitle: 'Deploy hotfix to production', projectName: 'Website Redesign', read: false },
-            { userId: admin.id, type: 'member_added', message: 'You were added to "Mobile App v2"', projectId: project2.id, projectName: 'Mobile App v2', read: true },
-        ],
-    });
+            { userId: admin.id, type: 'member_added', message: 'You were added to "Mobile App v2"', projectId: project2.id, projectName: 'Mobile App v2', read: true }
+        ]
+    })
 
-    console.log('✅ Activity logs and notifications created');
-    console.log('');
-    console.log('🎉 Database seeded successfully!');
-    console.log('');
-    console.log('Demo accounts:');
-    console.log('  admin@demo.com  / Demo@123  (admin)');
-    console.log('  member@demo.com / Demo@123  (member)');
-    console.log('  viewer@demo.com / Demo@123  (viewer)');
+    console.log('✅ Activity logs and notifications created')
+    console.log('')
+    console.log('🎉 Database seeded successfully!')
+    console.log('')
+    console.log('Demo accounts:')
+    console.log('  admin@demo.com  / Demo@123  (admin)')
+    console.log('  member@demo.com / Demo@123  (member)')
+    console.log('  viewer@demo.com / Demo@123  (viewer)')
 }
 
 main()
-    .catch((e) => { console.error(e); process.exit(1); })
-    .finally(() => prisma.$disconnect());
+    .catch((e) => {
+        console.error(e)
+        process.exit(1)
+    })
+    .finally(async () => {
+        await prisma.$disconnect()
+    })

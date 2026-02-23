@@ -1,7 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+import prisma from '../utils/prisma.js'
 
-exports.logTaskActivity = async ({ projectId, taskId, userId, type, message, metadata = {} }) => {
+export const logTaskActivity = async ({ projectId, taskId, userId, type, message, metadata = {} }) => {
     try {
         await prisma.activityLog.create({
             data: {
@@ -12,8 +11,8 @@ exports.logTaskActivity = async ({ projectId, taskId, userId, type, message, met
                 message,
                 metadata
             }
-        });
+        })
     } catch (error) {
-        console.error('Error logging task activity:', error);
+        console.error('Error logging task activity:', error)
     }
-};
+}
