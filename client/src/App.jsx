@@ -80,7 +80,7 @@ const AuthRoute = ({ children }) => {
 
     if (isAuthenticated) {
         const params = new URLSearchParams(location.search);
-        const returnTo = params.get('returnTo') || '/dashboard';
+        const returnTo = params.get('returnTo') || '/workspaces';
         return <Navigate to={returnTo} replace />;
     }
     return children;

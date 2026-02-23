@@ -2,6 +2,15 @@ import prisma from '../utils/prisma.js'
 import { successResponse, errorResponse } from '../utils/helpers.js'
 import { uploadFile, deleteFile } from '../services/r2Service.js'
 
+const getFileType = (mimeType) => {
+    if (mimeType.startsWith('image/')) return 'image'
+    if (mimeType.startsWith('video/')) return 'video'
+    if (mimeType.startsWith('audio/')) return 'audio'
+    if (mimeType.includes('pdf')) return 'pdf'
+    if (mimeType.includes('msword') || mimeType.includes('officedocument')) return 'document'
+    return 'file'
+}
+
 export const uploadAttachment = async (req, res, next) => {
     try {
         if (!req.file) return errorResponse(res, 'No file uploaded', 400)
@@ -9,6 +18,7 @@ export const uploadAttachment = async (req, res, next) => {
         const { buffer, originalname, mimetype } = req.file
 
         const { key, url } = await uploadFile(buffer, originalname, mimetype)
+        const fileType = getFileType(mimetype)
 
         const attachment = await prisma.attachment.create({
             data: {
@@ -17,6 +27,7 @@ export const uploadAttachment = async (req, res, next) => {
                 storageKey: key,
                 mimeType: mimetype,
                 size: buffer.length,
+                type: fileType,
                 taskId,
                 uploadedById: req.user.id
             }

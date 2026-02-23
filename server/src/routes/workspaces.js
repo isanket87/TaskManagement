@@ -17,7 +17,7 @@ import channelRoutes from './channels.js'
 import notifPrefRoutes from './notificationPreferences.js'
 import { getDashboardStats } from '../controllers/taskController.js'
 
-const router = express.Router()
+const router = express.Router({ mergeParams: true })
 
 // Public / Auth handled internally
 router.get('/check-slug', workspaceController.checkSlugAvailability)

@@ -48,11 +48,12 @@ const WorkspaceGuard = ({ children }) => {
                     if (!isMounted) return;
 
                     if (workspaces.length === 1) {
-                        navigate(`/workspace/${workspaces[0].slug}/dashboard`);
+                        const target = `/workspace/${workspaces[0].slug}/dashboard`;
+                        if (window.location.pathname !== target) navigate(target);
                     } else if (workspaces.length > 1) {
-                        navigate('/workspaces');
+                        if (window.location.pathname !== '/workspaces') navigate('/workspaces');
                     } else {
-                        navigate('/onboarding');
+                        if (window.location.pathname !== '/onboarding') navigate('/onboarding');
                     }
                     return;
                 }

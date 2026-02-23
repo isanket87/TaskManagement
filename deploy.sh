@@ -6,10 +6,10 @@
 
 set -e  # Exit on any error
 
-SERVER_IP="YOUR_SERVER_IP"       # Replace with your Kamatera IP
-SERVER_USER="taskflow"           # Deploy user (not root)
+SERVER_IP="185.167.99.233"       # Replace with your Kamatera IP
+SERVER_USER="root"           # Deploy user (not root)
 APP_DIR="/var/www/taskflow"
-REPO_URL="https://github.com/YOUR_USERNAME/taskflow.git"
+REPO_URL="https://github.com/isanket87/TaskManagement.git"
 
 echo "🚀 Starting TaskFlow deployment..."
 echo "📡 Server: $SERVER_IP"

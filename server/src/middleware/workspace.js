@@ -20,6 +20,7 @@ export const requireWorkspace = async (req, res, next) => {
         })
 
         if (!workspace) {
+            console.log(`[WorkspaceMiddleware] 404 - Workspace not found for slug: ${slug}`)
             return res.status(404).json({ status: 'error', message: 'Workspace not found' })
         }
 

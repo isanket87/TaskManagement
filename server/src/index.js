@@ -11,7 +11,17 @@ import morgan from 'morgan'
 import dotenv from 'dotenv'
 
 // Load environment variables
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+// Prioritize root .env.development in dev mode, otherwise fallback to local .env
+if (process.env.NODE_ENV !== 'production') {
+    dotenv.config({ path: path.join(__dirname, '../../.env.development') })
+}
 dotenv.config()
+
+console.log(`[Env] Loaded environment: ${process.env.NODE_ENV || 'not set'}`)
+console.log(`[Env] Database URL host: ${process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL).host : 'none'}`)
 
 // ── Import ALL existing routes ──
 import authRoutes from './routes/auth.js'
@@ -39,8 +49,7 @@ import { startDueDateReminderJob } from './jobs/dueDateReminder.js'
 import { startDailyDigest } from './jobs/dailyDigest.js'
 import { startWeeklyDigest } from './jobs/weeklyDigest.js'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+
 const app = express()
 const httpServer = createServer(app)
 
@@ -79,13 +88,26 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.use(cookieParser())
 app.use(morgan('dev'))
 
-// ── RESPONSE TIMER ──
+// ── RESPONSE TIMER & DEBUG ──
 app.use((req, res, next) => {
     const start = process.hrtime.bigint()
-    res.on('finish', () => {
+
+    // Safety for the timing header (must be set before body is sent)
+    const originalWriteHead = res.writeHead
+    res.writeHead = function (...args) {
         const ms = Number(process.hrtime.bigint() - start) / 1_000_000
         res.setHeader('X-Response-Time', `${ms.toFixed(1)}ms`)
-        if (ms > 1000) console.warn(`🐢 SLOW: ${req.method} ${req.path} ${ms.toFixed(0)}ms`)
+        return originalWriteHead.apply(this, args)
+    }
+
+    res.on('finish', () => {
+        const ms = Number(process.hrtime.bigint() - start) / 1_000_000
+        if (ms > 1000) {
+            console.warn(`🐢 SLOW: ${req.method} ${req.originalUrl} ${ms.toFixed(0)}ms`)
+        }
+        if (res.statusCode === 404) {
+            console.log(`🔍 404 NOT FOUND: ${req.method} ${req.originalUrl}`)
+        }
     })
     next()
 })
@@ -123,15 +145,17 @@ app.get('/api/users/search', auth, async (req, res, next) => {
 
 app.use('/api/auth', authRoutes)
 app.use('/api/workspaces', workspaceRoutes)
-app.use('/api/projects', projectRoutes)
-app.use('/api/tasks', taskRoutes)
-app.use('/api/comments', commentRoutes)
+
+// Legacy top-level mounts for specific non-scoped calls if any
 app.use('/api/notifications', notificationRoutes)
-app.use('/api/time-entries', timeRoutes)
 app.use('/api/files', fileRoutes)
-app.use('/api/channels', channelRoutes)
-app.use('/api/attachments', attachmentRoutes)
 app.use('/api/notification-preferences', notificationPrefRoutes)
+
+// 404 Handler for API routes to help debug
+app.use('/api/*', (req, res) => {
+    console.log(`🔍 [API 404] No route matched: ${req.method} ${req.originalUrl}`)
+    res.status(404).json({ success: false, message: `Route not found: ${req.originalUrl}` })
+})
 
 app.get('/api/direct-messages/:userId', auth, getOrCreateDM)
 app.get('/api/timesheets', auth, getTimesheet)

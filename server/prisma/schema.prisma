@@ -38,6 +38,7 @@ model User {
   // Notifications
   notificationPreference NotificationPreference?
 
+  attachments            Attachment[]
   // Workspace
   activeWorkspaceId      String?
   ownedWorkspaces        Workspace[]             @relation("WorkspaceOwner")
@@ -131,13 +132,18 @@ model Comment {
 }
 
 model Attachment {
-  id        String   @id @default(uuid())
-  name      String
-  url       String
-  type      String
-  taskId    String
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id           String   @id @default(uuid())
+  name         String
+  url          String
+  storageKey   String
+  mimeType     String
+  size         Int
+  type         String
+  taskId       String
+  uploadedById String
+  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
 }
 
 model Notification {
