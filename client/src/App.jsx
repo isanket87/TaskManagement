@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { useEffect } from 'react';
 
 import useAuthStore from './store/authStore';
+import useWorkspaceStore from './store/workspaceStore';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import AuthCallback from './pages/AuthCallback';
@@ -87,14 +88,21 @@ const AuthRoute = ({ children }) => {
 };
 
 function App() {
-    const { fetchMe } = useAuthStore();
+    const { fetchMe, isAuthenticated } = useAuthStore();
+    const { fetchWorkspaces } = useWorkspaceStore();
 
+    // Run once on app start — check if user is already logged in
     useEffect(() => {
         fetchMe();
         // Apply dark mode from localStorage
         const isDark = localStorage.getItem('darkMode') === 'true';
         document.documentElement.classList.toggle('dark', isDark);
     }, []);
+
+    // Fetch workspace list only once authentication is confirmed
+    useEffect(() => {
+        if (isAuthenticated) fetchWorkspaces();
+    }, [isAuthenticated]);
 
     return (
         <QueryClientProvider client={queryClient}>

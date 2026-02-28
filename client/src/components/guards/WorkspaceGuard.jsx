@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { useNavigate, useParams, Outlet } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 import useWorkspaceStore from '../../store/workspaceStore';
-import api from '../../services/api';
 
 const PageSkeleton = () => (
     <div className="flex h-screen w-screen items-center justify-center bg-slate-50 dark:bg-slate-900">
@@ -13,71 +12,47 @@ const PageSkeleton = () => (
     </div>
 );
 
-const WorkspaceGuard = ({ children }) => {
+const WorkspaceGuard = () => {
     const { user } = useAuthStore();
     const { workspace, loading, switchWorkspace, fetchWorkspaces } = useWorkspaceStore();
     const navigate = useNavigate();
     const { slug } = useParams();
 
     useEffect(() => {
-        let isMounted = true;
-
-        const initializeWorkspace = async () => {
-            if (!user) {
-                if (isMounted) navigate('/login');
-                return;
-            }
-
-            // First time user — no workspace yet at all
-            if (!user.activeWorkspaceId) {
-                if (isMounted) navigate('/onboarding');
-                return;
-            }
-
-            // If we have a URL slug but it doesn't match the current active workspace 
-            // (or if workspace isn't loaded in Zustand yet)
-            if (slug && (!workspace || workspace.slug !== slug)) {
-                try {
-                    await switchWorkspace(slug);
-                    return; // Successfully switched, state will update and re-render
-                } catch (err) {
-                    console.error('Workspace access denied or not found', err);
-
-                    // Fallback to active workspace or picker
-                    const workspaces = await fetchWorkspaces();
-                    if (!isMounted) return;
-
-                    if (workspaces.length === 1) {
-                        const target = `/workspace/${workspaces[0].slug}/dashboard`;
-                        if (window.location.pathname !== target) navigate(target);
-                    } else if (workspaces.length > 1) {
-                        if (window.location.pathname !== '/workspaces') navigate('/workspaces');
-                    } else {
-                        if (window.location.pathname !== '/onboarding') navigate('/onboarding');
-                    }
-                    return;
-                }
-            } else if (workspace && workspace.slug === slug) {
-                // If the slug matches the cached workspace, ensure loading is false
-                useWorkspaceStore.setState({ loading: false });
-            } else if (!slug) {
-                // No slug (e.g. root path), ensure loading is false so children can render
-                useWorkspaceStore.setState({ loading: false });
-            }
-        };
-
-        if (user) {
-            initializeWorkspace();
+        if (!user) {
+            navigate('/login');
+            return;
         }
 
-        return () => { isMounted = false; };
-    }, [user, workspace?.slug, slug, navigate, switchWorkspace, fetchWorkspaces]);
+        // First time user — no workspace yet
+        if (!user.activeWorkspaceId) {
+            navigate('/onboarding');
+            return;
+        }
 
-    // Only show skeleton if explicitly loading. If we don't have a workspace but are not loading, 
-    // we still return children/outlet because it might be a redirect or a picker.
+        // slug in URL doesn't match the loaded workspace — need to switch
+        if (slug && (!workspace || workspace.slug !== slug)) {
+            switchWorkspace(slug).catch(async (err) => {
+                console.error('Workspace access denied or not found', err);
+
+                // Fallback: redirect to a workspace the user can access
+                const workspaces = await fetchWorkspaces();
+                if (workspaces.length === 1) {
+                    navigate(`/workspace/${workspaces[0].slug}/dashboard`);
+                } else if (workspaces.length > 1) {
+                    navigate('/workspaces');
+                } else {
+                    navigate('/onboarding');
+                }
+            });
+        }
+        // Only re-run when the URL slug changes or user changes — NOT on workspace store updates
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.id, slug]);
+
     if (loading) return <PageSkeleton />;
 
-    return children || <Outlet />;
+    return <Outlet />;
 };
 
 export default WorkspaceGuard;

@@ -10,7 +10,7 @@ const InviteAccept = () => {
     const { token } = useParams();
     const navigate = useNavigate();
     const { user, fetchMe } = useAuthStore();
-    const { setWorkspace } = useWorkspaceStore();
+    const { setWorkspace, fetchWorkspaces } = useWorkspaceStore();
 
     const [loadingInfo, setLoadingInfo] = useState(true);
     const [inviteInfo, setInviteInfo] = useState(null);
@@ -54,8 +54,8 @@ const InviteAccept = () => {
             const res = await api.post(`/workspaces/invites/${token}/accept`);
             toast.success('Successfully joined workspace!');
 
-            // Re-fetch user to get new activeWorkspaceId
-            await fetchMe();
+            // Re-fetch user & workspace list so switcher is up to date
+            await Promise.all([fetchMe(), fetchWorkspaces()]);
 
             // Set workspace context locally
             setWorkspace(res.data.data, inviteInfo.role);

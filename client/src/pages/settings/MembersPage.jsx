@@ -3,8 +3,63 @@ import { useParams } from 'react-router-dom';
 import useWorkspaceStore from '../../store/workspaceStore';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
-import { Mail, Shield, UserX, UserPlus, ShieldAlert, Loader2, Link2, XCircle } from 'lucide-react';
+import {
+    Mail, Shield, UserX, UserPlus, ShieldAlert,
+    Loader2, Link2, XCircle, Users, Clock, CheckCircle2, Crown
+} from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+
+const roleConfig = {
+    owner: {
+        label: 'Owner',
+        icon: Crown,
+        className: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/40',
+        dotClass: 'bg-amber-500'
+    },
+    admin: {
+        label: 'Admin',
+        icon: ShieldAlert,
+        className: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/40',
+        dotClass: 'bg-blue-500'
+    },
+    member: {
+        label: 'Member',
+        icon: Shield,
+        className: 'bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700',
+        dotClass: 'bg-slate-400'
+    },
+};
+
+const RoleBadge = ({ role }) => {
+    const cfg = roleConfig[role] || roleConfig.member;
+    const Icon = cfg.icon;
+    return (
+        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${cfg.className}`}>
+            <Icon className="w-3 h-3" />
+            {cfg.label}
+        </span>
+    );
+};
+
+const Avatar = ({ name, avatar, size = 'md' }) => {
+    const sizeClass = size === 'lg' ? 'h-12 w-12 text-base' : 'h-9 w-9 text-sm';
+    const colors = [
+        'from-violet-500 to-purple-600',
+        'from-blue-500 to-cyan-600',
+        'from-emerald-500 to-teal-600',
+        'from-orange-500 to-amber-600',
+        'from-pink-500 to-rose-600',
+        'from-indigo-500 to-blue-600',
+    ];
+    const color = colors[name?.charCodeAt(0) % colors.length] || colors[0];
+    return avatar ? (
+        <img className={`${sizeClass} rounded-full object-cover ring-2 ring-white dark:ring-slate-800`} src={avatar} alt={name} />
+    ) : (
+        <div className={`${sizeClass} rounded-full bg-gradient-to-br ${color} flex items-center justify-center font-bold text-white ring-2 ring-white dark:ring-slate-800`}>
+            {name?.charAt(0).toUpperCase()}
+        </div>
+    );
+};
 
 const MembersPage = () => {
     const { slug } = useParams();
@@ -15,7 +70,6 @@ const MembersPage = () => {
     const [invites, setInvites] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Invite form state
     const [inviteEmail, setInviteEmail] = useState('');
     const [inviteRole, setInviteRole] = useState('member');
     const [isInviting, setIsInviting] = useState(false);
@@ -25,7 +79,6 @@ const MembersPage = () => {
             try {
                 const membersRes = await api.get(`/workspaces/${slug}/members`);
                 setMembers(membersRes.data.data || []);
-
                 if (isAdmin()) {
                     const invitesRes = await api.get(`/workspaces/${slug}/invites`);
                     setInvites(invitesRes.data.data.invites || []);
@@ -37,14 +90,12 @@ const MembersPage = () => {
                 setLoading(false);
             }
         };
-
         if (slug) fetchMembersAndInvites();
     }, [slug, isAdmin]);
 
     const handleInvite = async (e) => {
         e.preventDefault();
         if (!inviteEmail) return;
-
         setIsInviting(true);
         try {
             const res = await api.post(`/workspaces/${slug}/members`, { email: inviteEmail, role: inviteRole });
@@ -70,7 +121,6 @@ const MembersPage = () => {
 
     const handleRemoveMember = async (memberUserId, memberName) => {
         if (!window.confirm(`Are you sure you want to remove ${memberName} from the workspace?`)) return;
-
         try {
             await api.delete(`/workspaces/${slug}/members/${memberUserId}`);
             setMembers(members.filter(m => m.userId !== memberUserId));
@@ -82,7 +132,6 @@ const MembersPage = () => {
 
     const handleCancelInvite = async (inviteId) => {
         if (!window.confirm('Cancel this invitation?')) return;
-
         try {
             await api.delete(`/workspaces/${slug}/invites/${inviteId}`);
             setInvites(invites.filter(i => i.id !== inviteId));
@@ -95,7 +144,7 @@ const MembersPage = () => {
     const copyInviteLink = (token) => {
         const url = `${window.location.origin}/invite/${token}`;
         navigator.clipboard.writeText(url);
-        toast.success('Invite link copied to clipboard!');
+        toast.success('Invite link copied!');
     };
 
     if (loading) {
@@ -106,174 +155,211 @@ const MembersPage = () => {
         );
     }
 
+    const ownerCount = members.filter(m => m.role === 'owner').length;
+    const adminCount = members.filter(m => m.role === 'admin').length;
+    const memberCount = members.filter(m => m.role === 'member').length;
+
     return (
-        <div className="max-w-6xl mx-auto space-y-8">
-            <div className="md:flex md:items-center md:justify-between">
-                <div className="min-w-0 flex-1">
-                    <h2 className="text-2xl font-bold leading-7 text-slate-900 dark:text-white sm:truncate sm:text-3xl sm:tracking-tight">
-                        Workspace Members
-                    </h2>
+        <div className="max-w-5xl mx-auto space-y-8 pb-12">
+
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+                        Team Members
+                    </h1>
                     <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                        Manage who has access to {workspace?.name}
+                        Manage who has access to <span className="font-medium text-slate-700 dark:text-slate-300">{workspace?.name}</span>
                     </p>
+                </div>
+
+                {/* Stats */}
+                <div className="flex items-center gap-3">
+                    {[
+                        { icon: Users, value: members.length, label: 'Members', color: 'text-indigo-600 dark:text-indigo-400', bg: 'bg-indigo-50 dark:bg-indigo-900/20' },
+                        { icon: Clock, value: invites.length, label: 'Pending', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
+                    ].map(({ icon: Icon, value, label, color, bg }) => (
+                        <div key={label} className={`flex items-center gap-2 px-3 py-2 rounded-lg ${bg} border border-transparent`}>
+                            <Icon className={`w-4 h-4 ${color}`} />
+                            <span className={`text-sm font-semibold ${color}`}>{value}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
+                        </div>
+                    ))}
                 </div>
             </div>
 
+            {/* Invite Card */}
             {isAdmin() && (
-                <div className="bg-white dark:bg-slate-800 shadow sm:rounded-lg border border-slate-200 dark:border-slate-700 p-6">
-                    <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-4">Invite New Members</h3>
-                    <form onSubmit={handleInvite} className="sm:flex sm:items-end gap-4">
-                        <div className="flex-1">
-                            <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Email address</label>
+                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/10 dark:to-purple-900/10 border border-indigo-100 dark:border-indigo-800/30 rounded-2xl p-6">
+                    <div className="flex items-center gap-3 mb-5">
+                        <div className="h-9 w-9 rounded-xl bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-500/20">
+                            <UserPlus className="h-4 w-4 text-white" />
+                        </div>
+                        <div>
+                            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Invite a team member</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">They'll receive an email with a link to join</p>
+                        </div>
+                    </div>
+                    <form onSubmit={handleInvite} className="flex flex-col sm:flex-row gap-3">
+                        <div className="flex-1 relative">
+                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                             <input
                                 type="email"
-                                name="email"
-                                id="email"
                                 required
                                 value={inviteEmail}
                                 onChange={(e) => setInviteEmail(e.target.value)}
-                                className="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-slate-700 dark:text-white px-4 py-2 border"
-                                placeholder="colleague@example.com"
+                                className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
+                                placeholder="colleague@company.com"
                             />
                         </div>
-                        <div className="mt-4 sm:mt-0 w-full sm:w-48">
-                            <label htmlFor="role" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Role</label>
-                            <select
-                                id="role"
-                                name="role"
-                                value={inviteRole}
-                                onChange={(e) => setInviteRole(e.target.value)}
-                                className="mt-1 block w-full rounded-md border-slate-300 dark:border-slate-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-slate-700 dark:text-white px-4 py-2 border"
-                            >
-                                <option value="member">Member</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
+                        <select
+                            value={inviteRole}
+                            onChange={(e) => setInviteRole(e.target.value)}
+                            className="w-full sm:w-36 px-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent shadow-sm"
+                        >
+                            <option value="member">Member</option>
+                            <option value="admin">Admin</option>
+                        </select>
                         <button
                             type="submit"
                             disabled={isInviting || !inviteEmail}
-                            className="mt-4 sm:mt-0 flex w-full sm:w-auto items-center justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+                            className="flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-md shadow-indigo-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isInviting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
+                            {isInviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
                             Send Invite
                         </button>
                     </form>
                 </div>
             )}
 
-            {/* Active Members Table */}
-            <div className="bg-white dark:bg-slate-800 shadow sm:rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="px-4 py-5 sm:px-6 border-b border-slate-200 dark:border-slate-700">
-                    <h3 className="text-lg font-medium text-slate-900 dark:text-white">Active Members</h3>
-                </div>
-                <ul role="list" className="divide-y divide-slate-200 dark:divide-slate-700">
-                    {members.map((member) => (
-                        <li key={member.id} className="px-4 py-4 sm:px-6 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                    <div className="flex-shrink-0">
-                                        {member.user.avatar ? (
-                                            <img className="h-10 w-10 rounded-full" src={member.user.avatar} alt="" />
-                                        ) : (
-                                            <div className="h-10 w-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold">
-                                                {member.user.name.charAt(0).toUpperCase()}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="ml-4">
-                                        <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                                            {member.user.name}
-                                            {member.userId === user.id && <span className="text-[10px] uppercase font-bold tracking-wider bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 px-2 py-0.5 rounded-full ring-1 ring-indigo-500/20">You</span>}
-                                        </div>
-                                        <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5">{member.user.email}</div>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-4">
-                                    {isAdmin() && member.role !== 'owner' && member.userId !== user.id ? (
-                                        <select
-                                            value={member.role}
-                                            onChange={(e) => handleUpdateRole(member.userId, e.target.value)}
-                                            className="text-sm rounded-md border-slate-300 dark:border-slate-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-slate-700 dark:text-white"
-                                        >
-                                            <option value="member">Member</option>
-                                            <option value="admin">Admin</option>
-                                        </select>
-                                    ) : (
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                            ${member.role === 'owner' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
-                                                member.role === 'admin' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                    'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300'}`}>
-                                            {member.role === 'owner' && <ShieldAlert className="w-3 h-3 mr-1" />}
-                                            {member.role === 'admin' && <Shield className="w-3 h-3 mr-1" />}
-                                            {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
-                                        </span>
-                                    )}
-
-                                    {/* Can remove if owner, or if admin removing a normal member, but not oneself */}
-                                    {(isOwner() || (isAdmin() && member.role === 'member')) && member.userId !== user.id && (
-                                        <button
-                                            onClick={() => handleRemoveMember(member.userId, member.user.name)}
-                                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-1"
-                                            title="Remove member"
-                                        >
-                                            <UserX className="h-5 w-5" />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
+            {/* Role breakdown pills */}
+            <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-medium text-slate-400 uppercase tracking-wider mr-1">Breakdown</span>
+                {ownerCount > 0 && <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800/40"><Crown className="w-3 h-3" />{ownerCount} Owner</span>}
+                {adminCount > 0 && <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800/40"><ShieldAlert className="w-3 h-3" />{adminCount} Admin{adminCount > 1 ? 's' : ''}</span>}
+                {memberCount > 0 && <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full bg-slate-50 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700"><Shield className="w-3 h-3" />{memberCount} Member{memberCount > 1 ? 's' : ''}</span>}
             </div>
 
-            {/* Pending Invites Table */}
+            {/* Members Grid */}
+            <div className="grid gap-3">
+                {members.map((member) => {
+                    const isCurrentUser = member.userId === user.id;
+                    const canEditRole = isAdmin() && member.role !== 'owner' && !isCurrentUser;
+                    const canRemove = (isOwner() || (isAdmin() && member.role === 'member')) && !isCurrentUser;
+
+                    return (
+                        <div
+                            key={member.id}
+                            className="group flex items-center justify-between gap-4 bg-white dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/60 rounded-2xl px-5 py-4 hover:border-indigo-200 dark:hover:border-indigo-800/40 hover:shadow-md hover:shadow-indigo-500/5 transition-all duration-200"
+                        >
+                            {/* Left — Avatar + Info */}
+                            <div className="flex items-center gap-4 min-w-0">
+                                <div className="relative shrink-0">
+                                    <Avatar name={member.user.name} avatar={member.user.avatar} />
+                                    {isCurrentUser && (
+                                        <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center">
+                                            <CheckCircle2 className="w-2.5 h-2.5 text-white" />
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="font-semibold text-slate-900 dark:text-white text-sm truncate">
+                                            {member.user.name}
+                                        </span>
+                                        {isCurrentUser && (
+                                            <span className="text-[10px] uppercase font-bold tracking-widest bg-indigo-100 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400 px-2 py-0.5 rounded-full">
+                                                You
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                        {member.user.email}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Right — Role + Actions */}
+                            <div className="flex items-center gap-3 shrink-0">
+                                {canEditRole ? (
+                                    <select
+                                        value={member.role}
+                                        onChange={(e) => handleUpdateRole(member.userId, e.target.value)}
+                                        className="text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm"
+                                    >
+                                        <option value="member">Member</option>
+                                        <option value="admin">Admin</option>
+                                    </select>
+                                ) : (
+                                    <RoleBadge role={member.role} />
+                                )}
+
+                                {canRemove && (
+                                    <button
+                                        onClick={() => handleRemoveMember(member.userId, member.user.name)}
+                                        title="Remove member"
+                                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-all duration-150"
+                                    >
+                                        <UserX className="h-4 w-4" />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* Pending Invites */}
             {isAdmin() && invites.length > 0 && (
-                <div className="bg-white dark:bg-slate-800 shadow sm:rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div className="px-4 py-5 sm:px-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                        <h3 className="text-lg font-medium text-slate-900 dark:text-white">Pending Invitations</h3>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
-                            {invites.length} Pending
+                <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Pending Invitations</h3>
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                            {invites.length}
                         </span>
                     </div>
-                    <ul role="list" className="divide-y divide-slate-200 dark:divide-slate-700">
-                        {invites.map((invite) => (
-                            <li key={invite.id} className="px-4 py-4 sm:px-6">
-                                <div className="flex items-center justify-between flex-wrap gap-4">
-                                    <div className="flex items-center">
-                                        <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700">
-                                            <Mail className="h-5 w-5 text-slate-400" />
-                                        </div>
-                                        <div className="ml-4">
-                                            <div className="font-medium text-slate-900 dark:text-white">{invite.email}</div>
-                                            <div className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                                                Invited to be <span className="font-medium">{invite.role}</span>
-                                                <span>•</span>
-                                                Expires {new Date(invite.expiresAt).toLocaleDateString()}
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={() => copyInviteLink(invite.token)}
-                                            className="inline-flex items-center px-3 py-1.5 border border-slate-300 dark:border-slate-600 shadow-sm text-xs font-medium rounded text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                                        >
-                                            <Link2 className="h-4 w-4 mr-1.5" />
-                                            Copy Link
-                                        </button>
-                                        <button
-                                            onClick={() => handleCancelInvite(invite.id)}
-                                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-red-700 bg-red-100 hover:bg-red-200 dark:text-red-400 dark:bg-red-900/30 dark:hover:bg-red-900/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                                        >
-                                            <XCircle className="h-4 w-4 mr-1.5" />
-                                            Cancel
-                                        </button>
+                    <div className="grid gap-2">
+                        {invites.map((invite) => (
+                            <div
+                                key={invite.id}
+                                className="flex items-center justify-between gap-4 bg-amber-50/60 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded-2xl px-5 py-4"
+                            >
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <div className="h-9 w-9 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center shrink-0">
+                                        <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 truncate">
+                                            {invite.email}
+                                        </p>
+                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                            Invited as <span className="font-medium capitalize">{invite.role}</span>
+                                            <span className="mx-1.5">·</span>
+                                            Expires {new Date(invite.expiresAt).toLocaleDateString()}
+                                        </p>
                                     </div>
                                 </div>
-                            </li>
+
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                        onClick={() => copyInviteLink(invite.token)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 shadow-sm transition-colors"
+                                    >
+                                        <Link2 className="h-3.5 w-3.5" />
+                                        Copy Link
+                                    </button>
+                                    <button
+                                        onClick={() => handleCancelInvite(invite.id)}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-100 dark:border-red-800/30 transition-colors"
+                                    >
+                                        <XCircle className="h-3.5 w-3.5" />
+                                        Revoke
+                                    </button>
+                                </div>
+                            </div>
                         ))}
-                    </ul>
+                    </div>
                 </div>
             )}
         </div>

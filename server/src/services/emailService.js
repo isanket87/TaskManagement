@@ -122,15 +122,83 @@ export const emailService = {
   },
 
   async sendDailyDigest({ to, userName, overdueTasks, dueTodayTasks, dueThisWeekCount, dashboardUrl }) {
-    // const taskList = (tasks) => tasks.map(t => `<li style="margin:4px 0;color:#374151;">${t.title} <span style="color:#9ca3af;">· ${t.projectName}</span></li>`).join('');
+    const taskRow = (t) =>
+      `<tr>
+        <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#1f2937;font-size:14px;">${t.title}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;color:#6b7280;font-size:13px;">${t.projectName}</td>
+      </tr>`
+
+    const taskTable = (tasks, accentColor) =>
+      tasks.length === 0 ? `<p style="color:#6b7280;font-size:14px;margin:0;">None — great job! 🎉</p>` :
+        `<table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
+        <thead><tr style="background:${accentColor}10;">
+          <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280;font-weight:600;text-transform:uppercase;">Task</th>
+          <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280;font-weight:600;text-transform:uppercase;">Project</th>
+        </tr></thead>
+        <tbody>${tasks.map(taskRow).join('')}</tbody>
+      </table>`
+
     await this.sendRaw({
       to,
       subject: `📋 Your Daily Summary — ${new Date().toLocaleDateString()}`,
       html: `
+<!DOCTYPE html><html><body style="font-family:Inter,sans-serif;background:#f8fafc;padding:20px;margin:0;">
+<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+  <div style="background:#6366f1;padding:32px;text-align:center;">
+    <h1 style="color:#fff;margin:0;font-size:22px;">📋 Daily Summary</h1>
+    <p style="color:#c7d2fe;margin:8px 0 0;font-size:14px;">${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
   </div>
-</div></body></html>`
+
+  <div style="padding:32px;">
+    <p style="color:#374151;margin:0 0 24px;">Hi <strong>${userName}</strong>, here's your task summary for today:</p>
+
+    <!-- Stats row -->
+    <div style="display:flex;gap:12px;margin-bottom:28px;">
+      <div style="flex:1;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px;text-align:center;">
+        <div style="font-size:28px;font-weight:700;color:#ef4444;">${overdueTasks.length}</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:4px;">Overdue</div>
+      </div>
+      <div style="flex:1;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:16px;text-align:center;">
+        <div style="font-size:28px;font-weight:700;color:#f97316;">${dueTodayTasks.length}</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:4px;">Due Today</div>
+      </div>
+      <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;text-align:center;">
+        <div style="font-size:28px;font-weight:700;color:#22c55e;">${dueThisWeekCount}</div>
+        <div style="font-size:12px;color:#6b7280;margin-top:4px;">This Week</div>
+      </div>
+    </div>
+
+    <!-- Overdue -->
+    ${overdueTasks.length > 0 ? `
+    <div style="margin-bottom:24px;">
+      <h3 style="color:#ef4444;margin:0 0 12px;font-size:15px;">🔴 Overdue Tasks</h3>
+      ${taskTable(overdueTasks, '#ef4444')}
+    </div>` : ''}
+
+    <!-- Due Today -->
+    <div style="margin-bottom:24px;">
+      <h3 style="color:#f97316;margin:0 0 12px;font-size:15px;">⏰ Due Today</h3>
+      ${taskTable(dueTodayTasks, '#f97316')}
+    </div>
+
+    <!-- CTA -->
+    <div style="text-align:center;margin-top:32px;">
+      <a href="${dashboardUrl}" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+        Open Dashboard →
+      </a>
+    </div>
+  </div>
+
+  <div style="padding:16px 32px;background:#f8fafc;border-top:1px solid #e5e7eb;">
+    <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
+      TaskFlow · <a href="${process.env.CLIENT_URL}/settings" style="color:#6366f1;">Manage notifications</a>
+    </p>
+  </div>
+</div>
+</body></html>`
     })
   },
+
 
   async sendWorkspaceInvite({ to, inviterName, workspaceName, memberCount, projectCount, token }) {
     const inviteUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/invite/${token}`

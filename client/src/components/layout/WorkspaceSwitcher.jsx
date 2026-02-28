@@ -8,6 +8,7 @@ import { cn } from '../../utils/helpers';
 const WorkspaceSwitcher = ({ collapsed }) => {
     const { workspace, workspaces, isAdmin } = useWorkspaceStore();
     const navigate = useNavigate();
+    // workspaces list is fetched once in App.jsx on startup — no local effect needed
 
     if (!workspace) return null;
 
@@ -56,8 +57,11 @@ const WorkspaceSwitcher = ({ collapsed }) => {
                                 <Menu.Item key={ws.id}>
                                     {({ active }) => (
                                         <button
-                                            onClick={() => navigate(`/workspaces`)}
-                                            // Navigation to /workspaces handles the actual switch logic safely
+                                            onClick={() => {
+                                                if (workspace.id !== ws.id) {
+                                                    navigate(`/workspace/${ws.slug}/dashboard`);
+                                                }
+                                            }}
                                             className={cn(
                                                 active ? 'bg-slate-100 dark:bg-slate-700/50 text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300',
                                                 'group flex w-full items-center px-4 py-2 text-sm'
