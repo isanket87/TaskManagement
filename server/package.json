@@ -10,6 +10,7 @@
         "build": "npx prisma generate",
         "postinstall": "npx prisma generate",
         "migrate": "npx prisma migrate deploy",
+        "migrate:prod": "set -a && . ./.env.production && set +a && npx prisma migrate deploy",
         "seed": "node prisma/seed.js"
     },
     "engines": {
