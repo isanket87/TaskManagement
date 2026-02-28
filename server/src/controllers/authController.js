@@ -245,4 +245,52 @@ const resetPassword = async (req, res, next) => {
     }
 }
 
-export { register, login, logout, refreshToken, getMe, googleRedirect, googleCallback, updateProfile, forgotPassword, resetPassword }
+const changePassword = async (req, res, next) => {
+    try {
+        const { currentPassword, newPassword } = z.object({
+            currentPassword: z.string().min(1),
+            newPassword: z.string().min(8, 'New password must be at least 8 characters')
+        }).parse(req.body)
+
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } })
+        if (!user?.password) return errorResponse(res, 'Cannot change password for OAuth accounts', 400)
+
+        const valid = await bcrypt.compare(currentPassword, user.password)
+        if (!valid) return errorResponse(res, 'Current password is incorrect', 400)
+
+        const hashed = await bcrypt.hash(newPassword, 12)
+        await prisma.user.update({ where: { id: req.user.id }, data: { password: hashed } })
+
+        return successResponse(res, null, 'Password changed successfully')
+    } catch (err) {
+        next(err)
+    }
+}
+
+const deleteAccount = async (req, res, next) => {
+    try {
+        const { password } = z.object({ password: z.string().min(1) }).parse(req.body)
+
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } })
+        if (!user) return errorResponse(res, 'User not found', 404)
+
+        // For OAuth users, skip password check
+        if (user.password) {
+            const valid = await bcrypt.compare(password, user.password)
+            if (!valid) return errorResponse(res, 'Incorrect password', 400)
+        }
+
+        // Delete the user — cascade deletes workspace memberships etc.
+        await prisma.user.delete({ where: { id: req.user.id } })
+
+        // Clear auth cookies
+        res.clearCookie('accessToken')
+        res.clearCookie('refreshToken')
+
+        return successResponse(res, null, 'Account deleted successfully')
+    } catch (err) {
+        next(err)
+    }
+}
+
+export { register, login, logout, refreshToken, getMe, googleRedirect, googleCallback, updateProfile, forgotPassword, resetPassword, changePassword, deleteAccount }
