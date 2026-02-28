@@ -1,15 +1,26 @@
+# Dependencies
 node_modules/
 client/node_modules/
 server/node_modules/
+
+# Environment secrets — NEVER commit these
 .env
-.env.local
-.env.production
-client/.env
-server/.env
+.env.*
+client/.env*
+server/.env*
+
+# Build outputs
 client/dist/
 server/dist/
+server/public/
+
+# Logs
 *.log
 npm-debug.log*
+
+# OS files
 .DS_Store
 Thumbs.db
+
+# Uploads (user files stored locally in dev)
 server/uploads/
