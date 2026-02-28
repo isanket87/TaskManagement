@@ -51,16 +51,22 @@ sudo -u postgres psql -c "CREATE DATABASE brioright OWNER brioright;" 2>/dev/nul
 echo ""
 echo "   ✅ Database ready!"
 echo "   DB User:     brioright"
-echo "   DB Password: $DB_PASS   ← SAVE THIS!"
+echo "   DB Password: $DB_PASS"
 echo "   DB Name:     brioright"
 echo ""
 
-# 7. Set up app directory
+# 7. Generate secrets
+echo "🔑 Generating secure secrets..."
+JWT_SECRET=$(openssl rand -hex 64)
+JWT_REFRESH_SECRET=$(openssl rand -hex 64)
+echo "   JWT secrets generated ✅"
+
+# 8. Set up app directory
 echo "📁 Setting up app directory..."
 mkdir -p /var/www/brioright
 mkdir -p /var/log/brioright
 
-# 8. Clone the repo
+# 9. Clone the repo
 echo "📥 Cloning Brioright repository..."
 if [ -d "/var/www/brioright/.git" ]; then
   echo "   Repo already exists, pulling latest..."
@@ -69,14 +75,48 @@ else
   git clone https://github.com/isanket87/TaskManagement.git /var/www/brioright
 fi
 
-# 9. Set up Nginx config
+# 10. Write .env.production with auto-generated values
+ENV_FILE="/var/www/brioright/server/.env.production"
+echo "📝 Writing $ENV_FILE..."
+cat > "$ENV_FILE" <<EOF
+NODE_ENV=production
+PORT=5000
+
+# Database (auto-generated)
+DATABASE_URL="postgresql://brioright:${DB_PASS}@localhost:5432/brioright"
+
+# Auth secrets (auto-generated — do NOT change unless you want all sessions to expire)
+JWT_SECRET="${JWT_SECRET}"
+JWT_REFRESH_SECRET="${JWT_REFRESH_SECRET}"
+
+# Frontend URL — update to your domain once you have one
+CLIENT_URL="http://185.167.99.233"
+
+# ── YOU MUST FILL THESE IN ──────────────────────────
+RESEND_API_KEY="re_CHANGE_ME"
+EMAIL_FROM="Brioright <noreply@brioright.app>"
+
+GOOGLE_CLIENT_ID="CHANGE_ME"
+GOOGLE_CLIENT_SECRET="CHANGE_ME"
+GOOGLE_CALLBACK_URL="http://185.167.99.233/api/auth/google/callback"
+# ────────────────────────────────────────────────────
+
+# File storage — optional
+CLOUDINARY_CLOUD_NAME=""
+CLOUDINARY_API_KEY=""
+CLOUDINARY_API_SECRET=""
+EOF
+chmod 600 "$ENV_FILE"
+echo "   .env.production written ✅"
+
+# 11. Set up Nginx config
 echo "🌐 Configuring Nginx..."
 cp /var/www/brioright/nginx.brioright.conf /etc/nginx/sites-available/brioright
 ln -sf /etc/nginx/sites-available/brioright /etc/nginx/sites-enabled/brioright
-rm -f /etc/nginx/sites-enabled/default  # Remove default site
+rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
 
-# 10. Firewall rules
+# 12. Firewall rules
 echo "🔒 Configuring firewall..."
 ufw --force enable
 ufw allow OpenSSH
@@ -87,19 +127,25 @@ echo "======================================"
 echo "  ✅ Server setup complete!"
 echo "======================================"
 echo ""
-echo "NEXT STEPS:"
-echo "1. Create /var/www/brioright/server/.env.production"
-echo "   Use: cp /var/www/brioright/server/.env.production.example /var/www/brioright/server/.env.production"
-echo "   Then edit it: nano /var/www/brioright/server/.env.production"
-echo "   (Set DATABASE_URL with password: $DB_PASS)"
+echo "Auto-generated values (already saved to .env.production):"
+echo "  DB Password:       $DB_PASS"
+echo "  JWT_SECRET:        (64-byte hex — stored in .env.production)"
+echo "  JWT_REFRESH_SECRET:(64-byte hex — stored in .env.production)"
 echo ""
-echo "2. Install deps + migrate + build:"
-echo "   cd /var/www/brioright/server && npm ci --omit=dev && npx prisma generate && npx prisma migrate deploy"
-echo "   cd ../client && npm ci && npm run build"
-echo "   mkdir -p ../server/public && cp -r dist/* ../server/public/"
+echo "ACTION REQUIRED — edit .env.production and fill in:"
+echo "  nano /var/www/brioright/server/.env.production"
 echo ""
-echo "3. Start the app:"
-echo "   cd /var/www/brioright && pm2 start ecosystem.config.cjs --env production && pm2 save"
-echo "   pm2 startup  ← and run the printed command"
+echo "  RESEND_API_KEY       → your Resend API key"
+echo "  GOOGLE_CLIENT_ID     → from Google Cloud Console"
+echo "  GOOGLE_CLIENT_SECRET → from Google Cloud Console"
 echo ""
-echo "4. Visit: http://185.167.99.233"
+echo "Then run the app:"
+echo "  cd /var/www/brioright/server"
+echo "  npm ci --omit=dev && npx prisma generate && npx prisma migrate deploy"
+echo "  cd ../client && npm ci && npm run build"
+echo "  mkdir -p ../server/public && cp -r dist/* ../server/public/"
+echo "  cd .. && pm2 start ecosystem.config.cjs --env production"
+echo "  pm2 save && pm2 startup"
+echo ""
+echo "  Visit: http://185.167.99.233 🚀"
+
