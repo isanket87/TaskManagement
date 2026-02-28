@@ -1,8 +1,10 @@
 import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 import prisma from '../utils/prisma.js'
 import { OAuth2Client } from 'google-auth-library'
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../utils/jwt.js'
 import { successResponse, errorResponse } from '../utils/helpers.js'
+import { emailService } from '../services/emailService.js'
 import { z } from 'zod'
 
 const googleClient = new OAuth2Client(
@@ -184,4 +186,63 @@ const updateProfile = async (req, res, next) => {
     }
 }
 
-export { register, login, logout, refreshToken, getMe, googleRedirect, googleCallback, updateProfile }
+const forgotPassword = async (req, res, next) => {
+    try {
+        const { email } = z.object({ email: z.string().email() }).parse(req.body)
+
+        const user = await prisma.user.findUnique({ where: { email } })
+        // Always return success to prevent user enumeration attacks
+        if (!user) return successResponse(res, null, 'If that email exists, a reset link has been sent.')
+
+        const rawToken = crypto.randomBytes(32).toString('hex')
+        const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex')
+        const expiry = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { passwordResetToken: hashedToken, passwordResetExpiry: expiry }
+        })
+
+        const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${rawToken}`
+        await emailService.sendPasswordReset({ to: user.email, userName: user.name, resetUrl })
+
+        return successResponse(res, null, 'If that email exists, a reset link has been sent.')
+    } catch (err) {
+        next(err)
+    }
+}
+
+const resetPassword = async (req, res, next) => {
+    try {
+        const { token, password } = z.object({
+            token: z.string().min(1),
+            password: z.string().min(8, 'Password must be at least 8 characters')
+        }).parse(req.body)
+
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex')
+        const user = await prisma.user.findFirst({
+            where: {
+                passwordResetToken: hashedToken,
+                passwordResetExpiry: { gt: new Date() }
+            }
+        })
+
+        if (!user) return errorResponse(res, 'Reset link is invalid or has expired.', 400)
+
+        const hashedPassword = await bcrypt.hash(password, 12)
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                password: hashedPassword,
+                passwordResetToken: null,
+                passwordResetExpiry: null
+            }
+        })
+
+        return successResponse(res, null, 'Password reset successfully. You can now sign in.')
+    } catch (err) {
+        next(err)
+    }
+}
+
+export { register, login, logout, refreshToken, getMe, googleRedirect, googleCallback, updateProfile, forgotPassword, resetPassword }

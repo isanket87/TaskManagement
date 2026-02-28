@@ -55,8 +55,8 @@ const Login = () => {
                     <div className="w-14 h-14 rounded-2xl bg-primary-600 flex items-center justify-center mb-4 shadow-lg shadow-primary-200 dark:shadow-primary-900/50">
                         <CheckSquare className="w-8 h-8 text-white" />
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">TaskFlow</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Project & Task Management</p>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Brioright</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Work with precision</p>
                 </div>
 
                 <div className="card p-8">
@@ -64,7 +64,18 @@ const Login = () => {
 
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                         <Input label="Email" type="email" placeholder="you@example.com" error={errors.email?.message} {...register('email')} />
-                        <Input label="Password" type="password" placeholder="••••••••" error={errors.password?.message} {...register('password')} />
+
+                        <div className="space-y-1">
+                            <Input label="Password" type="password" placeholder="••••••••" error={errors.password?.message} {...register('password')} />
+                            <div className="flex justify-end">
+                                <Link
+                                    to="/forgot-password"
+                                    className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium"
+                                >
+                                    Forgot password?
+                                </Link>
+                            </div>
+                        </div>
 
                         <Button type="submit" isLoading={isLoading} className="w-full mt-2">
                             <LogIn className="w-4 h-4" />
@@ -93,19 +104,13 @@ const Login = () => {
                         Continue with Google
                     </button>
 
-                    <div className="mt-4 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 text-xs text-gray-600 dark:text-gray-400">
-                        <p className="font-medium mb-1">Demo accounts:</p>
-                        <p>admin@demo.com / Demo@123</p>
-                        <p>member@demo.com / Demo@123</p>
-                    </div>
-
-                    <p className="text-center text-sm text-gray-500 mt-4">
+                    <p className="text-center text-sm text-gray-500 mt-5">
                         Don't have an account?{' '}
                         <Link
                             to={searchParams.get('returnTo') ? `/register?returnTo=${encodeURIComponent(searchParams.get('returnTo'))}` : '/register'}
                             className="text-primary-600 hover:text-primary-700 font-medium"
                         >
-                            Sign up
+                            Sign up free
                         </Link>
                     </p>
                 </div>

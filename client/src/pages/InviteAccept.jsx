@@ -127,7 +127,7 @@ const InviteAccept = () => {
                             <p className="text-sm text-slate-500 dark:text-slate-400">
                                 {inviteInfo.userExists
                                     ? "Welcome back! Please log in to your existing account to accept this invitation."
-                                    : "Welcome to TaskFlow! You need to create an account to accept this invitation."}
+                                    : "Welcome to Brioright! You need to create an account to accept this invitation."}
                             </p>
                             <button
                                 onClick={handleAccept}

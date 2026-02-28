@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Play, Square, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import useAuthStore from '../../store/authStore';
-import useProjectStore from '../../store/projectStore';
 import useWorkspaceStore from '../../store/workspaceStore';
 import * as timeService from '../../services/timeService';
+import { projectService } from '../../services/projectService';
 import toast from 'react-hot-toast';
 
 const pad = (n) => String(Math.floor(n)).padStart(2, '0');
@@ -18,7 +17,6 @@ const formatTime = (seconds) => {
 };
 
 const GlobalTimerBar = () => {
-    const { projects } = useProjectStore();
     const queryClient = useQueryClient();
 
     const [showStart, setShowStart] = useState(false);
@@ -27,6 +25,18 @@ const GlobalTimerBar = () => {
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
     const { workspace } = useWorkspaceStore();
+
+    // Use the same query key as the Projects page so React Query serves cached data — no duplicate fetch
+    const { data: projectsData } = useQuery({
+        queryKey: ['projects', workspace?.slug],
+        queryFn: async () => {
+            const res = await projectService.getAll();
+            return res.data;
+        },
+        enabled: !!workspace?.slug,
+        staleTime: 2 * 60 * 1000,
+    });
+    const projects = projectsData?.data?.projects || [];
 
     // Fetch active timer globally
     const activeTimerQuery = useQuery({

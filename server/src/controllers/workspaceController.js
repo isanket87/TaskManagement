@@ -510,6 +510,68 @@ const acceptInvite = async (req, res) => {
     }
 }
 
+const searchWorkspace = async (req, res) => {
+    try {
+        const { q } = req.query
+        if (!q || q.trim().length < 2) {
+            return res.json({ status: 'success', data: { projects: [], tasks: [], users: [] } })
+        }
+
+        const workspaceId = req.workspace.id
+        const search = q.trim()
+
+        const [projects, tasks, members] = await Promise.all([
+            prisma.project.findMany({
+                where: {
+                    workspaceId,
+                    OR: [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        { description: { contains: search, mode: 'insensitive' } }
+                    ]
+                },
+                select: { id: true, name: true, description: true, color: true },
+                take: 5
+            }),
+            prisma.task.findMany({
+                where: {
+                    project: { workspaceId },
+                    OR: [
+                        { title: { contains: search, mode: 'insensitive' } },
+                        { description: { contains: search, mode: 'insensitive' } }
+                    ]
+                },
+                select: { id: true, title: true, projectId: true, status: true, priority: true },
+                take: 5
+            }),
+            prisma.workspaceMember.findMany({
+                where: {
+                    workspaceId,
+                    user: {
+                        OR: [
+                            { name: { contains: search, mode: 'insensitive' } },
+                            { email: { contains: search, mode: 'insensitive' } }
+                        ]
+                    }
+                },
+                include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
+                take: 5
+            })
+        ])
+
+        return res.json({
+            status: 'success',
+            data: {
+                projects,
+                tasks,
+                users: members.map(m => m.user)
+            }
+        })
+    } catch (error) {
+        console.error('Search error:', error)
+        res.status(500).json({ status: 'error', message: 'Search failed' })
+    }
+}
+
 export {
     createWorkspace,
     getMyWorkspaces,
@@ -525,5 +587,6 @@ export {
     inviteMember,
     deleteInvite,
     getInviteDetails,
-    acceptInvite
+    acceptInvite,
+    searchWorkspace
 }

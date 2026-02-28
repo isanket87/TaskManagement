@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckSquare, UserPlus } from 'lucide-react';
+import { useState } from 'react';
 import useAuthStore from '../store/authStore';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -12,24 +13,48 @@ import toast from 'react-hot-toast';
 const schema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
     email: z.string().email('Invalid email'),
-    password: z.string().min(6, 'Password must be at least 6 characters'),
+    password: z.string().min(8, 'Password must be at least 8 characters'),
+    terms: z.boolean().refine(val => val === true, { message: 'You must accept the terms to continue' }),
 });
+
+// Password strength calculator
+const getPasswordStrength = (password) => {
+    if (!password) return { score: 0, label: '', color: '' };
+    let score = 0;
+    if (password.length >= 8) score++;
+    if (password.length >= 12) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+
+    if (score <= 1) return { score, label: 'Weak', color: 'bg-rose-500' };
+    if (score <= 2) return { score, label: 'Fair', color: 'bg-amber-500' };
+    if (score <= 3) return { score, label: 'Good', color: 'bg-yellow-400' };
+    if (score <= 4) return { score, label: 'Strong', color: 'bg-emerald-500' };
+    return { score, label: 'Very Strong', color: 'bg-emerald-600' };
+};
 
 const Register = () => {
     const { register: registerUser, isLoading } = useAuthStore();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const [password, setPassword] = useState('');
+
     const { register, handleSubmit, formState: { errors } } = useForm({
         resolver: zodResolver(schema),
         defaultValues: {
-            email: searchParams.get('email') || ''
+            email: searchParams.get('email') || '',
+            terms: false,
         }
     });
 
+    const strength = getPasswordStrength(password);
+
     const onSubmit = async (data) => {
-        const result = await registerUser(data);
+        const { terms, ...userData } = data;
+        const result = await registerUser(userData);
         if (result.success) {
-            toast.success('Account created!');
+            toast.success('Account created! Welcome to Brioright 🎉');
             const returnTo = searchParams.get('returnTo') || '/dashboard';
             navigate(returnTo);
         } else {
@@ -55,7 +80,8 @@ const Register = () => {
                     <div className="w-14 h-14 rounded-2xl bg-primary-600 flex items-center justify-center mb-4 shadow-lg shadow-primary-200 dark:shadow-primary-900/50">
                         <CheckSquare className="w-8 h-8 text-white" />
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">TaskFlow</h1>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Brioright</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Work with precision</p>
                 </div>
 
                 <div className="card p-8">
@@ -63,7 +89,65 @@ const Register = () => {
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                         <Input label="Full Name" placeholder="Alex Johnson" error={errors.name?.message} {...register('name')} />
                         <Input label="Email" type="email" placeholder="you@example.com" error={errors.email?.message} {...register('email')} />
-                        <Input label="Password" type="password" placeholder="Min. 6 characters" error={errors.password?.message} {...register('password')} />
+
+                        {/* Password with strength indicator */}
+                        <div className="space-y-2">
+                            <Input
+                                label="Password"
+                                type="password"
+                                placeholder="Min. 8 characters"
+                                error={errors.password?.message}
+                                {...register('password', {
+                                    onChange: (e) => setPassword(e.target.value)
+                                })}
+                            />
+                            {password.length > 0 && (
+                                <div className="space-y-1">
+                                    <div className="flex gap-1">
+                                        {[1, 2, 3, 4, 5].map((i) => (
+                                            <div
+                                                key={i}
+                                                className={`h-1 flex-1 rounded-full transition-all duration-300 ${i <= strength.score ? strength.color : 'bg-gray-200 dark:bg-gray-700'
+                                                    }`}
+                                            />
+                                        ))}
+                                    </div>
+                                    <p className={`text-xs font-medium ${strength.score <= 1 ? 'text-rose-500' :
+                                            strength.score <= 2 ? 'text-amber-500' :
+                                                strength.score <= 3 ? 'text-yellow-500' :
+                                                    'text-emerald-500'
+                                        }`}>
+                                        {strength.label}
+                                        {strength.score <= 2 && ' — try adding numbers, symbols, or uppercase letters'}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Terms of Service */}
+                        <div className="space-y-1">
+                            <label className="flex items-start gap-3 cursor-pointer group">
+                                <input
+                                    type="checkbox"
+                                    className="mt-0.5 w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                                    {...register('terms')}
+                                />
+                                <span className="text-sm text-gray-600 dark:text-gray-400 leading-snug">
+                                    I agree to the{' '}
+                                    <a href="/terms" target="_blank" className="text-primary-600 hover:text-primary-700 font-medium">
+                                        Terms of Service
+                                    </a>{' '}
+                                    and{' '}
+                                    <a href="/privacy" target="_blank" className="text-primary-600 hover:text-primary-700 font-medium">
+                                        Privacy Policy
+                                    </a>
+                                </span>
+                            </label>
+                            {errors.terms && (
+                                <p className="text-xs text-rose-500 ml-7">{errors.terms.message}</p>
+                            )}
+                        </div>
+
                         <Button type="submit" isLoading={isLoading} className="w-full mt-2">
                             <UserPlus className="w-4 h-4" />
                             Create Account
@@ -91,7 +175,7 @@ const Register = () => {
                         Continue with Google
                     </button>
 
-                    <p className="text-center text-sm text-gray-500 mt-4">
+                    <p className="text-center text-sm text-gray-500 mt-5">
                         Already have an account?{' '}
                         <Link
                             to={searchParams.get('returnTo') ? `/login?returnTo=${encodeURIComponent(searchParams.get('returnTo'))}` : '/login'}

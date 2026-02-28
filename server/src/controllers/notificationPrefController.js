@@ -48,7 +48,7 @@ const testSlack = async (req, res, next) => {
         await webhook.send({
             blocks: [{
                 type: 'section',
-                text: { type: 'mrkdwn', text: '✅ *TaskFlow Slack Integration Test*\nYour webhook is configured correctly!' }
+                text: { type: 'mrkdwn', text: '✅ *Brioright Slack Integration Test*\nYour webhook is configured correctly!' }
             }]
         })
 
@@ -64,7 +64,7 @@ const testEmail = async (req, res, next) => {
         const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { name: true, email: true } })
         await emailService.sendRaw({
             to: user.email,
-            subject: 'TaskFlow Email Test ✅',
+            subject: 'Brioright Email Test ✅',
             html: `<p>Hi ${user.name},</p><p>Your email notifications are working correctly!</p>`
         })
         return successResponse(res, null, 'Test email sent')

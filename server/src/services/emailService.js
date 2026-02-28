@@ -3,7 +3,7 @@ import { Resend } from 'resend'
 // Lazy-initialize so the key is always read fresh (not baked in at module load)
 const getResend = () => process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
-const FROM = () => process.env.EMAIL_FROM || 'TaskFlow <noreply@taskflow.app>'
+const FROM = () => process.env.EMAIL_FROM || 'Brioright <noreply@brioright.app>'
 
 export const emailService = {
   async sendRaw({ to, subject, html, text }) {
@@ -28,6 +28,34 @@ export const emailService = {
     } catch (err) {
       console.error('Email service error:', err)
     }
+  },
+
+  async sendPasswordReset({ to, userName, resetUrl }) {
+    await this.sendRaw({
+      to,
+      subject: 'Reset your Brioright password',
+      html: `<!DOCTYPE html><html><body style="font-family:Inter,sans-serif;background:#f8fafc;padding:20px;">
+<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1)">
+  <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:32px;text-align:center;">
+    <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700;">🔐 Reset your password</h1>
+    <p style="color:rgba(255,255,255,0.75);margin:8px 0 0;font-size:14px;">Brioright — Work with precision</p>
+  </div>
+  <div style="padding:32px;">
+    <p style="color:#374151;margin:0 0 16px;">Hi ${userName},</p>
+    <p style="color:#374151;margin:0 0 24px;">We received a request to reset your password. Click the button below to choose a new one. This link expires in <strong>1 hour</strong>.</p>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${resetUrl}" style="display:inline-block;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;">Reset Password →</a>
+    </div>
+    <p style="color:#6b7280;font-size:13px;margin:0 0 8px;">If the button doesn't work, copy this link into your browser:</p>
+    <p style="color:#6b7280;font-size:12px;word-break:break-all;background:#f8fafc;padding:10px;border-radius:6px;">${resetUrl}</p>
+    <p style="color:#9ca3af;font-size:13px;margin:24px 0 0;">If you didn't request this, you can safely ignore this email — your password won't change.</p>
+  </div>
+  <div style="padding:16px 32px;background:#f8fafc;border-top:1px solid #e5e7eb;">
+    <p style="margin:0;color:#9ca3af;font-size:12px;">Brioright · <a href="${process.env.CLIENT_URL}" style="color:#4f46e5;">brioright.app</a></p>
+  </div>
+</div></body></html>`,
+      text: `Hi ${userName},\n\nReset your Brioright password by clicking this link (expires in 1 hour):\n${resetUrl}\n\nIf you didn't request this, ignore this email.`
+    })
   },
 
   async sendTaskAssigned({ to, userName, taskTitle, projectName, priority, dueDate, assignedBy, taskUrl }) {
@@ -55,7 +83,7 @@ export const emailService = {
     ${taskUrl ? `<a href="${taskUrl}" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:16px;">View Task →</a>` : ''}
   </div>
   <div style="padding:16px 32px;background:#f8fafc;border-top:1px solid #e5e7eb;">
-    <p style="margin:0;color:#9ca3af;font-size:12px;">TaskFlow · <a href="${process.env.CLIENT_URL}/settings" style="color:#6366f1;">Manage notifications</a></p>
+    <p style="margin:0;color:#9ca3af;font-size:12px;">Brioright · <a href="${process.env.CLIENT_URL}/settings" style="color:#6366f1;">Manage notifications</a></p>
   </div>
 </div></body></html>`
     })
@@ -191,7 +219,7 @@ export const emailService = {
 
   <div style="padding:16px 32px;background:#f8fafc;border-top:1px solid #e5e7eb;">
     <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
-      TaskFlow · <a href="${process.env.CLIENT_URL}/settings" style="color:#6366f1;">Manage notifications</a>
+      Brioright · <a href="${process.env.CLIENT_URL}/settings" style="color:#6366f1;">Manage notifications</a>
     </p>
   </div>
 </div>
@@ -205,12 +233,12 @@ export const emailService = {
 
     await this.sendRaw({
       to,
-      subject: `${inviterName} invited you to join ${workspaceName} on TaskFlow`,
+      subject: `${inviterName} invited you to join ${workspaceName} on Brioright`,
       html: `
 <!DOCTYPE html><html><body style="font-family:Inter,sans-serif;background:#f8fafc;padding:20px;">
 <div style="max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.1)">
   <div style="background:#4f46e5;padding:32px;text-align:center;">
-    <h1 style="color:#fff;margin:0;font-size:24px;">TaskFlow</h1>
+    <h1 style="color:#fff;margin:0;font-size:24px;">Brioright</h1>
   </div>
   <div style="padding:32px;">
     <h2 style="color:#1f2937;margin-top:0;">You've been invited! 🎉</h2>

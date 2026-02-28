@@ -7,6 +7,8 @@ import useAuthStore from './store/authStore';
 import useWorkspaceStore from './store/workspaceStore';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import AuthCallback from './pages/AuthCallback';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
@@ -112,6 +114,8 @@ function App() {
                         {/* Public routes */}
                         <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
                         <Route path="/register" element={<AuthRoute><Register /></AuthRoute>} />
+                        <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
                         <Route path="/auth/callback" element={<AuthCallback />} />
                         <Route path="/invite/:token" element={<InviteAccept />} />
 

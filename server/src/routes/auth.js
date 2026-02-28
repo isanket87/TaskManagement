@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { register, login, logout, refreshToken, getMe, googleRedirect, googleCallback, updateProfile } from '../controllers/authController.js'
+import { register, login, logout, refreshToken, getMe, googleRedirect, googleCallback, updateProfile, forgotPassword, resetPassword } from '../controllers/authController.js'
 import auth from '../middleware/auth.js'
 import rateLimit from 'express-rate-limit'
 
@@ -20,6 +20,10 @@ router.post('/logout', logout)
 router.post('/refresh', refreshToken)
 router.get('/me', auth, getMe)
 router.patch('/profile', auth, updateProfile)
+
+// Password reset
+router.post('/forgot-password', authLimiter, forgotPassword)
+router.post('/reset-password', authLimiter, resetPassword)
 
 // Google OAuth
 router.get('/google', googleRedirect)

@@ -45,6 +45,9 @@ model User {
   workspaces             WorkspaceMember[]
   sentInvites            WorkspaceInvite[]
   invitedMembers         WorkspaceMember[]       @relation("InvitedBy")
+  // Password Reset
+  passwordResetToken  String?
+  passwordResetExpiry DateTime?
 }
 
 model Project {

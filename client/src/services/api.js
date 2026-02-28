@@ -58,84 +58,85 @@ api.interceptors.request.use(
 let isRefreshing = false;
 let failedQueue = [];
 
-const processQueue = (error, token = null) => {
+const processQueue = (error) => {
     failedQueue.forEach((prom) => {
         if (error) prom.reject(error);
-        else prom.resolve(token);
+        else prom.resolve();
     });
     failedQueue = [];
+};
+
+// These routes should never trigger a token refresh attempt
+const AUTH_BYPASS_URLS = [
+    '/auth/login',
+    '/auth/register',
+    '/auth/refresh',
+    '/auth/forgot-password',
+    '/auth/reset-password',
+];
+
+const clearAuthAndRedirect = () => {
+    // Clear persisted Zustand auth state
+    try {
+        const authStr = localStorage.getItem('auth-storage');
+        if (authStr) {
+            const parsed = JSON.parse(authStr);
+            if (parsed?.state) {
+                parsed.state.user = null;
+                parsed.state.isAuthenticated = false;
+                localStorage.setItem('auth-storage', JSON.stringify(parsed));
+            }
+        }
+    } catch (e) {
+        console.error('[Auth] Failed to clear auth storage:', e);
+    }
+
+    // Notify any in-memory Zustand listeners
+    window.dispatchEvent(new Event('auth-expired'));
+
+    // Hard redirect so React Router resets cleanly — prevents further token retries
+    if (!window.location.pathname.startsWith('/login') &&
+        !window.location.pathname.startsWith('/register')) {
+        const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = `/login?returnTo=${returnTo}`;
+    }
 };
 
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
+        const requestUrl = originalRequest?.url || '';
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
-            // Prevent infinite refresh loops if the refresh endpoint itself fails
-            if (originalRequest.url.includes('/auth/refresh')) {
-                // Clear state on explicit refresh failure
-                try {
-                    const authStr = localStorage.getItem('auth-storage');
-                    if (authStr) {
-                        const parsed = JSON.parse(authStr);
-                        parsed.state.user = null;
-                        parsed.state.isAuthenticated = false;
-                        localStorage.setItem('auth-storage', JSON.stringify(parsed));
-                    }
-                } catch (e) {
-                    console.error('Failed to clear local storage on refresh failure', e);
-                }
-
-                // Allow React Router to handle the redirect naturally via the ProtectedRoute guards
-                // rather than a hard window location reload that races with component mounting.
-                // window.location.href = '/login'; 
-                return Promise.reject(error);
-            }
-
-            if (isRefreshing) {
-                return new Promise((resolve, reject) => {
-                    failedQueue.push({ resolve, reject });
-                })
-                    .then(() => api(originalRequest))
-                    .catch((err) => Promise.reject(err));
-            }
-
-            originalRequest._retry = true;
-            isRefreshing = true;
-
-            try {
-                await api.post('/auth/refresh');
-                processQueue(null);
-                return api(originalRequest);
-            } catch (err) {
-                processQueue(err);
-
-                // Clear Zustand persisted state manually so Next render kicks them to login properly
-                try {
-                    const authStr = localStorage.getItem('auth-storage');
-                    if (authStr) {
-                        const parsed = JSON.parse(authStr);
-                        parsed.state.user = null;
-                        parsed.state.isAuthenticated = false;
-                        localStorage.setItem('auth-storage', JSON.stringify(parsed));
-                    }
-                    // Dispatch a custom event that App.jsx or authStore can optionally listen to 
-                    // to force a fast React state update, though localStorage change + reload usually suffices
-                    window.dispatchEvent(new Event('auth-expired'));
-                } catch (e) {
-                    console.error('Failed to clear local storage on auth expire', e);
-                }
-
-                // Instead of a hard window reload, let's just trigger a React Router navigation 
-                // by letting the Promise reject. The ProtectedRoute will see isAuthenticated: false soon.
-                return Promise.reject(err);
-            } finally {
-                isRefreshing = false;
-            }
+        // Don't attempt refresh for auth endpoints or already-retried requests
+        const isAuthEndpoint = AUTH_BYPASS_URLS.some(url => requestUrl.includes(url));
+        if (error.response?.status !== 401 || isAuthEndpoint || originalRequest._retry) {
+            return Promise.reject(error);
         }
 
-        return Promise.reject(error);
+        // If another request is already refreshing, queue this one
+        if (isRefreshing) {
+            return new Promise((resolve, reject) => {
+                failedQueue.push({ resolve, reject });
+            })
+                .then(() => api(originalRequest))
+                .catch((err) => Promise.reject(err));
+        }
+
+        originalRequest._retry = true;
+        isRefreshing = true;
+
+        try {
+            await api.post('/auth/refresh');
+            processQueue(null);
+            return api(originalRequest);
+        } catch (refreshError) {
+            processQueue(refreshError);
+            clearAuthAndRedirect();
+            return Promise.reject(refreshError);
+        } finally {
+            isRefreshing = false;
+        }
     }
 );
 

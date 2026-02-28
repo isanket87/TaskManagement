@@ -80,7 +80,7 @@ const Sidebar = () => {
                             exit={{ opacity: 0, x: -10 }}
                             className="font-bold text-slate-800 dark:text-slate-100 text-lg whitespace-nowrap"
                         >
-                            TaskFlow
+                            Brioright
                         </motion.span>
                     )}
                 </AnimatePresence>

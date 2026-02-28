@@ -59,7 +59,7 @@ const WorkspacePicker = () => {
                         Select a Workspace
                     </h2>
                     <p className="mt-4 text-lg text-slate-500 dark:text-slate-400">
-                        Choose an active workspace to continue to TaskFlow.
+                        Choose an active workspace to continue to Brioright.
                     </p>
                 </div>
 
@@ -86,7 +86,7 @@ const WorkspacePicker = () => {
                                                 <div>
                                                     <p className="truncate text-lg font-medium text-slate-900 dark:text-white">{ws.name}</p>
                                                     <div className="flex items-center text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                                        <span>taskflow.app/{ws.slug}</span>
+                                                        <span>brioright.app/{ws.slug}</span>
                                                     </div>
                                                 </div>
                                                 <div className="hidden md:flex flex-col items-end justify-center">

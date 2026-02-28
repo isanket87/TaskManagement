@@ -34,6 +34,7 @@ router.get('/', workspaceController.getMyWorkspaces)
 router.get('/:slug', requireWorkspace, workspaceController.getWorkspaceDetails)
 router.patch('/:slug/active', requireWorkspace, workspaceController.setActiveWorkspace)
 router.get('/:slug/dashboard/stats', requireWorkspace, getDashboardStats)
+router.get('/:slug/search', requireWorkspace, workspaceController.searchWorkspace)
 
 // Mount sub-resources scoped to this workspace
 router.use('/:slug/projects', requireWorkspace, projectRoutes)

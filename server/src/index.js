@@ -227,7 +227,7 @@ const start = async () => {
         httpServer.listen(PORT, '0.0.0.0', () => {
             console.log(`
   ┌─────────────────────────────────────────┐
-  │          🚀 TaskFlow Server             │
+  │          🚀 Brioright Server            │
   ├─────────────────────────────────────────┤
   │  Port:     ${PORT}                         │
   │  Env:      ${process.env.NODE_ENV}             │
