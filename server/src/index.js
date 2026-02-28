@@ -68,6 +68,9 @@ const io = new Server(httpServer, {
 app.set('io', io)
 setSocketIO(io)
 
+// Trust Nginx reverse proxy — required for express-rate-limit and correct IP detection
+app.set('trust proxy', 1)
+
 // ── SECURITY ──
 app.use(helmet({
     contentSecurityPolicy: false,
