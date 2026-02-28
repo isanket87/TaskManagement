@@ -1,54 +1,60 @@
 #!/bin/bash
 
-# TaskFlow — Zero-downtime deployment script
-# Run this on your LOCAL machine to deploy to Kamatera
-# Usage: ./deploy.sh
+# Brioright — Zero-downtime deployment script
+# Run from LOCAL machine: bash deploy.sh
+# Requires: ssh alias 'myserver' configured in ~/.ssh/config
 
 set -e  # Exit on any error
 
-SERVER_IP="185.167.99.233"       # Replace with your Kamatera IP
-SERVER_USER="root"           # Deploy user (not root)
-APP_DIR="/var/www/taskflow"
+SERVER_USER="root"
+SERVER_IP="185.167.99.233"
+APP_DIR="/var/www/brioright"
 REPO_URL="https://github.com/isanket87/TaskManagement.git"
+BRANCH="main"
 
-echo "🚀 Starting TaskFlow deployment..."
+echo "🚀 Starting Brioright deployment..."
 echo "📡 Server: $SERVER_IP"
 echo ""
 
-# SSH into server and run deployment
-ssh $SERVER_USER@$SERVER_IP << 'ENDSSH'
+ssh myserver << 'ENDSSH'
   set -e
-  
-  echo "📥 Pulling latest code..."
-  cd /var/www/taskflow
+
+  APP_DIR="/var/www/brioright"
+
+  if [ ! -d "$APP_DIR" ]; then
+    echo "❌ App directory not found. Run the initial setup first."
+    exit 1
+  fi
+
+  echo "📥 Pulling latest code from GitHub..."
+  cd "$APP_DIR"
   git pull origin main
-  
+
   echo "📦 Installing server dependencies..."
   cd server
-  npm ci --production
-  
-  echo "🔄 Running database migrations..."
-  npx prisma migrate deploy
+  npm ci --omit=dev
   npx prisma generate
-  
-  echo "📦 Installing client dependencies..."
+  npx prisma migrate deploy
+
+  echo "📦 Installing client dependencies + building..."
   cd ../client
   npm ci
-  
-  echo "🏗️  Building React app..."
   npm run build
-  
-  echo "📁 Copying build to web root..."
-  sudo cp -r dist/* /var/www/taskflow-static/
-  
-  echo "♻️  Restarting app (zero downtime)..."
+
+  echo "📁 Syncing React build to server public folder..."
+  mkdir -p ../server/public
+  rsync -a --delete dist/ ../server/public/
+
+  echo "♻️  Reloading app with zero downtime..."
   cd ..
-  pm2 reload ecosystem.config.cjs --env production
-  
+  pm2 reload ecosystem.config.cjs --env production --update-env
+  pm2 save
+
+  echo ""
   echo "✅ Deployment complete!"
-  pm2 status
+  pm2 list
 ENDSSH
 
 echo ""
-echo "🎉 TaskFlow deployed successfully!"
+echo "🎉 Brioright deployed successfully!"
 echo "🌐 Live at: http://$SERVER_IP"
