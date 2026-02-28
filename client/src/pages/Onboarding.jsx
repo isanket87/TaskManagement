@@ -132,7 +132,7 @@ const Onboarding = () => {
                 description: 'Created during onboarding',
                 color: '#6366f1',
             });
-            const project = pRes.data.data;
+            const project = pRes.data.data.project;
 
             // Auto-create sample tasks
             const sampleTasks = [
@@ -183,8 +183,8 @@ const Onboarding = () => {
                             <div key={s.id} className="flex items-center flex-1">
                                 <div className={`flex flex-col items-center gap-1 ${i < STEPS.length - 1 ? 'flex-1' : ''}`}>
                                     <div className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${done ? 'bg-indigo-600 border-indigo-600' :
-                                            active ? 'bg-white dark:bg-gray-900 border-indigo-600 shadow-md shadow-indigo-100' :
-                                                'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700'
+                                        active ? 'bg-white dark:bg-gray-900 border-indigo-600 shadow-md shadow-indigo-100' :
+                                            'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700'
                                         }`}>
                                         {done
                                             ? <CheckCircle2 className="w-5 h-5 text-white" />
