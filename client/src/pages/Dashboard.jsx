@@ -6,8 +6,10 @@ import DueDateSummaryCards from '../components/shared/DueDateSummaryCards';
 import OverdueBanner from '../components/shared/OverdueBanner';
 import UpcomingDeadlines from '../components/shared/UpcomingDeadlines';
 import ActivityFeed from '../components/shared/ActivityFeed';
+import QuickTaskCreate from '../components/shared/QuickTaskCreate';
 import { taskService } from '../services/taskService';
 import { notificationService } from '../services/notificationService';
+import { projectService } from '../services/projectService';
 import { TaskCardSkeleton } from '../components/ui/Skeleton';
 import DueDateBadge from '../components/due-date/DueDateBadge';
 import useNotificationStore from '../store/notificationStore';
@@ -54,6 +56,13 @@ const Dashboard = () => {
         queryKey: ['notifications', workspace?.slug],
         queryFn: () => notificationService.getAll(),
     });
+
+    const { data: projectsData } = useQuery({
+        queryKey: ['projects', workspace?.slug],
+        queryFn: () => projectService.getAll(),
+        enabled: !!workspace?.slug,
+    });
+    const projects = projectsData?.data?.data?.projects || [];
 
     // React Query v5 removed onSuccess — use useEffect instead
     useEffect(() => {
@@ -109,9 +118,7 @@ const Dashboard = () => {
                                         </Badge>
                                     )}
                                 </div>
-                                <span className="text-sm font-medium text-slate-400 bg-slate-100 dark:bg-slate-700/50 px-2.5 py-0.5 rounded-full">
-                                    {filteredTasks.length}
-                                </span>
+                                <QuickTaskCreate projects={projects} />
                             </div>
 
                             {isLoading ? (
