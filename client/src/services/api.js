@@ -95,7 +95,7 @@ const clearAuthAndRedirect = () => {
     window.dispatchEvent(new Event('auth-expired'));
 
     // Don't redirect if already on a public page
-    const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+    const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password', '/terms', '/privacy'];
     const isPublicPath = PUBLIC_PATHS.some(p => window.location.pathname === p) ||
         window.location.pathname.startsWith('/invite/');
     if (isPublicPath) return;
