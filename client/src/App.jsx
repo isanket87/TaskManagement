@@ -28,6 +28,8 @@ import WorkspaceSettings from './pages/settings/WorkspaceSettings';
 import React from 'react';
 import GlobalTimerBar from './components/time/GlobalTimerBar';
 import Landing from './pages/Landing';
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -118,6 +120,8 @@ function App() {
                         <Route path="/reset-password" element={<ResetPassword />} />
                         <Route path="/auth/callback" element={<AuthCallback />} />
                         <Route path="/invite/:token" element={<InviteAccept />} />
+                        <Route path="/terms" element={<TermsOfService />} />
+                        <Route path="/privacy" element={<PrivacyPolicy />} />
 
                         {/* Workspace setup & selection */}
                         <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
