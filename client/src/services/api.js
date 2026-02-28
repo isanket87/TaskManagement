@@ -94,12 +94,14 @@ const clearAuthAndRedirect = () => {
     // Notify any in-memory Zustand listeners
     window.dispatchEvent(new Event('auth-expired'));
 
-    // Hard redirect so React Router resets cleanly — prevents further token retries
-    if (!window.location.pathname.startsWith('/login') &&
-        !window.location.pathname.startsWith('/register')) {
-        const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
-        window.location.href = `/login?returnTo=${returnTo}`;
-    }
+    // Don't redirect if already on a public page
+    const PUBLIC_PATHS = ['/', '/login', '/register', '/forgot-password', '/reset-password'];
+    const isPublicPath = PUBLIC_PATHS.some(p => window.location.pathname === p) ||
+        window.location.pathname.startsWith('/invite/');
+    if (isPublicPath) return;
+
+    const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
+    window.location.href = `/login?returnTo=${returnTo}`;
 };
 
 api.interceptors.response.use(
