@@ -1,18 +1,20 @@
 import { Resend } from 'resend'
 
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
+// Lazy-initialize so the key is always read fresh (not baked in at module load)
+const getResend = () => process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 
-const FROM = process.env.EMAIL_FROM || 'TaskFlow <noreply@taskflow.app>'
+const FROM = () => process.env.EMAIL_FROM || 'TaskFlow <noreply@taskflow.app>'
 
 export const emailService = {
   async sendRaw({ to, subject, html, text }) {
-    if (!process.env.RESEND_API_KEY) {
+    const resend = getResend()
+    if (!resend) {
       console.log(`[Email] Resend not configured. Would send to ${to}: ${subject}`)
       return
     }
     try {
       const { data, error } = await resend.emails.send({
-        from: FROM,
+        from: FROM(),
         to: Array.isArray(to) ? to : [to],
         subject,
         html,

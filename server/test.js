@@ -1,1 +1,0 @@
-const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); async function m() { const [u, n] = await Promise.all([prisma.user.findMany(), prisma.notification.findMany()]); console.log('users:', u.map(x=>x.email)); console.log('notifs:', n); } m().then(() => process.exit(0));

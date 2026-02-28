@@ -14,11 +14,12 @@ import dotenv from 'dotenv'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-// Prioritize root .env.development in dev mode, otherwise fallback to local .env
-if (process.env.NODE_ENV !== 'production') {
-    dotenv.config({ path: path.join(__dirname, '../../.env.development') })
+// server/.env is the single source of truth for all environments
+// In production, server/.env.production can overlay additional values
+dotenv.config({ path: path.join(__dirname, '../.env') })
+if (process.env.NODE_ENV === 'production') {
+    dotenv.config({ path: path.join(__dirname, '../.env.production'), override: true })
 }
-dotenv.config()
 
 console.log(`[Env] Loaded environment: ${process.env.NODE_ENV || 'not set'}`)
 console.log(`[Env] Database URL host: ${process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL).host : 'none'}`)

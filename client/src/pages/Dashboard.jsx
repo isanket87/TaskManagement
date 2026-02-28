@@ -42,31 +42,37 @@ const Dashboard = () => {
         queryKey: ['dashboard-stats', workspace?.slug],
         queryFn: () => taskService.getDashboardStats(),
         refetchInterval: 60_000,
-        onSuccess: (res) => {
-            // no-op
-        }
     });
 
     const { data: summaryData } = useQuery({
         queryKey: ['due-date-summary', workspace?.slug],
         queryFn: () => taskService.getDueDateSummary(),
         refetchInterval: 60_000,
-        onSuccess: (res) => {
-            if (res.data?.data?.summary) setDueDateSummary(res.data.data.summary);
-        }
     });
 
     const { data: notifData } = useQuery({
         queryKey: ['notifications', workspace?.slug],
         queryFn: () => notificationService.getAll(),
-        onSuccess: (res) => {
-            if (res.data?.data) setNotifications(res.data.data.notifications, res.data.data.unreadCount);
-        }
     });
+
+    // React Query v5 removed onSuccess — use useEffect instead
+    useEffect(() => {
+        const summary = summaryData?.data?.data?.summary;
+        if (summary) setDueDateSummary(summary);
+    }, [summaryData]);
+
+    useEffect(() => {
+        const d = notifData?.data?.data;
+        if (d) setNotifications(d.notifications, d.unreadCount);
+    }, [notifData]);
 
     const stats = statsData?.data?.data?.stats;
     const myTasks = stats?.myTasks || [];
     const upcomingTasks = stats?.upcomingTasks || [];
+    // Dedup: myTasks and upcomingTasks can include the same tasks (same user, same date window)
+    const allTasksForDeadlines = [...myTasks, ...upcomingTasks].filter(
+        (task, index, self) => index === self.findIndex((t) => t.id === task.id)
+    );
     const overdueCount = stats?.overdueTasks || 0;
 
     // Filter tasks
@@ -151,7 +157,7 @@ const Dashboard = () => {
 
                     {/* Right — Upcoming Deadlines & Activity */}
                     <div className="space-y-6">
-                        <UpcomingDeadlines tasks={[...myTasks, ...upcomingTasks]} />
+                        <UpcomingDeadlines tasks={allTasksForDeadlines} />
                         <ActivityFeed activities={stats?.recentActivity || []} />
                     </div>
                 </div>

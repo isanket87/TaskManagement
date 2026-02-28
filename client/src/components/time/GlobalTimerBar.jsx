@@ -60,12 +60,13 @@ const GlobalTimerBar = () => {
     const startMutation = useMutation({
         mutationFn: (data) => timeService.createEntry(data),
         onSuccess: (res) => {
-            queryClient.setQueryData(['active-timer'], res.data.data.entry);
+            queryClient.setQueryData(['active-timer', workspace?.id], res.data.data.entry);
             setShowStart(false);
             setDesc('');
             toast.success('Timer started');
             // If viewing a task's time log, invalidate it
-            queryClient.invalidateQueries(['timesheets']);
+            queryClient.invalidateQueries({ queryKey: ['timesheets'] });
+            queryClient.invalidateQueries({ queryKey: ['time-summary'] });
         },
         onError: () => toast.error('Failed to start timer')
     });
@@ -74,15 +75,18 @@ const GlobalTimerBar = () => {
         mutationFn: () => timeService.stopTimer(activeEntry.id),
         onSuccess: () => {
             toast.success(`Stopped — ${formatTime(elapsedSeconds)}`);
-            queryClient.setQueryData(['active-timer'], null);
-            queryClient.invalidateQueries(['timesheets']);
+            queryClient.setQueryData(['active-timer', workspace?.id], null);
+            queryClient.invalidateQueries({ queryKey: ['timesheets'] });
+            queryClient.invalidateQueries({ queryKey: ['time-summary'] });
             // The task-specific time entries will be invalidated if they are mounted
             if (activeEntry?.taskId) {
-                queryClient.invalidateQueries(['task', activeEntry.projectId, activeEntry.taskId, 'time-entries']);
+                queryClient.invalidateQueries({ queryKey: ['task', activeEntry.projectId, activeEntry.taskId, 'time-entries'] });
             }
         },
         onError: () => toast.error('Failed to stop timer')
     });
+
+    const loading = startMutation.isPending || stopMutation.isPending;
 
     const handleStart = (e) => {
         e.preventDefault();

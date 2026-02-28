@@ -13,6 +13,7 @@ const googleClient = new OAuth2Client(
 
 const COOKIE_OPTIONS = {
     httpOnly: true,
+    //need to set false for secure in development
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/'
@@ -42,7 +43,7 @@ const register = async (req, res, next) => {
             select: { id: true, name: true, email: true, avatar: true, role: true, activeWorkspaceId: true, createdAt: true }
         })
 
-        const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role })
+        const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, name: user.name })
         const refreshToken = signRefreshToken({ id: user.id })
 
         res.cookie('accessToken', accessToken, { ...COOKIE_OPTIONS, maxAge: 15 * 60 * 1000 })
@@ -64,7 +65,7 @@ const login = async (req, res, next) => {
         const isValid = await bcrypt.compare(password, user.password)
         if (!isValid) return errorResponse(res, 'Invalid credentials', 401)
 
-        const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role })
+        const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, name: user.name })
         const refreshToken = signRefreshToken({ id: user.id })
 
         res.cookie('accessToken', accessToken, { ...COOKIE_OPTIONS, maxAge: 15 * 60 * 1000 })
@@ -91,11 +92,11 @@ const refreshToken = async (req, res, next) => {
         const decoded = verifyRefreshToken(token)
         const user = await prisma.user.findUnique({
             where: { id: decoded.id },
-            select: { id: true, email: true, role: true }
+            select: { id: true, email: true, role: true, name: true }
         })
         if (!user) return errorResponse(res, 'User not found', 401)
 
-        const newAccessToken = signAccessToken({ id: user.id, email: user.email, role: user.role })
+        const newAccessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, name: user.name })
         const newRefreshToken = signRefreshToken({ id: user.id })
 
         res.cookie('accessToken', newAccessToken, { ...COOKIE_OPTIONS, maxAge: 15 * 60 * 1000 })
@@ -156,7 +157,7 @@ const googleCallback = async (req, res, next) => {
             })
         }
 
-        const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role })
+        const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, name: user.name })
         const refreshToken = signRefreshToken({ id: user.id })
 
         res.cookie('accessToken', accessToken, { ...COOKIE_OPTIONS, maxAge: 15 * 60 * 1000 })

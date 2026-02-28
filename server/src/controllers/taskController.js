@@ -430,7 +430,7 @@ const getDashboardStats = async (req, res, next) => {
 
         const workspaceId = req.workspace.id
 
-        const [myTasks, projects, overdueTasks, upcomingTasks] = await Promise.all([
+        const [myTasks, projects, overdueTasks, upcomingTasks, recentActivity] = await Promise.all([
             prisma.task.findMany({
                 where: { assigneeId: userId, status: { not: 'done' }, project: { workspaceId } },
                 select: taskSelect,
@@ -446,10 +446,16 @@ const getDashboardStats = async (req, res, next) => {
                 select: taskSelect,
                 orderBy: { dueDate: 'asc' },
                 take: 10
+            }),
+            prisma.activityLog.findMany({
+                where: { project: { workspaceId } },
+                include: { user: { select: { id: true, name: true, avatar: true } } },
+                orderBy: { createdAt: 'desc' },
+                take: 10
             })
         ])
 
-        return successResponse(res, { stats: { myTasks, projects, overdueTasks, upcomingTasks } })
+        return successResponse(res, { stats: { myTasks, projects, overdueTasks, upcomingTasks, recentActivity } })
     } catch (err) {
         next(err)
     }
