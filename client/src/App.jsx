@@ -148,8 +148,8 @@ function App() {
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </ErrorBoundary>
-                {/* Global persistent timer bar */}
-                <GlobalTimerBar />
+                {/* Global persistent timer bar — only for authenticated users */}
+                {isAuthenticated && <GlobalTimerBar />}
 
             </BrowserRouter>
             <Toaster
