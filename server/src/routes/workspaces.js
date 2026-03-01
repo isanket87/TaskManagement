@@ -11,11 +11,13 @@ import taskRoutes from './tasks.js'
 import commentRoutes from './comments.js'
 import attachmentRoutes from './attachments.js'
 import timeEntryRoutes from './timeEntries.js'
+import timesheetRoutes from './timesheets.js'
 import notificationRoutes from './notifications.js'
 import fileRoutes from './files.js'
 import channelRoutes from './channels.js'
 import notifPrefRoutes from './notificationPreferences.js'
 import { getDashboardStats } from '../controllers/taskController.js'
+import { getWorkspaceAnalytics } from '../controllers/workspaceController.js'
 
 const router = express.Router({ mergeParams: true })
 
@@ -34,6 +36,7 @@ router.get('/', workspaceController.getMyWorkspaces)
 router.get('/:slug', requireWorkspace, workspaceController.getWorkspaceDetails)
 router.patch('/:slug/active', requireWorkspace, workspaceController.setActiveWorkspace)
 router.get('/:slug/dashboard/stats', requireWorkspace, getDashboardStats)
+router.get('/:slug/analytics', requireWorkspace, getWorkspaceAnalytics)
 router.get('/:slug/search', requireWorkspace, workspaceController.searchWorkspace)
 
 // Mount sub-resources scoped to this workspace
@@ -43,6 +46,7 @@ router.use('/:slug/tasks', requireWorkspace, taskRoutes)
 router.use('/:slug/tasks/:taskId/comments', requireWorkspace, commentRoutes)
 router.use('/:slug/tasks/:taskId/attachments', requireWorkspace, attachmentRoutes)
 router.use('/:slug/time-entries', requireWorkspace, timeEntryRoutes)
+router.use('/:slug/timesheets', requireWorkspace, timesheetRoutes)
 router.use('/:slug/notifications', requireWorkspace, notificationRoutes)
 router.use('/:slug/files', requireWorkspace, fileRoutes)
 router.use('/:slug/channels', requireWorkspace, channelRoutes)

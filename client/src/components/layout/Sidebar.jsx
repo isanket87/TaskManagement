@@ -35,6 +35,7 @@ const NAV_GROUPS = [
         label: 'Tracking',
         items: [
             { to: '/timesheets', icon: Clock, label: 'Timesheets' },
+            { to: '/analytics', icon: BarChart3, label: 'Analytics' },
         ]
     }
 ];

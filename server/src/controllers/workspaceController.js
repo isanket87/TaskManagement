@@ -572,6 +572,119 @@ const searchWorkspace = async (req, res) => {
     }
 }
 
+const getWorkspaceAnalytics = async (req, res, next) => {
+    try {
+        const workspaceId = req.workspace.id
+        const now = new Date()
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+
+        const [
+            byStatus,
+            byPriority,
+            totalTasks,
+            completedTasks,
+            completedLast30,
+            projectProgress,
+            memberLeaderboard
+        ] = await Promise.all([
+            // Tasks by status
+            prisma.task.groupBy({
+                by: ['status'],
+                where: { project: { workspaceId } },
+                _count: { _all: true }
+            }),
+            // Tasks by priority
+            prisma.task.groupBy({
+                by: ['priority'],
+                where: { project: { workspaceId } },
+                _count: { _all: true }
+            }),
+            // Total tasks
+            prisma.task.count({ where: { project: { workspaceId } } }),
+            // Total completed
+            prisma.task.count({ where: { project: { workspaceId }, status: 'done' } }),
+            // Completed tasks in last 30 days — only fetch date field
+            prisma.task.findMany({
+                where: { project: { workspaceId }, status: 'done', updatedAt: { gte: thirtyDaysAgo } },
+                select: { updatedAt: true }
+            }),
+            // Top 5 projects with task counts
+            prisma.project.findMany({
+                where: { workspaceId },
+                select: {
+                    id: true, name: true, color: true,
+                    _count: { select: { tasks: true } }
+                },
+                orderBy: { tasks: { _count: 'desc' } },
+                take: 5
+            }),
+            // Top 5 members by tasks completed this month
+            prisma.task.groupBy({
+                by: ['assigneeId'],
+                where: { project: { workspaceId }, status: 'done', updatedAt: { gte: monthStart }, assigneeId: { not: null } },
+                _count: { _all: true },
+                orderBy: { _count: { _all: 'desc' } },
+                take: 5
+            })
+        ])
+
+        // Build daily completion trend for last 30 days
+        const trendMap = {}
+        for (let i = 29; i >= 0; i--) {
+            const d = new Date(now.getTime() - i * 86400000)
+            trendMap[d.toISOString().split('T')[0]] = 0
+        }
+        completedLast30.forEach(({ updatedAt }) => {
+            const key = new Date(updatedAt).toISOString().split('T')[0]
+            if (trendMap[key] !== undefined) trendMap[key]++
+        })
+        const completionTrend = Object.entries(trendMap).map(([date, count]) => ({ date, count }))
+
+        // Resolve member names for leaderboard
+        const memberIds = memberLeaderboard.map(m => m.assigneeId)
+        const members = await prisma.user.findMany({
+            where: { id: { in: memberIds } },
+            select: { id: true, name: true, avatar: true }
+        })
+        const memberMap = Object.fromEntries(members.map(m => [m.id, m]))
+        const leaderboard = memberLeaderboard.map(m => ({
+            user: memberMap[m.assigneeId],
+            completed: m._count._all
+        }))
+
+        // Project completion breakdown
+        const projectIds = projectProgress.map(p => p.id)
+        const doneCounts = await prisma.task.groupBy({
+            by: ['projectId'],
+            where: { projectId: { in: projectIds }, status: 'done' },
+            _count: { _all: true }
+        })
+        const doneMap = Object.fromEntries(doneCounts.map(d => [d.projectId, d._count._all]))
+        const projects = projectProgress.map(p => ({
+            id: p.id, name: p.name, color: p.color,
+            total: p._count.tasks,
+            done: doneMap[p.id] || 0,
+            percent: p._count.tasks > 0 ? Math.round(((doneMap[p.id] || 0) / p._count.tasks) * 100) : 0
+        }))
+
+        return res.json({
+            success: true,
+            data: {
+                totalTasks,
+                completedTasks,
+                openTasks: totalTasks - completedTasks,
+                completionRate: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
+                byStatus: Object.fromEntries(byStatus.map(r => [r.status, r._count._all])),
+                byPriority: Object.fromEntries(byPriority.map(r => [r.priority, r._count._all])),
+                completionTrend,
+                projects,
+                leaderboard
+            }
+        })
+    } catch (err) { next(err) }
+}
+
 export {
     createWorkspace,
     getMyWorkspaces,
@@ -588,5 +701,6 @@ export {
     deleteInvite,
     getInviteDetails,
     acceptInvite,
-    searchWorkspace
+    searchWorkspace,
+    getWorkspaceAnalytics
 }

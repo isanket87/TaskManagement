@@ -23,6 +23,7 @@ const Notifications = lazy(() => import('./pages/Notifications'));
 const Settings = lazy(() => import('./pages/Settings'));
 const MessagesPage = lazy(() => import('./pages/MessagesPage'));
 const TimesheetsPage = lazy(() => import('./pages/TimesheetsPage'));
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'));
 const ProjectFilesPage = lazy(() => import('./pages/ProjectFilesPage'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const WorkspacePicker = lazy(() => import('./pages/WorkspacePicker'));
@@ -152,6 +153,7 @@ function App() {
                                 <Route path="notifications" element={<Notifications />} />
                                 <Route path="messages" element={<MessagesPage />} />
                                 <Route path="timesheets" element={<TimesheetsPage />} />
+                                <Route path="analytics" element={<AnalyticsPage />} />
                                 <Route path="members" element={<MembersPage />} />
                                 <Route path="settings" element={<WorkspaceSettings />} />
                                 {/* Profile Settings */}
