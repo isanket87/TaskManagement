@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -49,7 +49,7 @@ const PropertyRow = ({ icon: Icon, label, children }) => (
     </div>
 );
 
-const TaskDetailPanel = ({ task, projectId, onClose }) => {
+const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
     const queryClient = useQueryClient();
     const { workspace } = useWorkspaceStore();
     const [activeTab, setActiveTab] = useState('details');
@@ -92,6 +92,15 @@ const TaskDetailPanel = ({ task, projectId, onClose }) => {
 
     const [isEditingTags, setIsEditingTags] = useState(false);
     const [newTagValue, setNewTagValue] = useState('');
+
+    // Reset state when task changes (e.g., navigating through subtasks/dependencies)
+    useEffect(() => {
+        setActiveTab('details');
+        setIsEditingTitle(false);
+        setIsEditingDescription(false);
+        setIsEditingTags(false);
+        setIsDueDatePickerOpen(false);
+    }, [task?.id]);
 
     // Mutations
     const descriptionMutation = useMutation({
@@ -691,7 +700,11 @@ const TaskDetailPanel = ({ task, projectId, onClose }) => {
 
                                     {/* DEPENDENCIES */}
                                     <div className="pt-2">
-                                        <TaskDependencies taskId={detailedTask.id} projectId={projectId} />
+                                        <TaskDependencies
+                                            taskId={detailedTask.id}
+                                            projectId={projectId}
+                                            onTaskSelect={onTaskSelect}
+                                        />
                                     </div>
 
                                     <div className="h-4 border-b border-slate-100 dark:border-slate-800/50" />

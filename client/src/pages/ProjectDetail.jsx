@@ -498,6 +498,7 @@ const ProjectDetail = () => {
                     task={selectedTask}
                     projectId={projectId}
                     onClose={() => setSelectedTask(null)}
+                    onTaskSelect={setSelectedTask}
                 />
             )}
 

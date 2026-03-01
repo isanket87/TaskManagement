@@ -7,7 +7,7 @@ import { taskService } from '../../services/taskService';
 import { cn } from '../../utils/helpers';
 import Avatar from '../ui/Avatar';
 
-const TaskSubtasks = ({ parentTaskId, projectId, subtasks = [] }) => {
+const TaskSubtasks = ({ parentTaskId, projectId, subtasks = [], onTaskSelect }) => {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
     const [title, setTitle] = useState('');
@@ -115,7 +115,7 @@ const TaskSubtasks = ({ parentTaskId, projectId, subtasks = [] }) => {
                         <div
                             key={task.id}
                             className="group flex items-center justify-between p-2 -mx-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                            onClick={() => navigate(`/workspace/projects/${projectId}/tasks/${task.id}`)}
+                            onClick={() => onTaskSelect ? onTaskSelect(task) : navigate(`/workspace/projects/${projectId}/tasks/${task.id}`)}
                         >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
                                 <button

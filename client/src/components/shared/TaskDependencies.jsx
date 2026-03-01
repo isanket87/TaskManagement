@@ -24,8 +24,11 @@ const StatusChip = ({ status }) => {
 };
 
 // ── Dependency row ────────────────────────────────────────────────────────────
-const DepRow = ({ task, onRemove, isRemoving }) => (
-    <div className="flex items-center gap-2 py-1.5 group/dep">
+const DepRow = ({ task, onRemove, isRemoving, onClick }) => (
+    <div
+        className={cn("flex items-center gap-2 py-1.5 group/dep", onClick && "cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 -mx-2 px-2 rounded-lg transition-colors")}
+        onClick={() => onClick && onClick(task)}
+    >
         <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">{task.title}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
@@ -44,7 +47,7 @@ const DepRow = ({ task, onRemove, isRemoving }) => (
 );
 
 // ── Main component ────────────────────────────────────────────────────────────
-const TaskDependencies = ({ taskId, projectId }) => {
+const TaskDependencies = ({ taskId, projectId, onTaskSelect }) => {
     const queryClient = useQueryClient();
     const { workspace } = useWorkspaceStore();
     const [isAdding, setIsAdding] = useState(false);
@@ -171,7 +174,7 @@ const TaskDependencies = ({ taskId, projectId }) => {
                     </p>
                     <div className="space-y-0.5 pl-1">
                         {blockedBy.map(t => (
-                            <DepRow key={t.depId} task={t} onRemove={id => removeMutation.mutate(id)} isRemoving={removingId === t.depId} />
+                            <DepRow key={t.depId} task={t} onRemove={id => removeMutation.mutate(id)} isRemoving={removingId === t.depId} onClick={onTaskSelect} />
                         ))}
                     </div>
                 </div>
@@ -185,7 +188,7 @@ const TaskDependencies = ({ taskId, projectId }) => {
                     </p>
                     <div className="space-y-0.5 pl-1">
                         {blocks.map(t => (
-                            <DepRow key={t.depId} task={t} onRemove={id => removeMutation.mutate(id)} isRemoving={removingId === t.depId} />
+                            <DepRow key={t.depId} task={t} onRemove={id => removeMutation.mutate(id)} isRemoving={removingId === t.depId} onClick={onTaskSelect} />
                         ))}
                     </div>
                 </div>
