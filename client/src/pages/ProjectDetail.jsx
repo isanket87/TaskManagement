@@ -147,12 +147,22 @@ const TaskCard = ({ task, projectId, onDueDateUpdate, onDelete, onSelect }) => {
                         <span className={`badge ${getPriorityBadgeClass(task.priority)} scale-90 origin-left`}>
                             {task.priority}
                         </span>
-                        {task._count?.comments > 0 && (
-                            <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
-                                <MessageCircle className="w-3.5 h-3.5" />
-                                {task._count.comments}
-                            </span>
-                        )}
+
+                        {/* Subtask / Comment Badges */}
+                        <div className="flex items-center gap-2">
+                            {task._count?.subtasks > 0 && (
+                                <span className="flex items-center gap-1 text-[11px] font-medium text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-800" title={`${task.subtasks?.filter(s => s.status === 'done')?.length || 0} of ${task._count.subtasks} subtasks completed`}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                    {task.subtasks?.filter(s => s.status === 'done')?.length || 0}/{task._count.subtasks}
+                                </span>
+                            )}
+                            {task._count?.comments > 0 && (
+                                <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                    {task._count.comments}
+                                </span>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-2">

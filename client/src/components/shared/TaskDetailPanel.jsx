@@ -24,6 +24,7 @@ import { getPriorityBadgeClass, cn } from '../../utils/helpers';
 import { STATUS_OPTIONS, PRIORITY_OPTIONS } from '../../utils/constants';
 import TaskAttachments from '../tasks/TaskAttachments';
 import TaskDependencies from './TaskDependencies';
+import TaskSubtasks from './TaskSubtasks';
 
 // Helper for status colors
 const getStatusLabel = (status) => {
@@ -407,6 +408,15 @@ const TaskDetailPanel = ({ task, projectId, onClose }) => {
                                                 Add a more detailed description...
                                             </div>
                                         )}
+                                    </div>
+
+                                    {/* SUBTASKS */}
+                                    <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                                        <TaskSubtasks
+                                            parentTaskId={detailedTask.id}
+                                            projectId={projectId}
+                                            subtasks={detailedTask.subtasks || []}
+                                        />
                                     </div>
 
                                     {/* COMMENTS AREA */}

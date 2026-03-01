@@ -111,6 +111,10 @@ model Task {
   timeEntries      TimeEntry[]
   activities       ActivityLog[]
   files            File[]
+  // Subtasks
+  parentTaskId     String?
+  parentTask       Task?              @relation("Subtasks", fields: [parentTaskId], references: [id], onDelete: Cascade)
+  subtasks         Task[]             @relation("Subtasks")
   // Task Dependencies
   blockedBy        TaskDependency[]   @relation("BlockedTask")
   blocks           TaskDependency[]   @relation("BlockingTask")

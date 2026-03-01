@@ -25,6 +25,7 @@ const taskSelect = {
     updatedAt: true,
     assignee: { select: { id: true, name: true, avatar: true } },
     createdBy: { select: { id: true, name: true, avatar: true } },
+    parentTaskId: true,
     _count: { select: { comments: true } }
 }
 
@@ -36,7 +37,8 @@ const createTaskSchema = z.object({
     tags: z.array(z.string()).optional(),
     dueDate: z.string().optional().nullable(),
     hasDueTime: z.boolean().optional(),
-    assigneeId: z.string().optional().nullable()
+    assigneeId: z.string().optional().nullable(),
+    parentTaskId: z.string().optional().nullable()
 })
 
 // GET /api/projects/:id/tasks
@@ -50,6 +52,7 @@ const getTasks = async (req, res, next) => {
         if (priority) where.priority = priority
         if (assigneeId) where.assigneeId = assigneeId
         if (search) where.title = { contains: search, mode: 'insensitive' }
+        if (req.query.includeSubtasks !== 'true') where.parentTaskId = null
 
         const now = new Date()
         if (dueDateFilter === 'overdue') {
@@ -126,7 +129,23 @@ const createTask = async (req, res, next) => {
 const getTask = async (req, res, next) => {
     try {
         const { taskId } = req.params
-        const task = await prisma.task.findUnique({ where: { id: taskId }, select: taskSelect })
+        const task = await prisma.task.findUnique({
+            where: { id: taskId },
+            select: {
+                ...taskSelect,
+                subtasks: {
+                    select: {
+                        id: true,
+                        title: true,
+                        status: true,
+                        priority: true,
+                        assignee: { select: { id: true, name: true, avatar: true } },
+                        _count: { select: { subtasks: true } }
+                    },
+                    orderBy: { createdAt: 'asc' }
+                }
+            }
+        })
         if (!task) return errorResponse(res, 'Task not found', 404)
         return successResponse(res, { task })
     } catch (err) {
