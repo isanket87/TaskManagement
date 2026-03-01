@@ -39,7 +39,8 @@ const Login = () => {
 
     const handleGoogleLogin = () => {
         const returnTo = searchParams.get('returnTo');
-        const baseUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/auth/google`;
+        const baseApi = import.meta.env.VITE_API_URL || '';
+        const baseUrl = `${baseApi}/api/auth/google`;
         window.location.href = returnTo ? `${baseUrl}?returnTo=${encodeURIComponent(returnTo)}` : baseUrl;
     };
 

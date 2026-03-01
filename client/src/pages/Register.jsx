@@ -63,7 +63,8 @@ const Register = () => {
     };
 
     const handleGoogleLogin = () => {
-        let authUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/auth/google`;
+        const baseApi = import.meta.env.VITE_API_URL || '';
+        let authUrl = `${baseApi}/api/auth/google`;
         const returnTo = searchParams.get('returnTo');
         if (returnTo) authUrl += `?state=${encodeURIComponent(returnTo)}`;
         window.location.href = authUrl;
@@ -113,9 +114,9 @@ const Register = () => {
                                         ))}
                                     </div>
                                     <p className={`text-xs font-medium ${strength.score <= 1 ? 'text-rose-500' :
-                                            strength.score <= 2 ? 'text-amber-500' :
-                                                strength.score <= 3 ? 'text-yellow-500' :
-                                                    'text-emerald-500'
+                                        strength.score <= 2 ? 'text-amber-500' :
+                                            strength.score <= 3 ? 'text-yellow-500' :
+                                                'text-emerald-500'
                                         }`}>
                                         {strength.label}
                                         {strength.score <= 2 && ' — try adding numbers, symbols, or uppercase letters'}
