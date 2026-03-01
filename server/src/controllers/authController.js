@@ -127,31 +127,20 @@ const getMe = async (req, res, next) => {
 }
 
 const googleRedirect = (req, res) => {
-    console.log('[Google OAuth] Initiating redirect...')
-    console.log('[Google OAuth] Client ID:', process.env.GOOGLE_CLIENT_ID?.substring(0, 15) + '...')
-    console.log('[Google OAuth] Callback URL:', process.env.GOOGLE_CALLBACK_URL)
-
     const url = getGoogleClient().generateAuthUrl({
         access_type: 'offline',
         scope: ['profile', 'email'],
         prompt: 'select_account'
     })
-
-    console.log('[Google OAuth] Generated URL:', url)
     res.redirect(url)
 }
 
 const googleCallback = async (req, res, next) => {
     try {
-        console.log('[Google OAuth] Callback received')
         const { code } = req.query
-        if (!code) {
-            console.log('[Google OAuth] No code received in query')
-            return res.redirect(`${process.env.CLIENT_URL}/login?error=no_code`)
-        }
+        if (!code) return res.redirect(`${process.env.CLIENT_URL}/login?error=no_code`)
 
         const googleClient = getGoogleClient()
-        console.log('[Google OAuth] Exchanging code for tokens...')
         const { tokens } = await googleClient.getToken(code)
         googleClient.setCredentials(tokens)
 
