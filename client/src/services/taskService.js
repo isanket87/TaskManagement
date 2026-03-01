@@ -31,4 +31,9 @@ export const taskService = {
         });
     },
     deleteAttachment: (taskId, attachmentId) => api.delete(`/tasks/${taskId}/attachments/${attachmentId}`),
+    // Dependencies
+    getDependencies: (projectId, taskId) => api.get(`/projects/${projectId}/tasks/${taskId}/dependencies`),
+    addDependency: (projectId, taskId, blockingTaskId) => api.post(`/projects/${projectId}/tasks/${taskId}/dependencies`, { blockingTaskId }),
+    removeDependency: (projectId, taskId, depId) => api.delete(`/projects/${projectId}/tasks/${taskId}/dependencies/${depId}`),
 };
+

@@ -5,6 +5,7 @@ import {
     bulkUpdateDueDate, getDueDateSummary, getUpcomingTasks, getOverdueTasks,
     getCalendarTasks, getDashboardStats, getTaskActivities, bulkImportTasks
 } from '../controllers/taskController.js'
+import { getDependencies, addDependency, removeDependency } from '../controllers/taskDependencyController.js'
 import auth from '../middleware/auth.js'
 
 const router = Router({ mergeParams: true })
@@ -31,5 +32,10 @@ router.patch('/:taskId/position', updatePosition)
 router.patch('/:taskId/due-date', updateDueDate)
 router.patch('/:taskId/snooze', snoozeTask)
 router.get('/:taskId/activities', getTaskActivities)
+
+// Task dependencies
+router.get('/:taskId/dependencies', getDependencies)
+router.post('/:taskId/dependencies', addDependency)
+router.delete('/:taskId/dependencies/:depId', removeDependency)
 
 export default router

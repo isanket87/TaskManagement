@@ -87,32 +87,35 @@ model ProjectMember {
 }
 
 model Task {
-  id               String      @id @default(uuid())
+  id               String             @id @default(uuid())
   title            String
   description      String?
-  status           String      @default("todo")
-  priority         String      @default("medium")
-  position         Int         @default(0)
-  tags             String[]    @default([])
+  status           String             @default("todo")
+  priority         String             @default("medium")
+  position         Int                @default(0)
+  tags             String[]           @default([])
   dueDate          DateTime?
-  hasDueTime       Boolean     @default(false)
+  hasDueTime       Boolean            @default(false)
   dueDateStatus    String?
   lastReminderSent DateTime?
-  remindersSent    String[]    @default([])
+  remindersSent    String[]           @default([])
   snoozedUntil     DateTime?
   projectId        String
   assigneeId       String?
   createdById      String
-  project          Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assignee         User?       @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  createdBy        User        @relation("TaskCreator", fields: [createdById], references: [id])
+  project          Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignee         User?              @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdBy        User               @relation("TaskCreator", fields: [createdById], references: [id])
   comments         Comment[]
   attachments      Attachment[]
   timeEntries      TimeEntry[]
   activities       ActivityLog[]
   files            File[]
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  // Task Dependencies
+  blockedBy        TaskDependency[]   @relation("BlockedTask")
+  blocks           TaskDependency[]   @relation("BlockingTask")
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
 
   @@index([dueDate])
   @@index([projectId, dueDate])
@@ -120,6 +123,19 @@ model Task {
   @@index([dueDateStatus, assigneeId])
   @@index([projectId, status])
   @@index([assigneeId, status])
+}
+
+model TaskDependency {
+  id             String   @id @default(uuid())
+  blockingTaskId String
+  blockedTaskId  String
+  blockingTask   Task     @relation("BlockingTask", fields: [blockingTaskId], references: [id], onDelete: Cascade)
+  blockedTask    Task     @relation("BlockedTask", fields: [blockedTaskId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  @@unique([blockingTaskId, blockedTaskId])
+  @@index([blockedTaskId])
+  @@index([blockingTaskId])
 }
 
 model Comment {

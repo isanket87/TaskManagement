@@ -23,6 +23,7 @@ import Dropdown from '../ui/Dropdown';
 import { getPriorityBadgeClass, cn } from '../../utils/helpers';
 import { STATUS_OPTIONS, PRIORITY_OPTIONS } from '../../utils/constants';
 import TaskAttachments from '../tasks/TaskAttachments';
+import TaskDependencies from './TaskDependencies';
 
 // Helper for status colors
 const getStatusLabel = (status) => {
@@ -675,6 +676,13 @@ const TaskDetailPanel = ({ task, projectId, onClose }) => {
                                             )}
                                         </div>
                                     </PropertyRow>
+
+                                    <div className="h-4 border-b border-slate-100 dark:border-slate-800/50" />
+
+                                    {/* DEPENDENCIES */}
+                                    <div className="pt-2">
+                                        <TaskDependencies taskId={detailedTask.id} projectId={projectId} />
+                                    </div>
 
                                     <div className="h-4 border-b border-slate-100 dark:border-slate-800/50" />
 
