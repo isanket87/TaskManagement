@@ -1,35 +1,45 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 
 import useAuthStore from './store/authStore';
 import useWorkspaceStore from './store/workspaceStore';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import AuthCallback from './pages/AuthCallback';
-import Dashboard from './pages/Dashboard';
-import Projects from './pages/Projects';
-import ProjectDetail from './pages/ProjectDetail';
-import CalendarView from './pages/CalendarView';
-import Notifications from './pages/Notifications';
-import Settings from './pages/Settings';
-import MessagesPage from './pages/MessagesPage';
-import TimesheetsPage from './pages/TimesheetsPage';
-import ProjectFilesPage from './pages/ProjectFilesPage';
 import WorkspaceGuard from './components/guards/WorkspaceGuard';
-import Onboarding from './pages/Onboarding';
-import WorkspacePicker from './pages/WorkspacePicker';
-import InviteAccept from './pages/InviteAccept';
-import MembersPage from './pages/settings/MembersPage';
-import WorkspaceSettings from './pages/settings/WorkspaceSettings';
 import React from 'react';
 import GlobalTimerBar from './components/time/GlobalTimerBar';
-import Landing from './pages/Landing';
-import TermsOfService from './pages/TermsOfService';
-import PrivacyPolicy from './pages/PrivacyPolicy';
+
+// ── Lazy-loaded pages (each becomes its own async chunk) ─────────────────────
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const AuthCallback = lazy(() => import('./pages/AuthCallback'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Projects = lazy(() => import('./pages/Projects'));
+const ProjectDetail = lazy(() => import('./pages/ProjectDetail'));
+const CalendarView = lazy(() => import('./pages/CalendarView'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const Settings = lazy(() => import('./pages/Settings'));
+const MessagesPage = lazy(() => import('./pages/MessagesPage'));
+const TimesheetsPage = lazy(() => import('./pages/TimesheetsPage'));
+const ProjectFilesPage = lazy(() => import('./pages/ProjectFilesPage'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const WorkspacePicker = lazy(() => import('./pages/WorkspacePicker'));
+const InviteAccept = lazy(() => import('./pages/InviteAccept'));
+const MembersPage = lazy(() => import('./pages/settings/MembersPage'));
+const WorkspaceSettings = lazy(() => import('./pages/settings/WorkspaceSettings'));
+const Landing = lazy(() => import('./pages/Landing'));
+const TermsOfService = lazy(() => import('./pages/TermsOfService'));
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+
+// ── Page loading spinner ──────────────────────────────────────────────────────
+const PageLoader = () => (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+        <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+);
+
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
@@ -112,45 +122,47 @@ function App() {
         <QueryClientProvider client={queryClient}>
             <BrowserRouter>
                 <ErrorBoundary>
-                    <Routes>
-                        {/* Public routes */}
-                        <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
-                        <Route path="/register" element={<AuthRoute><Register /></AuthRoute>} />
-                        <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
-                        <Route path="/reset-password" element={<ResetPassword />} />
-                        <Route path="/auth/callback" element={<AuthCallback />} />
-                        <Route path="/invite/:token" element={<InviteAccept />} />
-                        <Route path="/terms" element={<TermsOfService />} />
-                        <Route path="/privacy" element={<PrivacyPolicy />} />
+                    <Suspense fallback={<PageLoader />}>
+                        <Routes>
+                            {/* Public routes */}
+                            <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
+                            <Route path="/register" element={<AuthRoute><Register /></AuthRoute>} />
+                            <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
+                            <Route path="/reset-password" element={<ResetPassword />} />
+                            <Route path="/auth/callback" element={<AuthCallback />} />
+                            <Route path="/invite/:token" element={<InviteAccept />} />
+                            <Route path="/terms" element={<TermsOfService />} />
+                            <Route path="/privacy" element={<PrivacyPolicy />} />
 
-                        {/* Workspace setup & selection */}
-                        <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-                        <Route path="/workspaces" element={<ProtectedRoute><WorkspacePicker /></ProtectedRoute>} />
+                            {/* Workspace setup & selection */}
+                            <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+                            <Route path="/workspaces" element={<ProtectedRoute><WorkspacePicker /></ProtectedRoute>} />
 
-                        {/* Workspace specific routes - Protected by WorkspaceGuard */}
-                        <Route path="/workspace/:slug" element={
-                            <ProtectedRoute>
-                                <WorkspaceGuard />
-                            </ProtectedRoute>
-                        }>
-                            <Route path="dashboard" element={<Dashboard />} />
-                            <Route path="projects" element={<Projects />} />
-                            <Route path="projects/:id" element={<ProjectDetail />} />
-                            <Route path="projects/:id/files" element={<ProjectFilesPage />} />
-                            <Route path="calendar" element={<CalendarView />} />
-                            <Route path="notifications" element={<Notifications />} />
-                            <Route path="messages" element={<MessagesPage />} />
-                            <Route path="timesheets" element={<TimesheetsPage />} />
-                            <Route path="members" element={<MembersPage />} />
-                            <Route path="settings" element={<WorkspaceSettings />} />
-                            {/* Profile Settings */}
-                            <Route path="profile" element={<Settings />} />
-                        </Route>
+                            {/* Workspace specific routes - Protected by WorkspaceGuard */}
+                            <Route path="/workspace/:slug" element={
+                                <ProtectedRoute>
+                                    <WorkspaceGuard />
+                                </ProtectedRoute>
+                            }>
+                                <Route path="dashboard" element={<Dashboard />} />
+                                <Route path="projects" element={<Projects />} />
+                                <Route path="projects/:id" element={<ProjectDetail />} />
+                                <Route path="projects/:id/files" element={<ProjectFilesPage />} />
+                                <Route path="calendar" element={<CalendarView />} />
+                                <Route path="notifications" element={<Notifications />} />
+                                <Route path="messages" element={<MessagesPage />} />
+                                <Route path="timesheets" element={<TimesheetsPage />} />
+                                <Route path="members" element={<MembersPage />} />
+                                <Route path="settings" element={<WorkspaceSettings />} />
+                                {/* Profile Settings */}
+                                <Route path="profile" element={<Settings />} />
+                            </Route>
 
-                        {/* Default redirect - send to guard which will push to onboarding or active workspace */}
-                        <Route path="/" element={<AuthRoute><Landing /></AuthRoute>} />
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
+                            {/* Default redirect - send to guard which will push to onboarding or active workspace */}
+                            <Route path="/" element={<AuthRoute><Landing /></AuthRoute>} />
+                            <Route path="*" element={<Navigate to="/" replace />} />
+                        </Routes>
+                    </Suspense>
                 </ErrorBoundary>
                 {/* Global persistent timer bar — only for authenticated users */}
                 {isAuthenticated && <GlobalTimerBar />}

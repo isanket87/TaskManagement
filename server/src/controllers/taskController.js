@@ -427,10 +427,11 @@ const getDashboardStats = async (req, res, next) => {
     try {
         const userId = req.user.id
         const now = new Date()
+        const weekAgo = addDays(now, -7)
 
         const workspaceId = req.workspace.id
 
-        const [myTasks, projects, overdueTasks, upcomingTasks, recentActivity] = await Promise.all([
+        const [myTasks, projects, overdueTasks, upcomingTasks, recentActivity, completedThisWeek, hoursThisWeekRaw] = await Promise.all([
             prisma.task.findMany({
                 where: { assigneeId: userId, status: { not: 'done' }, project: { workspaceId } },
                 select: taskSelect,
@@ -452,10 +453,21 @@ const getDashboardStats = async (req, res, next) => {
                 include: { user: { select: { id: true, name: true, avatar: true } } },
                 orderBy: { createdAt: 'desc' },
                 take: 10
+            }),
+            // Tasks completed in the last 7 days by this user
+            prisma.task.count({
+                where: { assigneeId: userId, status: 'done', updatedAt: { gte: weekAgo }, project: { workspaceId } }
+            }),
+            // Total hours tracked this week by this user
+            prisma.timeEntry.aggregate({
+                where: { userId, startTime: { gte: weekAgo }, project: { workspaceId } },
+                _sum: { duration: true }
             })
         ])
 
-        return successResponse(res, { stats: { myTasks, projects, overdueTasks, upcomingTasks, recentActivity } })
+        const hoursThisWeek = Math.round(((hoursThisWeekRaw._sum.duration || 0) / 3600) * 10) / 10
+
+        return successResponse(res, { stats: { myTasks, projects, overdueTasks, upcomingTasks, recentActivity, completedThisWeek, hoursThisWeek } })
     } catch (err) {
         next(err)
     }

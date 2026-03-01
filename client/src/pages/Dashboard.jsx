@@ -22,7 +22,7 @@ import useWorkspaceStore from '../store/workspaceStore';
 import { getPriorityBadgeClass } from '../utils/helpers';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
-import { ClipboardList } from 'lucide-react';
+import { ClipboardList, CheckCircle2, FolderOpen, Clock4 } from 'lucide-react';
 
 const DUE_FILTER_LABELS = {
     overdue: 'Overdue',
@@ -99,9 +99,30 @@ const Dashboard = () => {
         <PageWrapper title="Dashboard">
             <OverdueBanner overdueCount={overdueCount} />
             <div className="p-6 space-y-6">
-                {/* Summary Cards */}
+                {/* Due-date summary cards */}
                 <DueDateSummaryCards onFilter={setActiveFilter} activeFilter={activeFilter} />
 
+                {/* Activity stats row */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[
+                        { label: 'Active Tasks', value: myTasks.length, icon: ClipboardList, color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-950/30' },
+                        { label: 'Projects', value: stats?.projects ?? '—', icon: FolderOpen, color: 'text-violet-500', bg: 'bg-violet-50 dark:bg-violet-950/30' },
+                        { label: 'Completed This Week', value: stats?.completedThisWeek ?? '—', icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-950/30' },
+                        { label: 'Hours Tracked', value: stats?.hoursThisWeek != null ? `${stats.hoursThisWeek}h` : '—', icon: Clock4, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-950/30' },
+                    ].map(({ label, value, icon: Icon, color, bg }) => (
+                        <div key={label} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 flex items-center gap-4">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${bg}`}>
+                                <Icon className={`w-5 h-5 ${color}`} />
+                            </div>
+                            <div>
+                                <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                                    {isLoading ? <span className="inline-block w-8 h-6 bg-slate-200 dark:bg-slate-700 rounded animate-pulse" /> : value}
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">{label}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Left — My Tasks + Activity */}
                     <div className="lg:col-span-2 space-y-6">
