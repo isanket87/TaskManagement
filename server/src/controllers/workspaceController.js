@@ -623,8 +623,8 @@ const getWorkspaceAnalytics = async (req, res, next) => {
             prisma.task.groupBy({
                 by: ['assigneeId'],
                 where: { project: { workspaceId }, status: 'done', updatedAt: { gte: monthStart }, assigneeId: { not: null } },
-                _count: { _all: true },
-                orderBy: { _count: { _all: 'desc' } },
+                _count: { assigneeId: true },
+                orderBy: { _count: { assigneeId: 'desc' } },
                 take: 5
             })
         ])
@@ -650,7 +650,7 @@ const getWorkspaceAnalytics = async (req, res, next) => {
         const memberMap = Object.fromEntries(members.map(m => [m.id, m]))
         const leaderboard = memberLeaderboard.map(m => ({
             user: memberMap[m.assigneeId],
-            completed: m._count._all
+            completed: m._count.assigneeId
         }))
 
         // Project completion breakdown
