@@ -7,7 +7,10 @@ import { successResponse, errorResponse } from '../utils/helpers.js'
 import { emailService } from '../services/emailService.js'
 import { z } from 'zod'
 
-const googleClient = new OAuth2Client(
+// ── Lazy factory: reads env vars at request time, not at module init ─────────
+// This is required because ESM imports are hoisted and evaluated before
+// dotenv.config() runs in index.js, so process.env is not yet populated.
+const getGoogleClient = () => new OAuth2Client(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
     process.env.GOOGLE_CALLBACK_URL
@@ -124,7 +127,7 @@ const getMe = async (req, res, next) => {
 }
 
 const googleRedirect = (req, res) => {
-    const url = googleClient.generateAuthUrl({
+    const url = getGoogleClient().generateAuthUrl({
         access_type: 'offline',
         scope: ['profile', 'email'],
         prompt: 'select_account'
@@ -137,6 +140,7 @@ const googleCallback = async (req, res, next) => {
         const { code } = req.query
         if (!code) return res.redirect(`${process.env.CLIENT_URL}/login?error=no_code`)
 
+        const googleClient = getGoogleClient()
         const { tokens } = await googleClient.getToken(code)
         googleClient.setCredentials(tokens)
 
