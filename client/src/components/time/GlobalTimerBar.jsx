@@ -29,14 +29,11 @@ const GlobalTimerBar = () => {
     // Use the same query key as the Projects page so React Query serves cached data — no duplicate fetch
     const { data: projectsData } = useQuery({
         queryKey: ['projects', workspace?.slug],
-        queryFn: async () => {
-            const res = await projectService.getAll();
-            return res.data;
-        },
+        queryFn: () => projectService.getAll(),
         enabled: !!workspace?.slug,
         staleTime: 2 * 60 * 1000,
     });
-    const projects = projectsData?.data?.projects || [];
+    const projects = projectsData?.data?.data?.projects || [];
 
     // Fetch active timer globally
     const activeTimerQuery = useQuery({

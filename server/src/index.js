@@ -49,6 +49,8 @@ import { setSocketIO } from './services/notificationService.js'
 import { startDueDateReminderJob } from './jobs/dueDateReminder.js'
 import { startDailyDigest } from './jobs/dailyDigest.js'
 import { startWeeklyDigest } from './jobs/weeklyDigest.js'
+import { startDatabaseBackupJob } from './jobs/databaseBackup.js'
+import { runDatabaseBackup } from './services/backupService.js'
 
 
 const app = express()
@@ -155,6 +157,16 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/files', fileRoutes)
 app.use('/api/notification-preferences', notificationPrefRoutes)
 
+// ── SYSTEM TRIGGER ──
+app.post('/api/system/backup', auth, async (req, res, next) => {
+    try {
+        const result = await runDatabaseBackup()
+        res.json({ success: true, data: result })
+    } catch (err) {
+        next(err)
+    }
+})
+
 // 404 Handler for API routes to help debug
 app.use('/api/*', (req, res) => {
     console.log(`🔍 [API 404] No route matched: ${req.method} ${req.originalUrl}`)
@@ -226,6 +238,7 @@ const start = async () => {
         startDueDateReminderJob(io)
         startDailyDigest()
         startWeeklyDigest()
+        startDatabaseBackupJob()
 
         httpServer.listen(PORT, '0.0.0.0', () => {
             console.log(`

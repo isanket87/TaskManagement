@@ -1,0 +1,96 @@
+{
+  "projects": [
+    {
+      "id": "ad4b6739-2d72-477a-b0a3-a3dfe654f188",
+      "name": "project management",
+      "description": "sdfsd",
+      "color": "#eab308",
+      "status": "active",
+      "dueDate": null,
+      "ownerId": "1a1f08d3-d35a-4bf7-a4dd-ae15f940d7d5",
+      "createdAt": "2026-02-28T13:19:30.534Z",
+      "updatedAt": "2026-02-28T13:19:30.534Z",
+      "workspaceId": "cf664ade-8128-4757-9236-55be2ec30582"
+    },
+    {
+      "id": "f1a26253-813b-4f75-87e3-4ec4b8dca75f",
+      "name": "Brand new project",
+      "description": "Created during onboarding",
+      "color": "#6366f1",
+      "status": "active",
+      "dueDate": null,
+      "ownerId": "722bac60-49af-486d-95db-9aaa571f55f4",
+      "createdAt": "2026-02-28T21:21:21.742Z",
+      "updatedAt": "2026-02-28T21:21:21.742Z",
+      "workspaceId": "7bbf6e6e-c5c7-4ca9-a673-45f416e3a9e2"
+    },
+    {
+      "id": "9e2775c9-28ab-49d7-9f13-90ffac23c8d8",
+      "name": "New project",
+      "description": "Created during onboarding",
+      "color": "#6366f1",
+      "status": "active",
+      "dueDate": null,
+      "ownerId": "1cb6a3a1-7983-4ac3-8680-ed02e140a5b9",
+      "createdAt": "2026-02-28T21:28:26.027Z",
+      "updatedAt": "2026-02-28T21:28:26.027Z",
+      "workspaceId": "79e4a3cc-fd96-472b-9a72-d1f6ed0e904f"
+    },
+    {
+      "id": "ec28bc83-ee41-42e7-a95e-360d3edbda4b",
+      "name": "new",
+      "description": "asd",
+      "color": "#eab308",
+      "status": "active",
+      "dueDate": null,
+      "ownerId": "1cb6a3a1-7983-4ac3-8680-ed02e140a5b9",
+      "createdAt": "2026-02-28T21:38:29.672Z",
+      "updatedAt": "2026-02-28T21:38:29.672Z",
+      "workspaceId": "79e4a3cc-fd96-472b-9a72-d1f6ed0e904f"
+    },
+    {
+      "id": "5a5b7e90-1140-4d12-a643-962f2ef69edf",
+      "name": "changes should be done today ",
+      "description": "",
+      "color": "#6366f1",
+      "status": "active",
+      "dueDate": null,
+      "ownerId": "1cb6a3a1-7983-4ac3-8680-ed02e140a5b9",
+      "createdAt": "2026-03-01T06:03:23.636Z",
+      "updatedAt": "2026-03-01T06:03:23.636Z",
+      "workspaceId": "79e4a3cc-fd96-472b-9a72-d1f6ed0e904f"
+    }
+  ],
+  "workspaces": [
+    {
+      "id": "cf664ade-8128-4757-9236-55be2ec30582",
+      "name": "project management",
+      "slug": "project-management",
+      "logo": null,
+      "description": "",
+      "ownerId": "1a1f08d3-d35a-4bf7-a4dd-ae15f940d7d5",
+      "createdAt": "2026-02-28T13:19:07.659Z",
+      "updatedAt": "2026-02-28T13:19:07.659Z"
+    },
+    {
+      "id": "7bbf6e6e-c5c7-4ca9-a673-45f416e3a9e2",
+      "name": "my workspace",
+      "slug": "my-workspace",
+      "logo": null,
+      "description": "good workspace",
+      "ownerId": "722bac60-49af-486d-95db-9aaa571f55f4",
+      "createdAt": "2026-02-28T21:20:42.952Z",
+      "updatedAt": "2026-02-28T21:20:42.952Z"
+    },
+    {
+      "id": "79e4a3cc-fd96-472b-9a72-d1f6ed0e904f",
+      "name": "new demo 1",
+      "slug": "new-demo-1",
+      "logo": null,
+      "description": "",
+      "ownerId": "1cb6a3a1-7983-4ac3-8680-ed02e140a5b9",
+      "createdAt": "2026-02-28T21:28:17.183Z",
+      "updatedAt": "2026-02-28T21:28:17.183Z"
+    }
+  ]
+}

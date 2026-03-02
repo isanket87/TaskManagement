@@ -52,6 +52,12 @@ const WorkspaceGuard = () => {
 
     if (loading) return <PageSkeleton />;
 
+    // Prevent mounting child routes until the workspace fully matches the URL
+    // Otherwise, child routes might fire API requests using the new slug but the old localStorage store
+    if (slug && (!workspace || workspace.slug !== slug)) {
+        return <PageSkeleton />;
+    }
+
     return <Outlet />;
 };
 

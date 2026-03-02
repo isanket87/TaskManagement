@@ -10,38 +10,43 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
     (config) => {
-        // Try to read active workspace slug from Zustand storage directly
-        // because importing the hook directly in a non-component file might cause circular dependency
-        // or require raw store access
+        // Attempt to read the slug from the URL first to avoid Zustand/localStorage race conditions
         try {
-            const storeStr = localStorage.getItem('workspace-storage');
-            if (storeStr) {
-                const store = JSON.parse(storeStr);
-                const activeWs = store?.state?.workspace;
+            let activeWsSlug = null;
+            const pathParts = window.location.pathname.split('/');
+            if (pathParts[1] === 'workspace' && pathParts[2]) {
+                activeWsSlug = pathParts[2];
+            } else {
+                // Fallback to local storage
+                const storeStr = localStorage.getItem('workspace-storage');
+                if (storeStr) {
+                    const store = JSON.parse(storeStr);
+                    activeWsSlug = store?.state?.workspace?.slug;
+                }
+            }
 
-                // If we have an active workspace slug, and the route isn't inherently workspace-agnostic
-                if (activeWs?.slug && config.url) {
-                    const url = config.url;
+            // If we have an active workspace slug, and the route isn't inherently workspace-agnostic
+            if (activeWsSlug && config.url) {
+                const url = config.url;
 
-                    // List of routes that SHOULD NOT be prefixed with a workspace slug
-                    const bypassRoutes = [
-                        '/auth',
-                        '/users',
-                        '/workspaces', // Important: backend handles /workspaces inherently, do not prefix it
-                    ];
+                // List of routes that SHOULD NOT be prefixed with a workspace slug
+                const bypassRoutes = [
+                    '/auth',
+                    '/users',
+                    '/workspaces', // Important: backend handles /workspaces inherently, do not prefix it
+                ];
 
-                    // Specific check for /workspaces vs /workspaces/check-slug etc.
-                    // We only want to prepend the slug if the route is a core app route (projects, tasks, timesheets, etc.)
-                    const isBypassed = bypassRoutes.some(route => url.startsWith(route));
+                // Specific check for /workspaces vs /workspaces/check-slug etc.
+                // We only want to prepend the slug if the route is a core app route (projects, tasks, timesheets, etc.)
+                const isBypassed = bypassRoutes.some(route => url.startsWith(route));
 
-                    if (!isBypassed) {
-                        // Standardize: remove leading slash if present for cleaner concat
-                        const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
+                if (!isBypassed) {
+                    // Standardize: remove leading slash if present for cleaner concat
+                    const cleanUrl = url.startsWith('/') ? url.substring(1) : url;
 
-                        // Special case: if it already has workspaces/ in it, don't mess with it
-                        if (!cleanUrl.startsWith('workspaces/')) {
-                            config.url = `/workspaces/${activeWs.slug}/${cleanUrl}`;
-                        }
+                    // Special case: if it already has workspaces/ in it, don't mess with it
+                    if (!cleanUrl.startsWith('workspaces/')) {
+                        config.url = `/workspaces/${activeWsSlug}/${cleanUrl}`;
                     }
                 }
             }
