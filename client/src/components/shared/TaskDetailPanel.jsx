@@ -62,7 +62,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
             return res.data.data.task;
         },
         enabled: !!task?.id,
-        initialData: task // Use partial data immediately
+        placeholderData: task // Show partial data while fetching full details
     });
 
     const workspaceMembersQuery = useQuery({
@@ -425,6 +425,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                             parentTaskId={detailedTask.id}
                                             projectId={projectId}
                                             subtasks={detailedTask.subtasks || []}
+                                            onTaskSelect={onTaskSelect}
                                         />
                                     </div>
 

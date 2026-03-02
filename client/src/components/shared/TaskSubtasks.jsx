@@ -6,10 +6,12 @@ import toast from 'react-hot-toast';
 import { taskService } from '../../services/taskService';
 import { cn } from '../../utils/helpers';
 import Avatar from '../ui/Avatar';
+import useWorkspaceStore from '../../store/workspaceStore';
 
 const TaskSubtasks = ({ parentTaskId, projectId, subtasks = [], onTaskSelect }) => {
     const queryClient = useQueryClient();
     const navigate = useNavigate();
+    const { workspace } = useWorkspaceStore();
     const [title, setTitle] = useState('');
     const [isAdding, setIsAdding] = useState(false);
 
@@ -115,7 +117,7 @@ const TaskSubtasks = ({ parentTaskId, projectId, subtasks = [], onTaskSelect }) 
                         <div
                             key={task.id}
                             className="group flex items-center justify-between p-2 -mx-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                            onClick={() => onTaskSelect ? onTaskSelect(task) : navigate(`/workspace/projects/${projectId}/tasks/${task.id}`)}
+                            onClick={() => onTaskSelect ? onTaskSelect(task) : navigate(`/workspace/${workspace?.slug}/projects/${projectId}/tasks/${task.id}`)}
                         >
                             <div className="flex items-center gap-3 min-w-0 flex-1">
                                 <button

@@ -127,6 +127,7 @@ model Task {
   @@index([dueDateStatus, assigneeId])
   @@index([projectId, status])
   @@index([assigneeId, status])
+  @@index([parentTaskId])
 }
 
 model TaskDependency {
@@ -151,6 +152,9 @@ model Comment {
   author    User     @relation(fields: [authorId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([taskId])
+  @@index([authorId])
 }
 
 model Attachment {
@@ -166,6 +170,8 @@ model Attachment {
   task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   uploadedBy   User     @relation(fields: [uploadedById], references: [id])
   createdAt    DateTime @default(now())
+
+  @@index([taskId])
 }
 
 model Notification {
@@ -198,6 +204,9 @@ model ActivityLog {
   task      Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
+
+  @@index([projectId])
+  @@index([taskId])
 }
 
 // ─── Chat & Messaging ───────────────────────────────────────────────────────
