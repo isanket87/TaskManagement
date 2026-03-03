@@ -21,6 +21,18 @@ if (process.env.NODE_ENV === 'production') {
     dotenv.config({ path: path.join(__dirname, '../.env.production'), override: true })
 }
 
+// Limit Prisma connection pool per PM2 cluster instance.
+// Default is ~9 per instance; 4 instances × 9 = 36 connections which exhausts PostgreSQL under simultaneous restarts.
+// Prisma reads DATABASE_URL lazily at $connect() time, so modifying it here (after dotenv) is safe.
+if (process.env.DATABASE_URL) {
+    const poolSize = parseInt(process.env.DATABASE_POOL_SIZE || '3')
+    const [base, existingQuery] = process.env.DATABASE_URL.split('?')
+    const params = new URLSearchParams(existingQuery || '')
+    params.set('connection_limit', String(poolSize))
+    params.set('pool_timeout', '20')
+    process.env.DATABASE_URL = `${base}?${params.toString()}`
+}
+
 console.log(`[Env] Loaded environment: ${process.env.NODE_ENV || 'not set'}`)
 console.log(`[Env] Database URL host: ${process.env.DATABASE_URL ? new URL(process.env.DATABASE_URL).host : 'none'}`)
 
