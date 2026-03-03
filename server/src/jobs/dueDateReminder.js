@@ -6,7 +6,7 @@ import { createNotification } from '../services/notificationService.js'
 export const startDueDateReminderJob = (io) => {
     console.log('[CronJob] Due date reminder job started — runs every 15 minutes')
 
-    cron.schedule('*/15 * * * *', async () => {
+    const task = cron.schedule('*/15 * * * *', async () => {
         const now = new Date()
         console.log(`[CronJob] Running due date check at ${now.toISOString()}`)
 
@@ -80,21 +80,39 @@ export const startDueDateReminderJob = (io) => {
 
             console.log(`[CronJob] Updated dueDateStatus for ${statusUpdates.length} tasks`)
 
-            // Emit summary updates to connected users
+            // Emit summary updates — single groupBy replaces N+1 per-user COUNT queries
             if (io) {
-                const users = await prisma.user.findMany({ select: { id: true } })
-                for (const user of users) {
-                    const [overdue, dueToday, dueSoon, upcoming] = await Promise.all([
-                        prisma.task.count({ where: { assigneeId: user.id, dueDateStatus: 'overdue' } }),
-                        prisma.task.count({ where: { assigneeId: user.id, dueDateStatus: 'due_today' } }),
-                        prisma.task.count({ where: { assigneeId: user.id, dueDateStatus: 'due_soon' } }),
-                        prisma.task.count({ where: { assigneeId: user.id, dueDateStatus: 'on_track' } })
-                    ])
-                    io.to(`user:${user.id}`).emit('dueDateSummary:updated', { overdue, dueToday, dueSoon, upcoming })
+                const statuses = ['overdue', 'due_today', 'due_soon', 'on_track']
+                const grouped = await prisma.task.groupBy({
+                    by: ['assigneeId', 'dueDateStatus'],
+                    where: {
+                        assigneeId: { not: null },
+                        dueDateStatus: { in: statuses },
+                        status: { not: 'done' }
+                    },
+                    _count: { id: true }
+                })
+
+                // Build a map: userId -> { overdue, dueToday, dueSoon, upcoming }
+                const summaryMap = {}
+                for (const row of grouped) {
+                    const uid = row.assigneeId
+                    if (!summaryMap[uid]) summaryMap[uid] = { overdue: 0, dueToday: 0, dueSoon: 0, upcoming: 0 }
+                    const count = row._count.id
+                    if (row.dueDateStatus === 'overdue') summaryMap[uid].overdue += count
+                    if (row.dueDateStatus === 'due_today') summaryMap[uid].dueToday += count
+                    if (row.dueDateStatus === 'due_soon') summaryMap[uid].dueSoon += count
+                    if (row.dueDateStatus === 'on_track') summaryMap[uid].upcoming += count
+                }
+
+                for (const [userId, summary] of Object.entries(summaryMap)) {
+                    io.to(`user:${userId}`).emit('dueDateSummary:updated', summary)
                 }
             }
         } catch (err) {
             console.error('[CronJob] Error in due date reminder job:', err)
         }
     })
+
+    return task
 }

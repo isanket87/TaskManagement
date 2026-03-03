@@ -46,8 +46,9 @@ const runDailyDigest = async () => {
 
 // Run at 8:00 AM every day
 const startDailyDigest = () => {
-    cron.schedule('0 8 * * *', runDailyDigest, { timezone: 'UTC' })
+    const task = cron.schedule('0 8 * * *', runDailyDigest, { timezone: 'UTC' })
     console.log('[DailyDigest] Scheduled at 08:00 UTC daily')
+    return task
 }
 
 export { startDailyDigest, runDailyDigest }

@@ -56,8 +56,9 @@ const runWeeklyDigest = async () => {
 
 // Run at 8 AM every Monday
 export const startWeeklyDigest = () => {
-  cron.schedule('0 8 * * 1', runWeeklyDigest, { timezone: 'UTC' })
+  const task = cron.schedule('0 8 * * 1', runWeeklyDigest, { timezone: 'UTC' })
   console.log('[WeeklyDigest] Scheduled at 08:00 UTC every Monday')
+  return task
 }
 
 export { runWeeklyDigest }

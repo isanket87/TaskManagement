@@ -73,7 +73,7 @@ export const runDatabaseBackup = async () => {
 
         console.log('[Backup] Invoking pg_dump...');
 
-        const pgDumpCmd = process.env.PG_DUMP_PATH || 'C:\\Program Files\\PostgreSQL\\17\\bin\\pg_dump.exe';
+        const pgDumpCmd = process.env.PG_DUMP_PATH || 'pg_dump';
 
         // Spawn pg_dump process
         const dumpProcess = spawn(pgDumpCmd, pgDumpArgs, { env });

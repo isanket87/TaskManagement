@@ -235,10 +235,15 @@ const start = async () => {
         await prisma.$connect()
         console.log('[Server] Database connected')
 
-        startDueDateReminderJob(io)
-        startDailyDigest()
-        startWeeklyDigest()
-        startDatabaseBackupJob()
+        // Only run cron jobs on PM2 instance 0 (or in dev where NODE_APP_INSTANCE is undefined)
+        if (process.env.NODE_APP_INSTANCE === undefined || process.env.NODE_APP_INSTANCE === '0') {
+            global._cronJobs = [
+                startDueDateReminderJob(io),
+                startDailyDigest(),
+                startWeeklyDigest(),
+                startDatabaseBackupJob()
+            ]
+        }
 
         httpServer.listen(PORT, '0.0.0.0', () => {
             console.log(`
@@ -263,6 +268,12 @@ start()
 // ── GRACEFUL SHUTDOWN ──
 const shutdown = async (signal) => {
     console.log(`\n${signal} — shutting down gracefully...`)
+    // Stop all cron jobs so they don't fire during shutdown
+    if (global._cronJobs) {
+        global._cronJobs.forEach(t => t?.stop())
+    }
+    // Close Socket.IO first — httpServer.close() won't complete if WS clients are connected
+    io.close()
     httpServer.close(async () => {
         await prisma.$disconnect()
         console.log('✅ Shutdown complete')
