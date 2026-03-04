@@ -1,4 +1,4 @@
-import express from 'express'
+import express from 'express' // brioright api v2
 import { createServer } from 'http'
 import { Server } from 'socket.io'
 import cors from 'cors'
@@ -48,6 +48,7 @@ import fileRoutes from './routes/files.js'
 import channelRoutes from './routes/channels.js'
 import attachmentRoutes from './routes/attachments.js'
 import notificationPrefRoutes from './routes/notificationPreferences.js'
+import healthRoutes from './routes/health.js'
 
 // Middleware and Utils
 import prisma from './utils/prisma.js'
@@ -168,6 +169,7 @@ app.use('/api/workspaces', workspaceRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/files', fileRoutes)
 app.use('/api/notification-preferences', notificationPrefRoutes)
+app.use('/api/health', healthRoutes)   // public — no auth required
 
 // ── SYSTEM TRIGGER ──
 app.post('/api/system/backup', auth, async (req, res, next) => {

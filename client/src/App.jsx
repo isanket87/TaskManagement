@@ -33,6 +33,7 @@ const WorkspaceSettings = lazy(() => import('./pages/settings/WorkspaceSettings'
 const Landing = lazy(() => import('./pages/Landing'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
+const HealthDashboard = lazy(() => import('./pages/HealthDashboard'));
 
 // ── Page loading spinner ──────────────────────────────────────────────────────
 const PageLoader = () => (
@@ -134,6 +135,7 @@ function App() {
                             <Route path="/invite/:token" element={<InviteAccept />} />
                             <Route path="/terms" element={<TermsOfService />} />
                             <Route path="/privacy" element={<PrivacyPolicy />} />
+                            <Route path="/health" element={<HealthDashboard />} />
 
                             {/* Workspace setup & selection */}
                             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
