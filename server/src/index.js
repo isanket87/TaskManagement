@@ -131,8 +131,11 @@ app.use((req, res, next) => {
     next()
 })
 
-// ── HEALTH CHECK ──
-app.get('/health', (req, res) => {
+// ── PING / LIVENESS CHECK ──
+// Renamed from /health → /api/ping so the React dashboard at /health
+// is served correctly in production (Express was intercepting it first).
+// Full metrics are available at /api/health/status.
+app.get('/api/ping', (req, res) => {
     res.json({
         status: 'ok',
         timestamp: new Date().toISOString(),
