@@ -1,6 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useRef, useCallback } from 'react';
+import WorkloadView from '../components/views/WorkloadView';
+import SwimlaneView from '../components/views/SwimlaneView';
 import {
     DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
     closestCorners, useDroppable,
@@ -8,7 +10,7 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag } from 'lucide-react';
+import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag, BarChart2, LayoutGrid, AlignLeft, Users } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import DueDateBadge from '../components/due-date/DueDateBadge';
 import DateTimePicker from '../components/due-date/DateTimePicker';
@@ -264,6 +266,11 @@ const ProjectDetail = () => {
     const [selectedTask, setSelectedTask] = useState(null);
     const [taskAttachments, setTaskAttachments] = useState([]);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [viewMode, setViewMode] = useState('kanban'); // 'kanban' | 'swimlane' | 'workload'
+    const [focusedMemberId, setFocusedMemberId] = useState(null);
+
+    const toggleFocus = (memberId) => setFocusedMemberId(prev => prev === memberId ? null : memberId);
+    const clearFocus = () => setFocusedMemberId(null);
 
     useSocket(projectId);
 
@@ -297,6 +304,24 @@ const ProjectDetail = () => {
 
     const project = projectData?.data?.data?.project;
     const tasks = tasksData?.data?.data?.tasks || [];
+    const members = project?.members || [];
+
+    // Swimlane/Workload: also include workspace members who have tasks assigned
+    // but weren't explicitly added to the project's member list
+    const tasksList = Array.isArray(tasks) ? tasks : [];
+    const effectiveMembers = (() => {
+        const seen = new Set(members.map((m) => m.user.id));
+        const extra = tasksList
+            .filter((t) => t.assignee && !seen.has(t.assignee.id))
+            .reduce((acc, t) => {
+                if (!acc.find((m) => m.user.id === t.assignee.id)) {
+                    acc.push({ user: t.assignee, role: 'Member', userId: t.assignee.id });
+                }
+                return acc;
+            }, []);
+        return [...members, ...extra];
+    })();
+
 
     const importMutation = useMutation({
         mutationFn: (importTasks) => taskService.bulkImport(projectId, importTasks),
@@ -364,9 +389,12 @@ const ProjectDetail = () => {
         }
     };
 
-    const tasksList = Array.isArray(tasks) ? tasks : [];
     const tasksByStatus = KANBAN_COLUMNS.reduce((acc, col) => {
-        acc[col.id] = tasksList.filter((t) => t.status === col.id);
+        acc[col.id] = tasksList.filter((t) => {
+            if (t.status !== col.id) return false;
+            if (focusedMemberId) return t.assignee?.id === focusedMemberId;
+            return true;
+        });
         return acc;
     }, {});
 
@@ -402,42 +430,157 @@ const ProjectDetail = () => {
     return (
         <PageWrapper title={project?.name || 'Project Board'}>
             <div className="h-full flex flex-col pt-4">
-                {/* Header & Filter bar */}
-                <div className="px-6 flex items-center justify-between mb-4 shrink-0">
-                    <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
+                {/* ── Primary toolbar ─────────────────────────────── */}
+                <div className="px-6 flex items-center gap-3 mb-2 shrink-0">
+                    {/* View toggle */}
+                    <div className="flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
+                        {[
+                            { id: 'kanban', icon: <LayoutGrid className="w-3.5 h-3.5" />, label: 'Kanban' },
+                            { id: 'swimlane', icon: <AlignLeft className="w-3.5 h-3.5" />, label: 'Swimlane' },
+                            { id: 'workload', icon: <BarChart2 className="w-3.5 h-3.5" />, label: 'Workload' },
+                        ].map(({ id, icon, label }) => (
+                            <button
+                                key={id}
+                                onClick={() => setViewMode(id)}
+                                className={cn(
+                                    'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all whitespace-nowrap',
+                                    viewMode === id
+                                        ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm'
+                                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                                )}
+                            >
+                                {icon}
+                                {label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
+
+                    {/* Member filter — labelled so users know it's interactive */}
+                    {effectiveMembers.length > 0 && (
+                        <div className={cn(
+                            'flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all shrink-0',
+                            focusedMemberId
+                                ? 'bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-700'
+                                : 'bg-slate-50 border-slate-200 dark:bg-slate-800/60 dark:border-slate-700'
+                        )}>
+                            <Users className={cn(
+                                'w-3 h-3 shrink-0 transition-colors',
+                                focusedMemberId ? 'text-orange-500' : 'text-slate-400'
+                            )} />
+                            <span className={cn(
+                                'text-[10px] font-semibold uppercase tracking-wider shrink-0 transition-colors',
+                                focusedMemberId ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500'
+                            )}>
+                                Members
+                            </span>
+                            <div className="flex items-center gap-1">
+                                {effectiveMembers.map((m) => {
+                                    const isFocused = focusedMemberId === m.user.id;
+                                    return (
+                                        <button
+                                            key={m.user.id}
+                                            title={isFocused ? `Clear filter (${m.user.name})` : `Filter by ${m.user.name}`}
+                                            onClick={() => toggleFocus(m.user.id)}
+                                            className={cn(
+                                                'relative transition-all duration-150 rounded-full',
+                                                isFocused ? '-translate-y-0.5' : 'hover:-translate-y-0.5 opacity-70 hover:opacity-100'
+                                            )}
+                                        >
+                                            <Avatar
+                                                user={m.user}
+                                                size="xs"
+                                                className={cn(
+                                                    'ring-2 transition-all',
+                                                    isFocused
+                                                        ? 'ring-orange-400 shadow-sm shadow-orange-200 dark:shadow-orange-900/40'
+                                                        : 'ring-white dark:ring-slate-900'
+                                                )}
+                                            />
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            {/* Active filter name + clear */}
+                            {focusedMemberId && (
+                                <span className="flex items-center gap-1 text-[10px] font-semibold text-orange-700 dark:text-orange-300 pl-0.5">
+                                    {effectiveMembers.find(m => m.user.id === focusedMemberId)?.user.name.split(' ')[0]}
+                                    <button
+                                        onClick={clearFocus}
+                                        title="Clear member filter"
+                                        className="w-3.5 h-3.5 flex items-center justify-center rounded-full bg-orange-200 dark:bg-orange-800 hover:bg-orange-300 dark:hover:bg-orange-700 text-orange-800 dark:text-orange-200 transition-colors"
+                                    >
+                                        <X className="w-2 h-2" />
+                                    </button>
+                                </span>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Spacer */}
+                    <div className="flex-1" />
+
+                    {/* Action Buttons — only in Kanban */}
+                    {viewMode === 'kanban' && (
+                        <div className="hidden sm:flex gap-2 shrink-0 items-center">
+                            <Button variant="secondary" onClick={() => setIsImportModalOpen(true)} className="shadow-sm text-xs py-1.5">
+                                Import CSV
+                            </Button>
+                            <Button variant="secondary" onClick={handleExportCSV} className="shadow-sm text-xs py-1.5">
+                                Export CSV
+                            </Button>
+                            <Button onClick={() => { setNewTaskStatus('todo'); setShowAddTask(true); }} className="shadow-sm">
+                                <Plus className="w-4 h-4 mr-1.5" />
+                                New Task
+                            </Button>
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Secondary toolbar: due-date filters (Kanban only) ── */}
+                {viewMode === 'kanban' && (
+                    <div className="px-6 flex items-center gap-1.5 mb-4 shrink-0 overflow-x-auto hide-scrollbar">
                         {DUE_FILTERS.map((f) => (
                             <button
                                 key={f.value}
                                 onClick={() => setFilter(f.value)}
                                 className={cn(
-                                    "px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all border",
+                                    'px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all border',
                                     filter === f.value
-                                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/10 dark:border-indigo-500/30 dark:text-indigo-300 shadow-sm"
-                                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-700/50"
+                                        ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/10 dark:border-indigo-500/30 dark:text-indigo-300'
+                                        : 'bg-transparent border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700'
                                 )}
                             >
                                 {f.label}
                             </button>
                         ))}
                     </div>
-                    {/* Action Buttons (Desktop) */}
-                    <div className="hidden sm:flex gap-2 shrink-0 ml-4 items-center">
-                        <Button variant="secondary" onClick={() => setIsImportModalOpen(true)} className="shadow-sm">
-                            Import CSV
-                        </Button>
-                        <Button variant="secondary" onClick={handleExportCSV} className="shadow-sm">
-                            Export CSV
-                        </Button>
-                        <Button onClick={() => { setNewTaskStatus('todo'); setShowAddTask(true); }} className="shadow-sm">
-                            <Plus className="w-4 h-4 mr-1.5" />
-                            New Task
-                        </Button>
-                    </div>
-                </div>
+                )}
 
-                {/* Kanban board area */}
-                <div className="flex-1 overflow-x-auto overflow-y-hidden px-6 pb-6">
-                    {isLoading ? (
+                {/* Board / Workload / Swimlane area */}
+                <div className={cn(
+                    "flex-1 min-h-0",
+                    viewMode === 'kanban' ? "overflow-x-auto overflow-y-hidden px-6 pb-6" : "overflow-hidden"
+                )}>
+                    {viewMode === 'workload' ? (
+                        <WorkloadView
+                            tasks={tasksList}
+                            members={effectiveMembers}
+                            projectId={projectId}
+                            focusedMemberId={focusedMemberId}
+                            onFocusChange={toggleFocus}
+                        />
+                    ) : viewMode === 'swimlane' ? (
+                        <SwimlaneView
+                            tasks={tasksList}
+                            members={effectiveMembers}
+                            projectId={projectId}
+                            focusedMemberId={focusedMemberId}
+                            onFocusChange={toggleFocus}
+                        />
+                    ) : isLoading ? (
                         <div className="flex gap-6 h-full">
                             {KANBAN_COLUMNS.map((col) => (
                                 <div key={col.id} className="w-[300px] shrink-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 space-y-3">
