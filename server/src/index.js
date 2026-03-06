@@ -49,6 +49,7 @@ import channelRoutes from './routes/channels.js'
 import attachmentRoutes from './routes/attachments.js'
 import notificationPrefRoutes from './routes/notificationPreferences.js'
 import healthRoutes from './routes/health.js'
+import { getRedis, closeRedis } from './utils/redis.js'
 
 // Middleware and Utils
 import prisma from './utils/prisma.js'
@@ -252,6 +253,13 @@ const start = async () => {
         await prisma.$connect()
         console.log('[Server] Database connected')
 
+        // Connect Redis (non-blocking: failures are logged but don't prevent startup)
+        try {
+            await getRedis().connect()
+        } catch (e) {
+            console.warn('[Redis] Could not connect on startup — caching disabled:', e.message)
+        }
+
         // Only run cron jobs on PM2 instance 0 (or in dev where NODE_APP_INSTANCE is undefined)
         if (process.env.NODE_APP_INSTANCE === undefined || process.env.NODE_APP_INSTANCE === '0') {
             global._cronJobs = [
@@ -292,6 +300,7 @@ const shutdown = async (signal) => {
     // Close Socket.IO first — httpServer.close() won't complete if WS clients are connected
     io.close()
     httpServer.close(async () => {
+        await closeRedis()
         await prisma.$disconnect()
         console.log('✅ Shutdown complete')
         process.exit(0)

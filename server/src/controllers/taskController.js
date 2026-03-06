@@ -4,6 +4,16 @@ import { computeDueDateStatus } from '../utils/dueDateUtils.js'
 import { z } from 'zod'
 import { startOfDay, endOfDay, addDays, startOfMonth, endOfMonth } from 'date-fns'
 import { logTaskActivity } from '../services/activityService.js'
+import cache, { TTL } from '../utils/cache.js'
+
+// Bust all task-aggregation caches for a workspace after any mutation
+const invalidateTaskCaches = (workspaceId, projectId, userId) =>
+    cache.del(
+        `ws:${workspaceId}:user:${userId}:dashboard`,
+        `ws:${workspaceId}:analytics`,
+        `ws:${workspaceId}:projects`,
+        `project:${projectId}:analytics`
+    )
 
 const taskSelect = {
     id: true,
@@ -119,6 +129,9 @@ const createTask = async (req, res, next) => {
         const io = req.app.get('io')
         if (io) io.to(`project:${projectId}`).emit('task:created', { task })
 
+        // Invalidate aggregation caches
+        await invalidateTaskCaches(req.workspace.id, projectId, req.user.id)
+
         return successResponse(res, { task }, 'Task created', 201)
     } catch (err) {
         next(err)
@@ -199,6 +212,9 @@ const updateTask = async (req, res, next) => {
         const io = req.app.get('io')
         if (io) io.to(`project:${projectId}`).emit('task:updated', { task })
 
+        // Invalidate aggregation caches
+        await invalidateTaskCaches(req.workspace.id, projectId, req.user.id)
+
         return successResponse(res, { task }, 'Task updated')
     } catch (err) {
         next(err)
@@ -213,6 +229,9 @@ const deleteTask = async (req, res, next) => {
 
         const io = req.app.get('io')
         if (io) io.to(`project:${projectId}`).emit('task:deleted', { taskId })
+
+        // Invalidate aggregation caches
+        await invalidateTaskCaches(req.workspace.id, projectId, req.user.id)
 
         return successResponse(res, null, 'Task deleted')
     } catch (err) {
@@ -251,6 +270,9 @@ const updateStatus = async (req, res, next) => {
 
         const io = req.app.get('io')
         if (io) io.to(`project:${projectId}`).emit('task:moved', { taskId, status })
+
+        // Invalidate aggregation caches (status changes affect dashboard counts)
+        await invalidateTaskCaches(req.workspace.id, projectId, req.user.id)
 
         return successResponse(res, { task }, 'Status updated')
     } catch (err) {
@@ -306,6 +328,8 @@ const updateDueDate = async (req, res, next) => {
 
         const io = req.app.get('io')
         if (io) io.to(`project:${projectId}`).emit('task:dueDateUpdated', { taskId, dueDate: due, dueDateStatus })
+
+        await invalidateTaskCaches(req.workspace.id, projectId, req.user.id)
 
         return successResponse(res, { task }, 'Due date updated')
     } catch (err) {
@@ -441,14 +465,16 @@ const getCalendarTasks = async (req, res, next) => {
     }
 }
 
-// GET /api/dashboard/stats
 const getDashboardStats = async (req, res, next) => {
     try {
         const userId = req.user.id
+        const workspaceId = req.workspace.id
+        const cacheKey = `ws:${workspaceId}:user:${userId}:dashboard`
+        const cached = await cache.get(cacheKey)
+        if (cached) return successResponse(res, { stats: cached })
+
         const now = new Date()
         const weekAgo = addDays(now, -7)
-
-        const workspaceId = req.workspace.id
 
         const [myTasks, projects, overdueTasks, upcomingTasks, recentActivity, completedThisWeek, hoursThisWeekRaw] = await Promise.all([
             prisma.task.findMany({
@@ -473,11 +499,9 @@ const getDashboardStats = async (req, res, next) => {
                 orderBy: { createdAt: 'desc' },
                 take: 10
             }),
-            // Tasks completed in the last 7 days by this user
             prisma.task.count({
                 where: { assigneeId: userId, status: 'done', updatedAt: { gte: weekAgo }, project: { workspaceId } }
             }),
-            // Total hours tracked this week by this user
             prisma.timeEntry.aggregate({
                 where: { userId, startTime: { gte: weekAgo }, project: { workspaceId } },
                 _sum: { duration: true }
@@ -485,8 +509,10 @@ const getDashboardStats = async (req, res, next) => {
         ])
 
         const hoursThisWeek = Math.round(((hoursThisWeekRaw._sum.duration || 0) / 3600) * 10) / 10
+        const stats = { myTasks, projects, overdueTasks, upcomingTasks, recentActivity, completedThisWeek, hoursThisWeek }
 
-        return successResponse(res, { stats: { myTasks, projects, overdueTasks, upcomingTasks, recentActivity, completedThisWeek, hoursThisWeek } })
+        await cache.set(cacheKey, stats, TTL.DASHBOARD)
+        return successResponse(res, { stats })
     } catch (err) {
         next(err)
     }
@@ -553,6 +579,9 @@ const bulkImportTasks = async (req, res, next) => {
             type: 'IMPORT_TASKS',
             message: `Imported ${tasks.length} tasks via CSV`
         })
+
+        // Invalidate caches — bulk import affects dashboard and analytics counts
+        await invalidateTaskCaches(req.workspace.id, projectId, userId)
 
         return successResponse(res, { count: created.count, message: `Successfully imported ${tasks.length} tasks` })
     } catch (err) {

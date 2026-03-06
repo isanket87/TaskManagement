@@ -2,6 +2,7 @@ import prisma from '../utils/prisma.js'
 import crypto from 'crypto'
 import { createNotification } from '../services/notificationService.js'
 import { emailService } from '../services/emailService.js'
+import cache, { TTL } from '../utils/cache.js'
 
 // Reusable slug check logic
 const isSlugAvailable = async (slug, excludeWorkspaceId = null) => {
@@ -53,6 +54,9 @@ const createWorkspace = async (req, res) => {
             return newWorkspace
         })
 
+        // Invalidate the user's workspace list cache
+        await cache.del(`user:${req.user.id}:workspaces`)
+
         // Add member count for frontend
         const workspaceWithCount = { ...result, _count: { members: 1, projects: 0 } }
 
@@ -65,6 +69,10 @@ const createWorkspace = async (req, res) => {
 
 const getMyWorkspaces = async (req, res) => {
     try {
+        const cacheKey = `user:${req.user.id}:workspaces`
+        const cached = await cache.get(cacheKey)
+        if (cached) return res.json({ status: 'success', data: cached })
+
         const memberships = await prisma.workspaceMember.findMany({
             where: { userId: req.user.id },
             include: {
@@ -84,6 +92,7 @@ const getMyWorkspaces = async (req, res) => {
             role: m.role
         }))
 
+        await cache.set(cacheKey, formatted, TTL.WORKSPACES)
         res.json({ status: 'success', data: formatted })
     } catch (error) {
         console.error('Get workspaces error:', error)
@@ -93,6 +102,10 @@ const getMyWorkspaces = async (req, res) => {
 
 const getWorkspaceDetails = async (req, res) => {
     try {
+        const cacheKey = `ws:${req.workspace.id}:detail`
+        const cached = await cache.get(cacheKey)
+        if (cached) return res.json({ status: 'success', data: cached })
+
         // req.workspace is populated by middleware
         const workspaceData = await prisma.workspace.findUnique({
             where: { id: req.workspace.id },
@@ -105,6 +118,7 @@ const getWorkspaceDetails = async (req, res) => {
             }
         })
 
+        await cache.set(cacheKey, workspaceData, TTL.WORKSPACE)
         res.json({ status: 'success', data: workspaceData })
     } catch (error) {
         console.error('Get workspace details error:', error)
@@ -121,6 +135,9 @@ const updateWorkspace = async (req, res) => {
             data: { name, description, logo }
         })
 
+        // Invalidate detail cache — name/logo may have changed
+        await cache.del(`ws:${req.workspace.id}:detail`)
+
         res.json({ status: 'success', data: updated })
     } catch (error) {
         console.error('Update workspace error:', error)
@@ -130,15 +147,17 @@ const updateWorkspace = async (req, res) => {
 
 const deleteWorkspace = async (req, res) => {
     try {
-        await prisma.workspace.delete({
-            where: { id: req.workspace.id }
-        })
+        const workspaceId = req.workspace.id
+        await prisma.workspace.delete({ where: { id: workspaceId } })
 
         // Also clean up activeWorkspaceId for users
         await prisma.user.updateMany({
-            where: { activeWorkspaceId: req.workspace.id },
+            where: { activeWorkspaceId: workspaceId },
             data: { activeWorkspaceId: null }
         })
+
+        // Wipe all caches for this workspace
+        await cache.delPattern(`ws:${workspaceId}:*`)
 
         res.json({ status: 'success', message: 'Workspace deleted successfully' })
     } catch (error) {
@@ -183,6 +202,10 @@ const checkSlugAvailability = async (req, res) => {
 
 const getMembers = async (req, res) => {
     try {
+        const cacheKey = `ws:${req.workspace.id}:members`
+        const cached = await cache.get(cacheKey)
+        if (cached) return res.json({ status: 'success', data: cached })
+
         const members = await prisma.workspaceMember.findMany({
             where: { workspaceId: req.workspace.id },
             include: {
@@ -191,6 +214,8 @@ const getMembers = async (req, res) => {
             },
             orderBy: { joinedAt: 'asc' }
         })
+
+        await cache.set(cacheKey, members, TTL.MEMBERS)
         res.json({ status: 'success', data: members })
     } catch (error) {
         res.status(500).json({ status: 'error', message: 'Failed to fetch members' })
@@ -220,6 +245,8 @@ const updateMemberRole = async (req, res) => {
             where: { id: targetMember.id },
             data: { role }
         })
+
+        await cache.del(`ws:${req.workspace.id}:members`)
 
         res.json({ status: 'success', data: updated })
     } catch (error) {
@@ -270,6 +297,12 @@ const removeMember = async (req, res) => {
             where: { id: userId, activeWorkspaceId: req.workspace.id },
             data: { activeWorkspaceId: null }
         })
+
+        // Invalidate member list and the removed user's workspace list
+        await cache.del(
+            `ws:${req.workspace.id}:members`,
+            `user:${userId}:workspaces`
+        )
 
         res.json({ status: 'success', message: 'Member removed successfully' })
     } catch (error) {
@@ -375,6 +408,9 @@ const inviteMember = async (req, res) => {
             projectCount: workspaceData._count.projects,
             token
         }).catch(err => console.error('Error sending invite email:', err))
+
+        // Invalidate member list so fresh data is shown
+        await cache.del(`ws:${req.workspace.id}:members`)
 
         // Return full invite object so frontend can copy the link
         res.status(201).json({ status: 'success', data: newInvite })
@@ -503,6 +539,12 @@ const acceptInvite = async (req, res) => {
             return invite.workspace
         })
 
+        // Invalidate the new member's workspace list and the workspace's member list
+        await cache.del(
+            `user:${userId}:workspaces`,
+            `ws:${invite.workspaceId}:members`
+        )
+
         res.json({ status: 'success', data: workspaceData })
     } catch (error) {
         console.error('Accept invite error:', error)
@@ -575,6 +617,10 @@ const searchWorkspace = async (req, res) => {
 const getWorkspaceAnalytics = async (req, res, next) => {
     try {
         const workspaceId = req.workspace.id
+        const cacheKey = `ws:${workspaceId}:analytics`
+        const cached = await cache.get(cacheKey)
+        if (cached) return res.json({ success: true, data: cached })
+
         const now = new Date()
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
@@ -668,20 +714,19 @@ const getWorkspaceAnalytics = async (req, res, next) => {
             percent: p._count.tasks > 0 ? Math.round(((doneMap[p.id] || 0) / p._count.tasks) * 100) : 0
         }))
 
-        return res.json({
-            success: true,
-            data: {
-                totalTasks,
-                completedTasks,
-                openTasks: totalTasks - completedTasks,
-                completionRate: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
-                byStatus: Object.fromEntries(byStatus.map(r => [r.status, r._count._all])),
-                byPriority: Object.fromEntries(byPriority.map(r => [r.priority, r._count._all])),
-                completionTrend,
-                projects,
-                leaderboard
-            }
-        })
+        const analyticsData = {
+            totalTasks,
+            completedTasks,
+            openTasks: totalTasks - completedTasks,
+            completionRate: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
+            byStatus: Object.fromEntries(byStatus.map(r => [r.status, r._count._all])),
+            byPriority: Object.fromEntries(byPriority.map(r => [r.priority, r._count._all])),
+            completionTrend,
+            projects,
+            leaderboard
+        }
+        await cache.set(cacheKey, analyticsData, TTL.ANALYTICS)
+        return res.json({ success: true, data: analyticsData })
     } catch (err) { next(err) }
 }
 

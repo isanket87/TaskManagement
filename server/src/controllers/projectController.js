@@ -1,6 +1,7 @@
 import prisma from '../utils/prisma.js'
 import { successResponse, errorResponse } from '../utils/helpers.js'
 import { z } from 'zod'
+import cache, { TTL } from '../utils/cache.js'
 
 const createProjectSchema = z.object({
     name: z.string().min(1),
@@ -12,11 +13,12 @@ const createProjectSchema = z.object({
 const getProjects = async (req, res, next) => {
     try {
         const workspaceId = req.workspace.id
+        const cacheKey = `ws:${workspaceId}:projects`
+        const cached = await cache.get(cacheKey)
+        if (cached) return successResponse(res, { projects: cached })
 
         const projects = await prisma.project.findMany({
-            where: {
-                workspaceId
-            },
+            where: { workspaceId },
             include: {
                 owner: { select: { id: true, name: true, avatar: true } },
                 members: { include: { user: { select: { id: true, name: true, avatar: true } } } },
@@ -24,6 +26,7 @@ const getProjects = async (req, res, next) => {
             },
             orderBy: { createdAt: 'desc' }
         })
+        await cache.set(cacheKey, projects, TTL.PROJECTS)
         return successResponse(res, { projects })
     } catch (err) {
         next(err)
@@ -51,6 +54,7 @@ const createProject = async (req, res, next) => {
             }
         })
 
+        await cache.del(`ws:${req.workspace.id}:projects`)
         return successResponse(res, { project }, 'Project created', 201)
     } catch (err) {
         next(err)
@@ -94,6 +98,7 @@ const updateProject = async (req, res, next) => {
                 dueDate: data.dueDate ? new Date(data.dueDate) : undefined
             }
         })
+        await cache.del(`ws:${req.workspace.id}:projects`)
         return successResponse(res, { project }, 'Project updated')
     } catch (err) {
         next(err)
@@ -108,6 +113,10 @@ const deleteProject = async (req, res, next) => {
         if (!check) return errorResponse(res, 'Project not found in this workspace', 404)
 
         await prisma.project.delete({ where: { id } })
+        await cache.del(
+            `ws:${req.workspace.id}:projects`,
+            `project:${id}:analytics`
+        )
         return successResponse(res, null, 'Project deleted')
     } catch (err) {
         next(err)
@@ -170,6 +179,10 @@ const getActivity = async (req, res, next) => {
 const getAnalytics = async (req, res, next) => {
     try {
         const { id } = req.params
+        const cacheKey = `project:${id}:analytics`
+        const cached = await cache.get(cacheKey)
+        if (cached) return successResponse(res, { analytics: cached })
+
         const now = new Date()
         const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
 
@@ -180,7 +193,6 @@ const getAnalytics = async (req, res, next) => {
             prisma.task.count({ where: { projectId: id } }),
             prisma.task.count({ where: { projectId: id, status: 'done' } }),
             prisma.task.count({ where: { projectId: id, status: { not: 'done' }, dueDate: { lt: now } } }),
-            // For daily breakdown we still need dates — but only for completed in last 30d
             prisma.task.findMany({
                 where: { projectId: id, status: 'done', updatedAt: { gte: thirtyDaysAgo } },
                 select: { updatedAt: true }
@@ -197,17 +209,9 @@ const getAnalytics = async (req, res, next) => {
             dailyCompletion[day] = (dailyCompletion[day] || 0) + 1
         })
 
-        return successResponse(res, {
-            analytics: {
-                byStatus,
-                byPriority,
-                overdue: overdueCount,
-                completionRate,
-                total: totalCount,
-                completed: completedCount,
-                dailyCompletion
-            }
-        })
+        const analytics = { byStatus, byPriority, overdue: overdueCount, completionRate, total: totalCount, completed: completedCount, dailyCompletion }
+        await cache.set(cacheKey, analytics, TTL.ANALYTICS)
+        return successResponse(res, { analytics })
     } catch (err) {
         next(err)
     }

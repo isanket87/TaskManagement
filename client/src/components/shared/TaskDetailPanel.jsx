@@ -109,7 +109,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
             await queryClient.cancelQueries(['task', projectId, detailedTask.id]);
             const previousTask = queryClient.getQueryData(['task', projectId, detailedTask.id]);
             queryClient.setQueryData(['task', projectId, detailedTask.id], {
-                ...previousTask,
+                ...(previousTask || detailedTask),
                 description: newDesc
             });
             // Update globally
@@ -134,7 +134,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
             await queryClient.cancelQueries(['task', projectId, detailedTask.id]);
             const previousTask = queryClient.getQueryData(['task', projectId, detailedTask.id]);
             queryClient.setQueryData(['task', projectId, detailedTask.id], {
-                ...previousTask,
+                ...(previousTask || detailedTask),
                 ...updates
             });
             // Update globally
@@ -162,7 +162,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
             await queryClient.cancelQueries(['task', projectId, detailedTask.id]);
             const previousTask = queryClient.getQueryData(['task', projectId, detailedTask.id]);
             queryClient.setQueryData(['task', projectId, detailedTask.id], {
-                ...previousTask,
+                ...(previousTask || detailedTask),
                 title: newTitle
             });
             // Update in the tasks list as well to reflect globally
@@ -283,7 +283,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                             </button>
                             <span className="text-sm font-medium text-slate-400 dark:text-slate-500 flex items-center gap-2">
                                 {/* Add Project Name Breadcrumb here if available */}
-                                Task #{detailedTask.id.slice(0, 6)}
+                                Task #{detailedTask?.id?.slice(0, 6)}
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
