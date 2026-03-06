@@ -8,6 +8,7 @@ import useWorkspaceStore from './store/workspaceStore';
 import WorkspaceGuard from './components/guards/WorkspaceGuard';
 import React from 'react';
 import GlobalTimerBar from './components/time/GlobalTimerBar';
+import AnalyticsTracker from './components/shared/AnalyticsTracker';
 
 // ── Lazy-loaded pages (each becomes its own async chunk) ─────────────────────
 const Login = lazy(() => import('./pages/Login'));
@@ -123,6 +124,7 @@ function App() {
     return (
         <QueryClientProvider client={queryClient}>
             <BrowserRouter>
+                <AnalyticsTracker />
                 <ErrorBoundary>
                     <Suspense fallback={<PageLoader />}>
                         <Routes>

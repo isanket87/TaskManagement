@@ -1,0 +1,32 @@
+config:
+  target: "http://localhost:5000" # Change this to your server's actual URL if testing remotely (e.g., https://api.yourdomain.com)
+  phases:
+    - duration: 30
+      arrivalRate: 10
+      name: "Warm up phase"
+    - duration: 60
+      arrivalRate: 50
+      name: "Sustained load"
+  environments:
+    production:
+      target: "http://185.167.99.233:5000" # Based on the SSH IP, adjust port if different
+  payload:
+    # You can load test data from a CSV if needed
+    # path: "users.csv"
+    # fields:
+    #   - "email"
+    #   - "password"
+  defaults:
+    headers:
+      # REPLACE THIS with a valid Bearer token from a logged-in user session
+      Authorization: "Bearer YOUR_VALID_JWT_TOKEN_HERE"
+
+scenarios:
+  - name: "Fetch Workspaces and Projects (Cache Testing)"
+    flow:
+      - get:
+          url: "/api/workspaces"
+      - pause: 1
+      # Assuming workspace ID 1 exists, replace with a real ID
+      # - get:
+      #     url: "/api/workspaces/1/projects"
