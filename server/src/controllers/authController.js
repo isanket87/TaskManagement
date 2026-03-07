@@ -320,19 +320,6 @@ const verifyEmail = async (req, res, next) => {
 
         const hashedToken = crypto.createHash('sha256').update(token).digest('hex')
 
-        // DEBUG: log what we received and what hash we computed
-        console.log('[VerifyEmail] Raw token (first 20 chars):', token?.substring(0, 20))
-        console.log('[VerifyEmail] Hashed token (first 20 chars):', hashedToken?.substring(0, 20))
-
-        // Also check if ANY user has a verify token stored (to confirm the field is being saved)
-        const anyUserWithToken = await prisma.user.findFirst({
-            where: { emailVerifyToken: { not: null } },
-            select: { email: true, emailVerifyToken: true, emailVerifyExpiry: true, emailVerified: true }
-        })
-        console.log('[VerifyEmail] Any user with a stored token?', anyUserWithToken
-            ? `YES — ${anyUserWithToken.email} | token[:20]: ${anyUserWithToken.emailVerifyToken?.substring(0, 20)} | expiry: ${anyUserWithToken.emailVerifyExpiry} | verified: ${anyUserWithToken.emailVerified}`
-            : 'NO — no users have emailVerifyToken set')
-
         const user = await prisma.user.findFirst({
             where: {
                 emailVerifyToken: hashedToken,
