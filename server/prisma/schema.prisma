@@ -51,6 +51,21 @@ model User {
   emailVerified       Boolean   @default(false)
   emailVerifyToken    String?
   emailVerifyExpiry   DateTime?
+  // API Keys (for MCP / programmatic access)
+  apiKeys             ApiKey[]
+}
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  name        String                          // e.g. "Claude Desktop"
+  keyHash     String    @unique               // sha256 of the raw key
+  prefix      String                          // first 8 chars of raw key for display
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspaceId String?                         // scoped to a workspace (null = all)
+  createdAt   DateTime  @default(now())
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?                       // null = never expires
 }
 
 model Project {

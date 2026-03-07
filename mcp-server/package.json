@@ -1,0 +1,25 @@
+{
+    "name": "brioright-mcp",
+    "version": "1.0.0",
+    "description": "MCP server for Brioright — lets AI assistants create and manage tasks via natural language",
+    "type": "module",
+    "main": "index.js",
+    "bin": {
+        "brioright-mcp": "index.js"
+    },
+    "scripts": {
+        "start": "node index.js",
+        "dev": "node --watch index.js",
+        "inspect": "npx @modelcontextprotocol/inspector node index.js"
+    },
+    "dependencies": {
+        "@modelcontextprotocol/sdk": "^1.7.0",
+        "axios": "^1.7.0",
+        "cors": "^2.8.6",
+        "dotenv": "^16.4.0",
+        "express": "^4.22.1"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    }
+}

@@ -50,6 +50,7 @@ import channelRoutes from './routes/channels.js'
 import attachmentRoutes from './routes/attachments.js'
 import notificationPrefRoutes from './routes/notificationPreferences.js'
 import healthRoutes from './routes/health.js'
+import apiKeyRoutes from './routes/apiKeys.js'
 import { getRedis, closeRedis } from './utils/redis.js'
 
 // Middleware and Utils
@@ -225,6 +226,7 @@ app.use('/api/notifications', notificationRoutes)
 app.use('/api/files', fileRoutes)
 app.use('/api/notification-preferences', notificationPrefRoutes)
 app.use('/api/health', healthRoutes)   // public — no auth required
+app.use('/api/api-keys', apiKeyRoutes) // API key management
 
 // ── SYSTEM TRIGGER ──
 app.post('/api/system/backup', auth, async (req, res, next) => {
