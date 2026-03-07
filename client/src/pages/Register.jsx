@@ -63,8 +63,9 @@ const Register = () => {
     };
 
     const handleGoogleLogin = () => {
-        const baseApi = import.meta.env.VITE_API_URL || '';
-        let authUrl = `${baseApi}/api/auth/google`;
+        const rawApi = import.meta.env.VITE_API_URL || '';
+        const computedApi = rawApi ? (rawApi.replace(/\/+$/, '').endsWith('/api') ? rawApi.replace(/\/+$/, '') : `${rawApi.replace(/\/+$/, '')}/api`) : '/api';
+        let authUrl = `${computedApi}/auth/google`;
         const returnTo = searchParams.get('returnTo');
         if (returnTo) authUrl += `?state=${encodeURIComponent(returnTo)}`;
         window.location.href = authUrl;

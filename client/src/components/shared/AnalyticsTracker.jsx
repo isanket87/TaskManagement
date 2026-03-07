@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import ReactGA from 'react-ga4';
 
@@ -6,6 +6,7 @@ const trackingId = import.meta.env.VITE_GA_TRACKING_ID;
 
 const AnalyticsTracker = () => {
     const location = useLocation();
+    const isInitialized = useRef(false);
 
     useEffect(() => {
         if (!trackingId) {
@@ -13,7 +14,9 @@ const AnalyticsTracker = () => {
             return;
         }
 
-        // 1. Manually inject the gtag.js script if not present
+        if (isInitialized.current) return;
+
+        // 1. Inject the gtag.js script if not already present
         const scriptId = 'google-tag-manager';
         if (!document.getElementById(scriptId)) {
             const script = document.createElement('script');
@@ -32,15 +35,17 @@ const AnalyticsTracker = () => {
             document.head.appendChild(inlineScript);
         }
 
-        // 2. Initialize ReactGA
+        // 2. Initialize ReactGA once
         ReactGA.initialize(trackingId);
-        
-        // 3. Initial pageview
+        isInitialized.current = true;
+
+        // 3. Send initial pageview
         ReactGA.send({ hitType: 'pageview', page: window.location.pathname });
     }, []);
 
     useEffect(() => {
-        // 4. Track route changes
+        // 4. Track subsequent route changes only (skip the very first render)
+        if (!isInitialized.current) return;
         ReactGA.send({ hitType: 'pageview', page: location.pathname + location.search });
     }, [location]);
 

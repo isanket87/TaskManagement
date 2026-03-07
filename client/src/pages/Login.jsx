@@ -39,8 +39,9 @@ const Login = () => {
 
     const handleGoogleLogin = () => {
         const returnTo = searchParams.get('returnTo');
-        const baseApi = import.meta.env.VITE_API_URL || '';
-        const baseUrl = `${baseApi}/api/auth/google`;
+        const rawApi = import.meta.env.VITE_API_URL || '';
+        const computedApi = rawApi ? (rawApi.replace(/\/+$/, '').endsWith('/api') ? rawApi.replace(/\/+$/, '') : `${rawApi.replace(/\/+$/, '')}/api`) : '/api';
+        const baseUrl = `${computedApi}/auth/google`;
         window.location.href = returnTo ? `${baseUrl}?returnTo=${encodeURIComponent(returnTo)}` : baseUrl;
     };
 

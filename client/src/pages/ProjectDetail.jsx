@@ -283,7 +283,7 @@ const ProjectDetail = () => {
 
     const { data: tasksData, isLoading } = useQuery({
         queryKey: ['tasks', projectId, filter],
-        queryFn: () => taskService.getAll(projectId, filter ? { dueDateFilter: filter } : {}),
+        queryFn: () => taskService.getAll(projectId, { limit: 500, ...(filter ? { dueDateFilter: filter } : {}) }),
     });
 
     const createMutation = useMutation({
@@ -648,7 +648,7 @@ const ProjectDetail = () => {
             {/* Import CSV Modal */}
             <ImportCsvModal
                 isOpen={isImportModalOpen}
-                onClose={() => setIsImportModalOpen(false)}
+                onClose={() => { setIsImportModalOpen(false); importMutation.reset(); }}
                 onImport={handleImportCSV}
                 isImporting={importMutation.isPending}
             />

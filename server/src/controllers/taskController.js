@@ -55,7 +55,7 @@ const createTaskSchema = z.object({
 const getTasks = async (req, res, next) => {
     try {
         const { id: projectId } = req.params
-        const { status, priority, assigneeId, dueDateFilter, search, page = 1, limit = 100 } = req.query
+        const { status, priority, assigneeId, dueDateFilter, search, page = 1, limit = 500 } = req.query
 
         const where = { projectId }
         if (status) where.status = status

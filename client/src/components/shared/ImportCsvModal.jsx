@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { UploadCloud, Download, FileSpreadsheet, X } from 'lucide-react';
 import Modal from '../ui/Modal';
@@ -8,11 +8,18 @@ import { cn } from '../../utils/helpers';
 
 const ImportCsvModal = ({ isOpen, onClose, onImport, isImporting }) => {
     const [file, setFile] = useState(null);
+    const inputRef = useRef(null);
+
+    const resetInput = () => {
+        // Reset the hidden <input> so the same file can be selected again next time
+        if (inputRef.current) inputRef.current.value = '';
+    };
 
     const onDrop = useCallback((acceptedFiles) => {
         if (acceptedFiles?.length > 0) {
             setFile(acceptedFiles[0]);
         }
+        resetInput();
     }, []);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -46,9 +53,10 @@ const ImportCsvModal = ({ isOpen, onClose, onImport, isImporting }) => {
         }
     };
 
-    // Reset file when modal closes
+    // Reset file and input when modal closes
     const handleClose = () => {
         setFile(null);
+        resetInput();
         onClose();
     };
 
@@ -79,7 +87,7 @@ const ImportCsvModal = ({ isOpen, onClose, onImport, isImporting }) => {
                                     : "border-slate-300 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-slate-50 dark:hover:bg-slate-800/50"
                             )}
                         >
-                            <input {...getInputProps()} />
+                            <input {...getInputProps()} ref={inputRef} />
                             <div className={cn(
                                 "mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-colors",
                                 isDragActive ? "bg-indigo-200 dark:bg-indigo-900/50" : "bg-indigo-100 dark:bg-indigo-900/30"
