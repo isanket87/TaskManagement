@@ -9,11 +9,9 @@ const AnalyticsTracker = () => {
     const isInitialized = useRef(false);
 
     useEffect(() => {
-        // Skip analytics in development or if no tracking ID is provided
-        if (import.meta.env.DEV || !trackingId) {
-            if (!trackingId && !import.meta.env.DEV) {
-                console.warn('[Analytics] Google Analytics Tracking ID (VITE_GA_TRACKING_ID) is missing.');
-            }
+        // Skip analytics if no tracking ID is provided
+        if (!trackingId) {
+            console.warn('[Analytics] Google Analytics Tracking ID (VITE_GA_TRACKING_ID) is missing.');
             return;
         }
 
@@ -23,15 +21,13 @@ const AnalyticsTracker = () => {
         try {
             // Explicitly set the gtagUrl to ensure correct parameter structure (?id=)
             // and handle potential issues with older versions of the library.
-            ReactGA.initialize(trackingId, {
-                gtagUrl: `https://www.googletagmanager.com/gtag/js?id=${trackingId}`
-            });
+            ReactGA.initialize(trackingId);
             isInitialized.current = true;
-            
+
             // Send initial pageview
-            ReactGA.send({ 
-                hitType: 'pageview', 
-                page: window.location.pathname + window.location.search 
+            ReactGA.send({
+                hitType: 'pageview',
+                page: window.location.pathname + window.location.search
             });
         } catch (err) {
             // This won't catch ERR_BLOCKED_BY_CLIENT (which is a browser-level network error),
@@ -41,12 +37,12 @@ const AnalyticsTracker = () => {
     }, []);
 
     useEffect(() => {
-        if (import.meta.env.DEV || !isInitialized.current) return;
-        
+        if (!isInitialized.current) return;
+
         try {
-            ReactGA.send({ 
-                hitType: 'pageview', 
-                page: location.pathname + location.search 
+            ReactGA.send({
+                hitType: 'pageview',
+                page: location.pathname + location.search
             });
         } catch (err) {
             // Fail silently on subsequent page views to avoid cluttering the console
