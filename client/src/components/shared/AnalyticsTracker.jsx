@@ -21,8 +21,16 @@ const AnalyticsTracker = () => {
         try {
             // Explicitly set the gtagUrl to ensure correct parameter structure (?id=)
             // and handle potential issues with older versions of the library.
-            ReactGA.initialize(trackingId);
+            // Route the script fetch through our backend proxy
+            ReactGA.initialize(trackingId, {
+                gtagUrl: `/api/gtag/js?id=${trackingId}`
+            });
             isInitialized.current = true;
+
+            // Override the transport URL so events go to our backend proxy too
+            ReactGA.set({
+                transport_url: window.location.origin + '/api'
+            });
 
             // Send initial pageview
             ReactGA.send({

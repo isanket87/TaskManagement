@@ -9,6 +9,7 @@ import { fileURLToPath } from 'url'
 import cookieParser from 'cookie-parser'
 import morgan from 'morgan'
 import dotenv from 'dotenv'
+import { createProxyMiddleware } from 'http-proxy-middleware'
 
 // Load environment variables
 const __filename = fileURLToPath(import.meta.url)
@@ -107,6 +108,56 @@ app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.use(cookieParser())
 app.use(morgan('dev'))
+
+// ── ANALYTICS PROXY ──
+// Proxy the gtag.js script itself from Google
+app.get('/api/gtag/js', async (req, res) => {
+    try {
+        const gaId = req.query.id;
+        if (!gaId) return res.status(400).send('Missing id parameter');
+
+        const response = await fetch(`https://www.googletagmanager.com/gtag/js?id=${gaId}`, {
+            headers: {
+                'User-Agent': req.headers['user-agent'] || '',
+                'X-Forwarded-For': req.ip || ''
+            }
+        });
+
+        const script = await response.text();
+        res.setHeader('Content-Type', 'application/javascript');
+        res.send(script);
+    } catch (error) {
+        console.error('[Analytics Proxy] Error fetching gtag:', error.message);
+        res.status(500).send('Error loading analytics script');
+    }
+});
+
+// Proxy the actual tracking events sent to Google Analytics 4
+// Using app.all to capture both GET and POST requests that GA4 might send
+app.all('/api/g/collect', async (req, res) => {
+    try {
+        // Reconstruct the full Google Analytics URL including all query parameters
+        const urlParams = new URLSearchParams(req.query).toString();
+        const targetUrl = `https://www.google-analytics.com/g/collect?${urlParams}`;
+
+        const response = await fetch(targetUrl, {
+            method: req.method,
+            body: req.method === 'POST' ? JSON.stringify(req.body) : undefined,
+            headers: {
+                'User-Agent': req.headers['user-agent'] || '',
+                'X-Forwarded-For': req.ip || '',
+                'Content-Type': req.headers['content-type'] || 'text/plain'
+            }
+        });
+
+        // GA4 usually expects a 204 No Content response, but we'll proxy exactly what we get
+        res.status(response.status).send();
+    } catch (error) {
+        // We log it but still return a 200 so the client doesn't complain
+        console.error('[Analytics Proxy] Error forwarding collect payload:', error.message);
+        res.status(200).send();
+    }
+});
 
 // ── RESPONSE TIMER & DEBUG ──
 app.use((req, res, next) => {
