@@ -9,6 +9,7 @@ import WorkspaceGuard from './components/guards/WorkspaceGuard';
 import React from 'react';
 import GlobalTimerBar from './components/time/GlobalTimerBar';
 import AnalyticsTracker from './components/shared/AnalyticsTracker';
+import EmailVerificationBanner from './components/shared/EmailVerificationBanner';
 
 // ── Lazy-loaded pages (each becomes its own async chunk) ─────────────────────
 const Login = lazy(() => import('./pages/Login'));
@@ -35,6 +36,7 @@ const Landing = lazy(() => import('./pages/Landing'));
 const TermsOfService = lazy(() => import('./pages/TermsOfService'));
 const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'));
 const HealthDashboard = lazy(() => import('./pages/HealthDashboard'));
+const VerifyEmailPage = lazy(() => import('./pages/VerifyEmailPage'));
 
 // ── Page loading spinner ──────────────────────────────────────────────────────
 const PageLoader = () => (
@@ -125,6 +127,8 @@ function App() {
         <QueryClientProvider client={queryClient}>
             <BrowserRouter>
                 <AnalyticsTracker />
+                {/* Email verification banner — softly prompt unverified users at top */}
+                {isAuthenticated && <EmailVerificationBanner />}
                 <ErrorBoundary>
                     <Suspense fallback={<PageLoader />}>
                         <Routes>
@@ -137,6 +141,7 @@ function App() {
                             <Route path="/invite/:token" element={<InviteAccept />} />
                             <Route path="/terms" element={<TermsOfService />} />
                             <Route path="/privacy" element={<PrivacyPolicy />} />
+                            <Route path="/verify-email" element={<VerifyEmailPage />} />
                             <Route path="/health" element={<HealthDashboard />} />
 
                             {/* Workspace setup & selection */}

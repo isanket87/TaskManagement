@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { register, login, logout, refreshToken, getMe, googleRedirect, googleCallback, updateProfile, forgotPassword, resetPassword, changePassword, deleteAccount } from '../controllers/authController.js'
+import { register, login, logout, refreshToken, getMe, googleRedirect, googleCallback, updateProfile, forgotPassword, resetPassword, changePassword, deleteAccount, verifyEmail, resendVerificationEmail } from '../controllers/authController.js'
 import auth from '../middleware/auth.js'
 import rateLimit from 'express-rate-limit'
 
@@ -27,8 +27,13 @@ router.delete('/account', auth, deleteAccount)
 router.post('/forgot-password', authLimiter, forgotPassword)
 router.post('/reset-password', authLimiter, resetPassword)
 
+// Email verification
+router.get('/verify-email', verifyEmail)                            // public — token in query string
+router.post('/resend-verification', auth, resendVerificationEmail)  // requires auth
+
 // Google OAuth
 router.get('/google', googleRedirect)
 router.get('/google/callback', googleCallback)
 
 export default router
+

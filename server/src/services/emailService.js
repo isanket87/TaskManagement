@@ -265,5 +265,93 @@ export const emailService = {
   </div>
 </div></body></html>`
     })
+  },
+
+  async sendEmailVerification({ to, userName, verifyUrl }) {
+    await this.sendRaw({
+      to,
+      subject: 'Verify your Brioright email address',
+      html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Verify your email</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Arial,Helvetica,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f1f5f9;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <table width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;">
+
+          <!-- HEADER -->
+          <tr>
+            <td bgcolor="#4f46e5" align="center"
+                style="background-color:#4f46e5;padding:40px 32px;border-radius:12px 12px 0 0;">
+              <p style="margin:0 0 10px;font-size:36px;line-height:1;">&#x2709;&#xFE0F;</p>
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:bold;line-height:1.4;">
+                Verify your email address
+              </h1>
+              <p style="margin:8px 0 0;color:#c7d2fe;font-size:14px;">Brioright &mdash; Work with precision</p>
+            </td>
+          </tr>
+
+          <!-- BODY -->
+          <tr>
+            <td bgcolor="#ffffff" style="background-color:#ffffff;padding:36px 32px;">
+              <p style="margin:0 0 14px;color:#111827;font-size:16px;">Hi <strong>${userName}</strong>,</p>
+              <p style="margin:0 0 28px;color:#4b5563;font-size:15px;line-height:1.6;">
+                Thanks for signing up! Click the button below to verify your email address
+                and complete your account setup. This link expires in <strong>24 hours</strong>.
+              </p>
+
+              <!-- BUTTON — background-color on the <a> itself for max compatibility -->
+              <table cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom:28px;">
+                    <a href="${verifyUrl}"
+                       target="_blank"
+                       style="display:inline-block;background-color:#4f46e5;color:#ffffff;font-size:16px;font-weight:bold;text-decoration:none;padding:15px 40px;border-radius:8px;border:1px solid #4338ca;">
+                      Verify Email Address &#8594;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 8px;color:#9ca3af;font-size:13px;">
+                If the button doesn&apos;t work, paste this link into your browser:
+              </p>
+              <p style="margin:0 0 24px;font-size:12px;word-break:break-all;background-color:#f8fafc;padding:12px;border-radius:6px;border:1px solid #e5e7eb;">
+                <a href="${verifyUrl}" style="color:#4f46e5;text-decoration:none;">${verifyUrl}</a>
+              </p>
+
+              <p style="margin:0;color:#9ca3af;font-size:13px;">
+                If you didn&apos;t create an account, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+
+          <!-- FOOTER -->
+          <tr>
+            <td bgcolor="#f8fafc" align="center"
+                style="background-color:#f8fafc;padding:16px 32px;border-top:1px solid #e5e7eb;border-radius:0 0 12px 12px;">
+              <p style="margin:0;color:#9ca3af;font-size:12px;">
+                Brioright &middot;
+                <a href="${process.env.CLIENT_URL}" style="color:#4f46e5;text-decoration:none;">brioright.app</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`,
+      text: `Hi ${userName},\n\nVerify your Brioright email by clicking this link (expires in 24 hours):\n${verifyUrl}\n\nIf you didn't create an account, ignore this email.\n\nBrioright — brioright.app`
+    })
   }
 }

@@ -47,6 +47,10 @@ model User {
   // Password Reset
   passwordResetToken  String?
   passwordResetExpiry DateTime?
+  // Email Verification
+  emailVerified       Boolean   @default(false)
+  emailVerifyToken    String?
+  emailVerifyExpiry   DateTime?
 }
 
 model Project {

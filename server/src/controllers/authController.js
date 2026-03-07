@@ -45,7 +45,23 @@ const register = async (req, res, next) => {
         const hashedPassword = await bcrypt.hash(password, 12)
         const user = await prisma.user.create({
             data: { name, email, password: hashedPassword },
-            select: { id: true, name: true, email: true, avatar: true, role: true, activeWorkspaceId: true, createdAt: true }
+            select: { id: true, name: true, email: true, avatar: true, role: true, activeWorkspaceId: true, createdAt: true, emailVerified: true }
+        })
+
+        // Generate email verification token
+        const rawToken = crypto.randomBytes(32).toString('hex')
+        const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex')
+        const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { emailVerifyToken: hashedToken, emailVerifyExpiry: expiry }
+        })
+
+        const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${rawToken}`
+        // Non-blocking — don't fail registration if email send fails
+        emailService.sendEmailVerification({ to: user.email, userName: user.name, verifyUrl }).catch(err => {
+            console.error('[Auth] Failed to send verification email:', err.message)
         })
 
         const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, name: user.name })
@@ -117,7 +133,7 @@ const getMe = async (req, res, next) => {
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.user.id },
-            select: { id: true, name: true, email: true, avatar: true, role: true, activeWorkspaceId: true, createdAt: true }
+            select: { id: true, name: true, email: true, avatar: true, role: true, activeWorkspaceId: true, createdAt: true, emailVerified: true }
         })
         if (!user) return errorResponse(res, 'User not found', 404)
         return successResponse(res, { user })
@@ -297,4 +313,81 @@ const deleteAccount = async (req, res, next) => {
     }
 }
 
-export { register, login, logout, refreshToken, getMe, googleRedirect, googleCallback, updateProfile, forgotPassword, resetPassword, changePassword, deleteAccount }
+const verifyEmail = async (req, res, next) => {
+    try {
+        const { token } = req.query
+        if (!token) return errorResponse(res, 'Verification token is required.', 400)
+
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex')
+
+        // DEBUG: log what we received and what hash we computed
+        console.log('[VerifyEmail] Raw token (first 20 chars):', token?.substring(0, 20))
+        console.log('[VerifyEmail] Hashed token (first 20 chars):', hashedToken?.substring(0, 20))
+
+        // Also check if ANY user has a verify token stored (to confirm the field is being saved)
+        const anyUserWithToken = await prisma.user.findFirst({
+            where: { emailVerifyToken: { not: null } },
+            select: { email: true, emailVerifyToken: true, emailVerifyExpiry: true, emailVerified: true }
+        })
+        console.log('[VerifyEmail] Any user with a stored token?', anyUserWithToken
+            ? `YES — ${anyUserWithToken.email} | token[:20]: ${anyUserWithToken.emailVerifyToken?.substring(0, 20)} | expiry: ${anyUserWithToken.emailVerifyExpiry} | verified: ${anyUserWithToken.emailVerified}`
+            : 'NO — no users have emailVerifyToken set')
+
+        const user = await prisma.user.findFirst({
+            where: {
+                emailVerifyToken: hashedToken,
+                emailVerifyExpiry: { gt: new Date() }
+            }
+        })
+
+        if (!user) return errorResponse(res, 'Verification link is invalid or has expired.', 400)
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { emailVerified: true, emailVerifyToken: null, emailVerifyExpiry: null }
+        })
+
+        return successResponse(res, null, 'Email verified successfully. You are all set!')
+    } catch (err) {
+        next(err)
+    }
+}
+
+
+const resendVerificationEmail = async (req, res, next) => {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: { id: true, name: true, email: true, emailVerified: true }
+        })
+        if (!user) return errorResponse(res, 'User not found', 404)
+        if (user.emailVerified) return errorResponse(res, 'Your email is already verified.', 400)
+
+        // Rate limit: check if a non-expired token already exists (i.e. sent recently < 5 min ago)
+        const existing = await prisma.user.findFirst({
+            where: {
+                id: user.id,
+                emailVerifyExpiry: { gt: new Date(Date.now() + (24 * 60 - 5) * 60 * 1000) }
+            }
+        })
+        if (existing) return errorResponse(res, 'A verification email was sent recently. Please wait a few minutes before requesting again.', 429)
+
+        const rawToken = crypto.randomBytes(32).toString('hex')
+        const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex')
+        const expiry = new Date(Date.now() + 24 * 60 * 60 * 1000)
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { emailVerifyToken: hashedToken, emailVerifyExpiry: expiry }
+        })
+
+        const verifyUrl = `${process.env.CLIENT_URL}/verify-email?token=${rawToken}`
+        await emailService.sendEmailVerification({ to: user.email, userName: user.name, verifyUrl })
+
+        return successResponse(res, null, 'Verification email sent! Check your inbox.')
+    } catch (err) {
+        next(err)
+    }
+}
+
+export { register, login, logout, refreshToken, getMe, googleRedirect, googleCallback, updateProfile, forgotPassword, resetPassword, changePassword, deleteAccount, verifyEmail, resendVerificationEmail }

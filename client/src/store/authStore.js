@@ -56,7 +56,16 @@ const useAuthStore = create(
             },
 
             // Helper to clear state from outside components
-            clearAuth: () => set({ user: null, isAuthenticated: false })
+            clearAuth: () => set({ user: null, isAuthenticated: false }),
+
+            resendVerificationEmail: async () => {
+                try {
+                    await authService.resendVerification();
+                    return { success: true };
+                } catch (err) {
+                    return { success: false, error: err.response?.data?.message || 'Failed to resend email' };
+                }
+            },
         }),
         {
             name: 'auth-storage',

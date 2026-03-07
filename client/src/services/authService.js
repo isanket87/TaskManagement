@@ -6,4 +6,7 @@ export const authService = {
     logout: () => api.post('/auth/logout'),
     getMe: () => api.get('/auth/me'),
     refresh: () => api.post('/auth/refresh'),
+    verifyEmail: (token) => api.get(`/auth/verify-email?token=${token}`),
+    resendVerification: () => api.post('/auth/resend-verification'),
 };
+
