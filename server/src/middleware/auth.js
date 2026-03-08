@@ -1,7 +1,14 @@
 import { verifyAccessToken } from '../utils/jwt.js'
 import { errorResponse } from '../utils/helpers.js'
+import { apiKeyAuth } from './apiKeyAuth.js'
 
-const auth = (req, res, next) => {
+const auth = async (req, res, next) => {
+    // If request contains API key, delegate to API key middleware
+    if (req.headers['x-api-key']) {
+        return apiKeyAuth(req, res, next)
+    }
+
+    // Otherwise use standard JWT cookie auth
     try {
         const token = req.cookies?.accessToken
         if (!token) {

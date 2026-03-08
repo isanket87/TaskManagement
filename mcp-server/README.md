@@ -1,77 +1,69 @@
 # Brioright MCP Server
 
-Connect AI assistants (Claude Desktop, Cursor, etc.) directly to your Brioright workspace.
+Connect AI assistants (Claude Desktop, Cursor, Antigravity) directly to your Brioright workspace.
+
+## Transport Modes
+This server supports two transport modes:
+1. **Stdio mode (Local)**: Runs as a subprocess for local clients like Claude Desktop or Cursor.
+2. **HTTP/SSE mode (Cloud)**: Runs as a persistent web server for cloud-based AI assistants (like Antigravity).
 
 ## Quick Setup
 
 ### 1. Generate an API Key
-
-Log in to Brioright, then run this from your server terminal:
-
-```bash
-curl -X POST https://brioright.online/api/api-keys \
-  -H "Content-Type: application/json" \
-  -H "Cookie: <your-session-cookie>" \
-  -d '{"name": "Claude Desktop", "workspaceId": "your-workspace-slug"}'
+Log in to Brioright, then run from your browser console:
+```javascript
+const res = await fetch('/api/api-keys', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  credentials: 'include',
+  body: JSON.stringify({ name: 'My MCP Client' })
+});
+console.log(await res.json());
 ```
-
-Or use the Brioright Settings page (coming soon) to generate one visually.
-
-**Save the key** — it's shown only once!
-
----
+**Save the key**!
 
 ### 2. Configure the MCP Server
-
-Copy the example env file and fill in your values:
 
 ```bash
 cp .env.example .env
 ```
-
 Edit `.env`:
 ```env
 BRIORIGHT_API_URL=https://brioright.online/api
 BRIORIGHT_API_KEY=brio_your_key_here
 BRIORIGHT_WORKSPACE_ID=your-workspace-slug
+
+# Leave unset (or "stdio") for Claude Desktop
+# Set to "http" for cloud clients like Antigravity
+MCP_TRANSPORT=http
+MCP_PORT=4040
+MCP_SECRET=change_me_to_a_strong_secret
 ```
 
----
-
-### 3. Connect to Claude Desktop
-
-Add to `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
-
+### 3A. Connect to Claude Desktop (Local)
+Add to `%APPDATA%\Claude\claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
     "brioright": {
       "command": "node",
-      "args": ["D:/TaskManagement/mcp-server/index.js"],
+      "args": ["/absolute/path/to/mcp-server/index.js"],
       "env": {
-        "BRIORIGHT_API_URL": "https://brioright.online/api",
-        "BRIORIGHT_API_KEY": "brio_your_key_here",
-        "BRIORIGHT_WORKSPACE_ID": "your-workspace-slug"
+        "BRIORIGHT_API_URL": "...",
+        "BRIORIGHT_API_KEY": "...",
+        "BRIORIGHT_WORKSPACE_ID": "..."
       }
     }
   }
 }
 ```
 
-Restart Claude Desktop — you'll see the 🔌 icon showing Brioright tools are available.
-
----
-
-### 4. Test with MCP Inspector
-
-```bash
-npm run inspect
-```
-
----
+### 3B. Connect Cloud AI (Remote)
+Deploy the server with `MCP_TRANSPORT=http` (via PM2).
+Provide the cloud AI assistant your MCP server base URL: `http://your-server-ip:4040/sse`
+And pass the Authorization Header: `Bearer your_secure_bearer_token`.
 
 ## Available Tools
-
 | Tool | Description |
 |------|-------------|
 | `list_workspaces` | List all accessible workspaces |
@@ -84,15 +76,3 @@ npm run inspect
 | `create_project` | Create a new project |
 | `list_members` | List workspace members (for finding assignee IDs) |
 | `get_workspace_summary` | Dashboard stats: task counts by status/priority |
-
-## Example Prompts
-
-Once connected to Claude:
-
-> *"Create a task in the Brioright project: Set up Sentry error monitoring, high priority, due March 15"*
-
-> *"What are all the high priority tasks currently in progress?"*
-
-> *"Mark task abc123 as complete"*
-
-> *"Create a new project called Q2 Roadmap in my workspace"*
