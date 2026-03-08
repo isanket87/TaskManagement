@@ -39,6 +39,7 @@ api.interceptors.request.use(
                     '/auth',
                     '/users',
                     '/workspaces', // Important: backend handles /workspaces inherently, do not prefix it
+                    '/api-keys',   // Global user endpoints
                 ];
 
                 // Specific check for /workspaces vs /workspaces/check-slug etc.

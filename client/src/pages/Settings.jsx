@@ -10,6 +10,7 @@ import Avatar from '../components/ui/Avatar';
 import useAuthStore from '../store/authStore';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import ApiKeysSection from '../components/settings/ApiKeysSection';
 
 const profileSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -197,6 +198,9 @@ const Settings = () => {
                         </Button>
                     </form>
                 </div>
+
+                {/* ── API Keys ── */}
+                <ApiKeysSection />
 
                 {/* ── Danger Zone ── */}
                 <div className="card p-6 border-red-200 dark:border-red-900/50">
