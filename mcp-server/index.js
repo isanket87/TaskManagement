@@ -22,6 +22,13 @@ import { config } from 'dotenv'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 
+// Handle setup flow `npx brioright-mcp connect`
+if (process.argv[2] === 'connect') {
+    const { runSetup } = await import('./setup.js')
+    await runSetup()
+    process.exit(0)
+}
+
 // Load .env from mcp-server directory
 const __dirname = dirname(fileURLToPath(import.meta.url))
 config({ path: join(__dirname, '.env') })

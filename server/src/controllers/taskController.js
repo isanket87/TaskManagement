@@ -169,8 +169,20 @@ const getTask = async (req, res, next) => {
 // PUT /api/projects/:id/tasks/:taskId
 const updateTask = async (req, res, next) => {
     try {
-        const { taskId, id: projectId } = req.params
+        const { taskId } = req.params
+        let { id: projectId } = req.params
+
         const data = req.body
+
+        // If accessed via workspace alias (/workspaces/:slug/tasks/:taskId), projectId will be undefined.
+        if (!projectId) {
+            const tempTask = await prisma.task.findUnique({
+                where: { id: taskId },
+                select: { projectId: true }
+            })
+            if (!tempTask) throw new Error('Task not found')
+            projectId = tempTask.projectId
+        }
 
         const dueDate = data.dueDate !== undefined ? (data.dueDate ? new Date(data.dueDate) : null) : undefined
         const dueDateStatus = dueDate !== undefined ? computeDueDateStatus(dueDate, data.status || 'todo') : undefined

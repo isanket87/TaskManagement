@@ -7,7 +7,19 @@ This server supports two transport modes:
 1. **Stdio mode (Local)**: Runs as a subprocess for local clients like Claude Desktop or Cursor.
 2. **HTTP/SSE mode (Cloud)**: Runs as a persistent web server for cloud-based AI assistants (like Antigravity).
 
-## Quick Setup
+## Quick Setup (Easiest Way)
+
+Instead of manually editing JSON configuration files, you can use our interactive setup wizard to automatically connect your IDE to Brioright:
+
+```bash
+npx -y brioright-mcp connect
+```
+
+You will simply be prompted for your API Key and Workspace ID. The wizard supports injecting settings into VS Code (Roo/Cline), Cursor, Windsurf, and Antigravity automatically.
+
+---
+
+## Manual Setup
 
 ### 1. Generate an API Key
 Log in to Brioright, then run from your browser console:
