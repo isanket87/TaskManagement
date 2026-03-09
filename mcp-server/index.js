@@ -34,25 +34,25 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 config({ path: join(__dirname, '.env') })
 
 const API_URL = process.env.BRIORIGHT_API_URL || 'http://localhost:3001/api'
-const API_KEY = process.env.BRIORIGHT_API_KEY
+const ENV_API_KEY = process.env.BRIORIGHT_API_KEY
 const DEFAULT_WORKSPACE = process.env.BRIORIGHT_WORKSPACE_ID
 const MCP_PORT = parseInt(process.env.MCP_PORT || '4040')
 const MCP_SECRET = process.env.MCP_SECRET // Optional bearer token for HTTP mode
 const USE_HTTP = process.env.MCP_TRANSPORT === 'http'
 
-if (!API_KEY) {
-    process.stderr.write('[Brioright MCP] ERROR: BRIORIGHT_API_KEY is not set.\n')
-    process.exit(1)
-}
+// ── Axios client factory ──────────────────────────────────────────────────────
+async function call(method, path, data, overrideApiKey) {
+    const key = overrideApiKey || ENV_API_KEY;
+    if (!key) {
+        throw new Error('Brioright API error: No API Key provided. Either set BRIORIGHT_API_KEY environment variable or provide apiKey in the tool arguments.');
+    }
 
-// ── Axios client ──────────────────────────────────────────────────────────────
-const api = axios.create({
-    baseURL: API_URL,
-    headers: { 'X-API-Key': API_KEY, 'Content-Type': 'application/json' },
-    timeout: 10000,
-})
+    const api = axios.create({
+        baseURL: API_URL,
+        headers: { 'X-API-Key': key, 'Content-Type': 'application/json' },
+        timeout: 10000,
+    })
 
-async function call(method, path, data) {
     try {
         const res = await api({ method, url: path, data })
         return res.data.data
@@ -67,9 +67,10 @@ function buildServer() {
     const server = new McpServer({ name: 'brioright', version: '1.0.0' })
 
     // ── list_workspaces ───────────────────────────────────────────────────────
-    server.tool('list_workspaces', 'List all Brioright workspaces the API key has access to', {},
-        async () => {
-            const data = await call('GET', '/workspaces')
+    server.tool('list_workspaces', 'List all Brioright workspaces the API key has access to',
+        { apiKey: z.string().optional().describe('Brioright API Key') },
+        async ({ apiKey }) => {
+            const data = await call('GET', '/workspaces', null, apiKey)
             const workspaces = data.workspaces || data
             return { content: [{ type: 'text', text: JSON.stringify(workspaces.map(w => ({ id: w.id, slug: w.slug, name: w.name })), null, 2) }] }
         }
@@ -77,11 +78,14 @@ function buildServer() {
 
     // ── list_projects ─────────────────────────────────────────────────────────
     server.tool('list_projects', 'List all projects in a workspace',
-        { workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.') },
-        async ({ workspaceId }) => {
+        {
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API Key')
+        },
+        async ({ workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
-            const data = await call('GET', `/workspaces/${ws}/projects`)
+            const data = await call('GET', `/workspaces/${ws}/projects`, null, apiKey)
             const projects = data.projects || data
             return { content: [{ type: 'text', text: JSON.stringify(projects.map(p => ({ id: p.id, name: p.name, status: p.status })), null, 2) }] }
         }
@@ -95,15 +99,16 @@ function buildServer() {
             status: z.enum(['todo', 'in_progress', 'in_review', 'done', 'cancelled']).optional(),
             priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
             limit: z.number().optional().default(20),
+            apiKey: z.string().optional().describe('Brioright API Key')
         },
-        async ({ projectId, workspaceId, status, priority, limit }) => {
+        async ({ projectId, workspaceId, status, priority, limit, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
             const params = new URLSearchParams()
             if (status) params.set('status', status)
             if (priority) params.set('priority', priority)
             params.set('limit', String(limit || 20))
-            const data = await call('GET', `/workspaces/${ws}/projects/${projectId}/tasks?${params}`)
+            const data = await call('GET', `/workspaces/${ws}/projects/${projectId}/tasks?${params}`, null, apiKey)
             const tasks = data.tasks || data
             return { content: [{ type: 'text', text: JSON.stringify(tasks.map(t => ({ id: t.id, title: t.title, status: t.status, priority: t.priority, dueDate: t.dueDate, assignee: t.assignee?.name })), null, 2) }] }
         }
@@ -111,11 +116,11 @@ function buildServer() {
 
     // ── get_task ──────────────────────────────────────────────────────────────
     server.tool('get_task', 'Get full details of a single task',
-        { taskId: z.string(), workspaceId: z.string().optional() },
-        async ({ taskId, workspaceId }) => {
+        { taskId: z.string(), workspaceId: z.string().optional(), apiKey: z.string().optional().describe('Brioright API Key') },
+        async ({ taskId, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
-            const data = await call('GET', `/workspaces/${ws}/tasks/${taskId}`)
+            const data = await call('GET', `/workspaces/${ws}/tasks/${taskId}`, null, apiKey)
             return { content: [{ type: 'text', text: JSON.stringify(data.task || data, null, 2) }] }
         }
     )
@@ -131,15 +136,16 @@ function buildServer() {
             dueDate: z.string().optional().describe('ISO date string e.g. 2026-03-15'),
             assigneeId: z.string().optional(),
             workspaceId: z.string().optional(),
+            apiKey: z.string().optional().describe('Brioright API Key')
         },
-        async ({ projectId, title, description, status, priority, dueDate, assigneeId, workspaceId }) => {
+        async ({ projectId, title, description, status, priority, dueDate, assigneeId, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
             const data = await call('POST', `/workspaces/${ws}/projects/${projectId}/tasks`, {
                 title, description, status, priority,
                 dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
                 assigneeId,
-            })
+            }, apiKey)
             const task = data.task || data
             return { content: [{ type: 'text', text: `✅ Task created!\n\n${JSON.stringify({ id: task.id, title: task.title, status: task.status, priority: task.priority, dueDate: task.dueDate }, null, 2)}` }] }
         }
@@ -156,13 +162,14 @@ function buildServer() {
             dueDate: z.string().optional(),
             assigneeId: z.string().optional(),
             workspaceId: z.string().optional(),
+            apiKey: z.string().optional().describe('Brioright API Key')
         },
-        async ({ taskId, workspaceId, ...fields }) => {
+        async ({ taskId, workspaceId, apiKey, ...fields }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
             const updates = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined))
             if (updates.dueDate) updates.dueDate = new Date(updates.dueDate).toISOString()
-            const data = await call('PATCH', `/workspaces/${ws}/tasks/${taskId}`, updates)
+            const data = await call('PATCH', `/workspaces/${ws}/tasks/${taskId}`, updates, apiKey)
             const task = data.task || data
             return { content: [{ type: 'text', text: `✅ Task updated!\n\n${JSON.stringify({ id: task.id, title: task.title, status: task.status, priority: task.priority }, null, 2)}` }] }
         }
@@ -170,11 +177,11 @@ function buildServer() {
 
     // ── complete_task ─────────────────────────────────────────────────────────
     server.tool('complete_task', 'Mark a task as completed',
-        { taskId: z.string(), workspaceId: z.string().optional() },
-        async ({ taskId, workspaceId }) => {
+        { taskId: z.string(), workspaceId: z.string().optional(), apiKey: z.string().optional().describe('Brioright API Key') },
+        async ({ taskId, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
-            await call('PATCH', `/workspaces/${ws}/tasks/${taskId}`, { status: 'done' })
+            await call('PATCH', `/workspaces/${ws}/tasks/${taskId}`, { status: 'done' }, apiKey)
             return { content: [{ type: 'text', text: `✅ Task ${taskId} marked as done.` }] }
         }
     )
@@ -186,11 +193,12 @@ function buildServer() {
             description: z.string().optional(),
             color: z.string().optional().default('#6366f1'),
             workspaceId: z.string().optional(),
+            apiKey: z.string().optional().describe('Brioright API Key')
         },
-        async ({ name, description, color, workspaceId }) => {
+        async ({ name, description, color, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
-            const data = await call('POST', `/workspaces/${ws}/projects`, { name, description, color })
+            const data = await call('POST', `/workspaces/${ws}/projects`, { name, description, color }, apiKey)
             const project = data.project || data
             return { content: [{ type: 'text', text: `✅ Project created!\n\n${JSON.stringify({ id: project.id, name: project.name }, null, 2)}` }] }
         }
@@ -198,11 +206,11 @@ function buildServer() {
 
     // ── list_members ──────────────────────────────────────────────────────────
     server.tool('list_members', 'List workspace members (useful for finding assignee IDs)',
-        { workspaceId: z.string().optional() },
-        async ({ workspaceId }) => {
+        { workspaceId: z.string().optional(), apiKey: z.string().optional().describe('Brioright API Key') },
+        async ({ workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
-            const data = await call('GET', `/workspaces/${ws}/members`)
+            const data = await call('GET', `/workspaces/${ws}/members`, null, apiKey)
             const members = data.members || data
             return { content: [{ type: 'text', text: JSON.stringify(members.map(m => ({ id: m.user?.id || m.id, name: m.user?.name || m.name, email: m.user?.email || m.email, role: m.role })), null, 2) }] }
         }
@@ -210,11 +218,11 @@ function buildServer() {
 
     // ── get_workspace_summary ─────────────────────────────────────────────────
     server.tool('get_workspace_summary', 'Dashboard stats: task counts by status and priority',
-        { workspaceId: z.string().optional() },
-        async ({ workspaceId }) => {
+        { workspaceId: z.string().optional(), apiKey: z.string().optional().describe('Brioright API Key') },
+        async ({ workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
-            const data = await call('GET', `/workspaces/${ws}/dashboard/stats`)
+            const data = await call('GET', `/workspaces/${ws}/dashboard/stats`, null, apiKey)
             return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] }
         }
     )

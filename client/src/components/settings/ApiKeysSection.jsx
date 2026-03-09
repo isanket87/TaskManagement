@@ -191,6 +191,22 @@ const ApiKeysSection = () => {
 }`}
                 </pre>
             </div>
+
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Connecting Mobile / Remote AI (Gemini, ChatGPT)</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    For AI assistant apps that support connecting to a Remote MCP Server (SSE), use the following details to link your workspace over the internet:
+                </p>
+                <div className="space-y-2 text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <p><strong>URL / Endpoint:</strong> <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">https://brioright.online/mcp/sse</code></p>
+                    <p><strong>Auth / Server Secret:</strong> <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">brioright_mcp_secret_2026</code></p>
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                        <p className="text-sm">
+                            <span className="text-indigo-600 dark:text-indigo-400 font-medium">✨ Important:</span> Because this server is public, you must ask the AI to run its commands using <strong>your generated API Key above</strong>. (e.g., <em>"Please list my tasks and use my api key: br-..."</em>).
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };
