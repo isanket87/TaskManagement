@@ -1,11 +1,11 @@
-import { Sun, Moon, Bell, Search } from 'lucide-react';
+import { Sun, Moon, Bell, Search, Menu } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useNotificationStore from '../../store/notificationStore';
 import useWorkspaceStore from '../../store/workspaceStore';
 import GlobalSearchModal from '../shared/GlobalSearchModal';
 
-const Navbar = ({ title }) => {
+const Navbar = ({ title, onMenuClick }) => {
     const { unreadCount } = useNotificationStore();
     const { workspace } = useWorkspaceStore();
     const navigate = useNavigate();
@@ -30,10 +30,17 @@ const Navbar = ({ title }) => {
 
     return (
         <>
-            <header className="h-14 flex items-center justify-between px-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0 z-30 relative">
+            <header className="h-14 flex items-center justify-between px-4 sm:px-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shrink-0 z-30 relative">
 
-                {/* Left: Breadcrumb/Title */}
-                <div className="flex flex-1 items-center min-w-0">
+                {/* Left: Hamburger + Breadcrumb/Title */}
+                <div className="flex flex-1 items-center min-w-0 gap-3">
+                    <button
+                        onClick={onMenuClick}
+                        className="p-1.5 -ml-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 md:hidden transition-colors"
+                        title="Open Menu"
+                    >
+                        <Menu className="w-5 h-5" />
+                    </button>
                     <h1 className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate flex items-center gap-2">
                         {title}
                     </h1>

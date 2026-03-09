@@ -40,7 +40,7 @@ const NAV_GROUPS = [
     }
 ];
 
-const Sidebar = () => {
+const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     const [collapsed, setCollapsed] = useState(false);
     const { user, logout } = useAuthStore();
     const { unreadCount: notifCount } = useNotificationStore();
@@ -62,11 +62,22 @@ const Sidebar = () => {
         { icon: <LogOut className="w-4 h-4" />, label: 'Sign out', danger: true, onClick: async () => { await logout(); navigate('/login'); } },
     ];
 
+    // On mobile, close sidebar after clicking a nav link
+    const handleNavClick = () => {
+        if (isMobileOpen && onMobileClose) {
+            onMobileClose();
+        }
+    };
+
     return (
         <motion.aside
             animate={{ width: collapsed ? 64 : 240 }}
             transition={{ duration: 0.25, ease: "easeInOut" }}
-            className="flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shrink-0 z-40 relative"
+            className={cn(
+                "flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shrink-0 z-50",
+                "fixed inset-y-0 left-0 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
+                isMobileOpen ? "translate-x-0" : "-translate-x-full"
+            )}
         >
             {/* Logo */}
             <div className="flex items-center gap-3 px-4 h-14 border-b border-slate-200 dark:border-slate-800">
@@ -122,6 +133,7 @@ const Sidebar = () => {
                                     <NavLink
                                         key={to}
                                         to={currentTo}
+                                        onClick={handleNavClick}
                                         title={collapsed ? label : undefined}
                                         className={({ isActive }) => cn(
                                             "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 relative group",
@@ -176,6 +188,7 @@ const Sidebar = () => {
                 <div className="pt-4 mt-6 border-t border-slate-100 dark:border-slate-800">
                     <NavLink
                         to={workspace ? `/workspace/${workspace.slug}/profile` : '/settings'}
+                        onClick={handleNavClick}
                         title={collapsed ? "Settings" : undefined}
                         className={({ isActive }) => cn(
                             "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 relative",

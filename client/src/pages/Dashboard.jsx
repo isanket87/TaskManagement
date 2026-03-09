@@ -103,7 +103,7 @@ const Dashboard = () => {
                 <DueDateSummaryCards onFilter={setActiveFilter} activeFilter={activeFilter} />
 
                 {/* Activity stats row */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
                         { label: 'Active Tasks', value: myTasks.length, icon: ClipboardList, color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-950/30' },
                         { label: 'Projects', value: stats?.projects ?? '—', icon: FolderOpen, color: 'text-violet-500', bg: 'bg-violet-50 dark:bg-violet-950/30' },

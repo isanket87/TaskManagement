@@ -206,7 +206,7 @@ const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onA
     const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
     return (
-        <div className="flex flex-col w-[300px] shrink-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl h-full max-h-full">
+        <div className="flex flex-col w-[300px] sm:w-[320px] shrink-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl h-full max-h-full snap-center md:snap-align-none">
             <div className="flex items-center justify-between p-4 pb-2">
                 <div className="flex items-center gap-2.5">
                     <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: column.color }} />
@@ -562,7 +562,7 @@ const ProjectDetail = () => {
                 {/* Board / Workload / Swimlane area */}
                 <div className={cn(
                     "flex-1 min-h-0",
-                    viewMode === 'kanban' ? "overflow-x-auto overflow-y-hidden px-6 pb-6" : "overflow-hidden"
+                    viewMode === 'kanban' ? "overflow-x-auto overflow-y-hidden px-6 pb-6 snap-x snap-mandatory hide-scrollbar" : "overflow-hidden"
                 )}>
                     {viewMode === 'workload' ? (
                         <WorkloadView
