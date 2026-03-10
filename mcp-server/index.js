@@ -54,7 +54,11 @@ async function call(method, path, data, overrideApiKey) {
     })
 
     try {
-        const res = await api({ method, url: path, data })
+        const reqConfig = { method, url: path };
+        if (data !== null && data !== undefined) {
+            reqConfig.data = data;
+        }
+        const res = await api(reqConfig);
         return res.data.data
     } catch (err) {
         const msg = err.response?.data?.message || err.message || 'Unknown error'

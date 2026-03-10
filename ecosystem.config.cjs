@@ -8,7 +8,7 @@ module.exports = {
             instances: 'max',           // Use all CPU cores
             exec_mode: 'cluster',       // Cluster mode for multi-core
             watch: false,               // Don't watch files in production
-            max_memory_restart: '400M', // Restart if RAM exceeds 400MB
+            max_memory_restart: '1500M', // Restart if RAM exceeds 1500MB
             env_production: {
                 NODE_ENV: 'production',
                 PORT: 5000

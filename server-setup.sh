@@ -90,7 +90,7 @@ JWT_SECRET="${JWT_SECRET}"
 JWT_REFRESH_SECRET="${JWT_REFRESH_SECRET}"
 
 # Frontend URL — update to your domain once you have one
-CLIENT_URL="http://185.167.99.233"
+CLIENT_URL="http://15.235.202.51"
 
 # ── YOU MUST FILL THESE IN ──────────────────────────
 RESEND_API_KEY="re_CHANGE_ME"
@@ -98,7 +98,7 @@ EMAIL_FROM="Brioright <noreply@brioright.app>"
 
 GOOGLE_CLIENT_ID="CHANGE_ME"
 GOOGLE_CLIENT_SECRET="CHANGE_ME"
-GOOGLE_CALLBACK_URL="http://185.167.99.233/api/auth/google/callback"
+GOOGLE_CALLBACK_URL="http://15.235.202.51/api/auth/google/callback"
 # ────────────────────────────────────────────────────
 
 # File storage — optional
