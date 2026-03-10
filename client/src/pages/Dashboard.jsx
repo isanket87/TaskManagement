@@ -127,19 +127,21 @@ const Dashboard = () => {
                     {/* Left — My Tasks + Activity */}
                     <div className="lg:col-span-2 space-y-6">
                         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm">
-                            <div className="flex items-center justify-between mb-5 px-1">
-                                <div className="flex items-center gap-2">
-                                    <ClipboardList className="w-5 h-5 text-indigo-500" />
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-5 px-1 gap-3">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <ClipboardList className="w-5 h-5 text-indigo-500 shrink-0" />
                                     <h2 className="font-semibold text-slate-900 dark:text-slate-100">
                                         My Tasks
                                     </h2>
                                     {activeFilter && (
-                                        <Badge variant="secondary" className="ml-2 font-medium">
+                                        <Badge variant="secondary" className="ml-0 sm:ml-2 font-medium">
                                             {DUE_FILTER_LABELS[activeFilter]}
                                         </Badge>
                                     )}
                                 </div>
-                                <QuickTaskCreate projects={projects} />
+                                <div className="w-full sm:w-auto">
+                                    <QuickTaskCreate projects={projects} />
+                                </div>
                             </div>
 
                             {isLoading ? (

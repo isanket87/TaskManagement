@@ -113,8 +113,8 @@ const ApiKeysSection = () => {
             )}
 
             {!newKey && (
-                <form onSubmit={handleCreate} className="mb-8 flex items-end gap-3">
-                    <div className="flex-1">
+                <form onSubmit={handleCreate} className="mb-8 flex flex-col sm:flex-row sm:items-end gap-3">
+                    <div className="flex-1 w-full">
                         <Input
                             label="Create New API Key"
                             placeholder="e.g., Claude Desktop, Cursor AI"
@@ -122,7 +122,7 @@ const ApiKeysSection = () => {
                             onChange={(e) => setNewName(e.target.value)}
                         />
                     </div>
-                    <Button type="submit" disabled={!newName.trim() || creating} className="mb-[2px]">
+                    <Button type="submit" disabled={!newName.trim() || creating} className="w-full sm:w-auto sm:mb-[2px]">
                         {creating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
                         Generate Key
                     </Button>

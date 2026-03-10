@@ -116,8 +116,9 @@ const SwimlaneView = ({ tasks = [], members = [], projectId, focusedMemberId = n
             )}
 
             {/* Grid */}
-            <div className="min-w-[700px]">
-                {/* Column headers */}
+            <div className="overflow-x-auto pb-4 shrink-0">
+                <div className="min-w-[700px]">
+                    {/* Column headers */}
                 <div className="grid gap-3 mb-3" style={{ gridTemplateColumns: '160px repeat(4, 1fr)' }}>
                     <div /> {/* spacer for member column */}
                     {COLUMNS.map((col) => (
@@ -188,6 +189,7 @@ const SwimlaneView = ({ tasks = [], members = [], projectId, focusedMemberId = n
                         </motion.div>
                     );
                 })}
+                </div>
             </div>
         </div>
     );
