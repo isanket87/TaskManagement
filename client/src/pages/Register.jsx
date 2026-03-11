@@ -9,6 +9,7 @@ import useAuthStore from '../store/authStore';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import toast from 'react-hot-toast';
+import AuthLayout from '../components/layout/AuthLayout';
 
 const schema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -72,25 +73,12 @@ const Register = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-primary-950/20 flex items-center justify-center p-4">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md"
-            >
-                <div className="flex flex-col items-center mb-8">
-                    <div className="w-14 h-14 rounded-2xl bg-primary-600 flex items-center justify-center mb-4 shadow-lg shadow-primary-200 dark:shadow-primary-900/50">
-                        <CheckSquare className="w-8 h-8 text-white" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Brioright</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Work with precision</p>
-                </div>
-
-                <div className="card p-8">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">Create your account</h2>
+        <AuthLayout>
+            <div className="card p-8">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">Create your account</h2>
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                        <Input label="Full Name" placeholder="Alex Johnson" error={errors.name?.message} {...register('name')} />
-                        <Input label="Email" type="email" placeholder="you@example.com" error={errors.email?.message} {...register('email')} />
+                        <Input label="Full Name" placeholder="Alex Johnson" required={true} error={errors.name?.message} {...register('name')} />
+                        <Input label="Email" type="email" placeholder="you@example.com" required={true} error={errors.email?.message} {...register('email')} />
 
                         {/* Password with strength indicator */}
                         <div className="space-y-2">
@@ -98,6 +86,7 @@ const Register = () => {
                                 label="Password"
                                 type="password"
                                 placeholder="Min. 8 characters"
+                                required={true}
                                 error={errors.password?.message}
                                 {...register('password', {
                                     onChange: (e) => setPassword(e.target.value)
@@ -187,8 +176,7 @@ const Register = () => {
                         </Link>
                     </p>
                 </div>
-            </motion.div>
-        </div>
+        </AuthLayout>
     );
 };
 

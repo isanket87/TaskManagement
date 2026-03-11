@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import useWorkspaceStore from '../store/workspaceStore';
 import useAuthStore from '../store/authStore';
 import { Briefcase, Plus, ArrowRight } from 'lucide-react';
+import TopHeader from '../components/layout/TopHeader';
 
 const WorkspacePicker = () => {
     const { workspaces, fetchWorkspaces, switchWorkspace, loading } = useWorkspaceStore();
@@ -24,8 +25,11 @@ const WorkspacePicker = () => {
 
     if (loading) {
         return (
-            <div className="flex h-screen items-center justify-center bg-slate-50 dark:bg-slate-900">
-                <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+            <div className="flex h-screen flex-col bg-slate-50 dark:bg-slate-900">
+                <TopHeader />
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
+                </div>
             </div>
         );
     }
@@ -33,26 +37,31 @@ const WorkspacePicker = () => {
     // Edge case handling, shouldn't hit this normally via guard
     if (!loading && workspaces.length === 0) {
         return (
-            <div className="flex h-screen flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 px-4 text-center">
-                <Briefcase className="h-16 w-16 text-slate-400 mb-4" />
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">No Workspaces Found</h2>
-                <p className="mt-2 text-slate-500 dark:text-slate-400 max-w-md">
-                    You aren't a member of any workspaces yet. To get started, you can create a new workspace.
-                </p>
-                <button
-                    onClick={() => navigate('/onboarding')}
-                    className="mt-6 flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
-                >
-                    Create Workspace
-                </button>
+            <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-900">
+                <TopHeader />
+                <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
+                    <Briefcase className="h-16 w-16 text-slate-400 mb-4" />
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">No Workspaces Found</h2>
+                    <p className="mt-2 text-slate-500 dark:text-slate-400 max-w-md">
+                        You aren't a member of any workspaces yet. To get started, you can create a new workspace.
+                    </p>
+                    <button
+                        onClick={() => navigate('/onboarding')}
+                        className="mt-6 flex items-center justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
+                    >
+                        Create Workspace
+                    </button>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col">
+            <TopHeader />
+            <div className="flex-1 py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center">
 
-            <div className="w-full max-w-3xl space-y-8">
+                <div className="w-full max-w-3xl space-y-8">
 
                 <div className="text-center">
                     <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white sm:text-4xl">
@@ -120,8 +129,8 @@ const WorkspacePicker = () => {
                         Create a new workspace
                     </Link>
                 </div>
+                </div>
             </div>
-
         </div>
     );
 };

@@ -41,7 +41,10 @@ const NAV_GROUPS = [
 ];
 
 const Sidebar = ({ isMobileOpen, onMobileClose }) => {
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed] = useState(() => {
+        const saved = localStorage.getItem('sidebar_collapsed');
+        return saved === 'true';
+    });
     const { user, logout } = useAuthStore();
     const { unreadCount: notifCount } = useNotificationStore();
     const { unreadCounts: chatCounts } = useChatStore();
@@ -97,7 +100,11 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                     )}
                 </AnimatePresence>
                 <button
-                    onClick={() => setCollapsed((c) => !c)}
+                    onClick={() => setCollapsed((c) => {
+                        const next = !c;
+                        localStorage.setItem('sidebar_collapsed', String(next));
+                        return next;
+                    })}
                     className="ml-auto p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 shrink-0 transition-colors"
                 >
                     {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}

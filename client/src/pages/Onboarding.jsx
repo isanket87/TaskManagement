@@ -10,6 +10,7 @@ import useWorkspaceStore from '../store/workspaceStore';
 import useAuthStore from '../store/authStore';
 import api from '../services/api';
 import debounce from 'lodash.debounce';
+import TopHeader from '../components/layout/TopHeader';
 
 // ── Step config ───────────────────────────────────────────────────────────────
 const STEPS = [
@@ -160,21 +161,15 @@ const Onboarding = () => {
 
     // ── Render ────────────────────────────────────────────────────────────
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex flex-col items-center justify-center px-4 py-12">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-950 dark:via-gray-900 dark:to-indigo-950 flex flex-col">
+            <TopHeader />
 
-            {/* Logo */}
-            <div className="flex items-center gap-2 mb-10">
-                <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center shadow-md">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                        <path d="M4 3h9c3 0 5.5 2.2 5.5 5S16 13 13 13H4V3zm0 10h10c3.3 0 6 2.4 6 5.5S17.3 24 14 24H4V13z" fill="white" />
-                    </svg>
-                </div>
-                <span className="font-bold text-xl text-gray-900 dark:text-white">Brioright</span>
-            </div>
-
+            <div className="flex-1 w-full max-w-6xl mx-auto flex flex-col lg:flex-row items-center lg:items-start justify-center px-4 py-8 lg:py-16 gap-8 lg:gap-16">
+            
             {/* Progress bar */}
-            <div className="w-full max-w-md mb-8">
-                <div className="flex items-center justify-between mb-3">
+            <div className="w-full max-w-md lg:w-64 flex-shrink-0 lg:mt-8">
+                {/* Mobile View: Horizontal */}
+                <div className="flex lg:hidden items-center justify-between mb-8 w-full max-w-md mx-auto">
                     {STEPS.map((s, i) => {
                         const Icon = s.icon;
                         const done = step > s.id;
@@ -198,6 +193,38 @@ const Onboarding = () => {
                                 {i < STEPS.length - 1 && (
                                     <div className={`h-0.5 flex-1 mx-2 mb-4 rounded transition-all duration-500 ${done ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'}`} />
                                 )}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Desktop View: Vertical */}
+                <div className="hidden lg:flex flex-col gap-6 relative">
+                    {STEPS.map((s, i) => {
+                        const Icon = s.icon;
+                        const done = step > s.id;
+                        const active = step === s.id;
+                        return (
+                            <div key={s.id} className="flex items-start gap-4">
+                                <div className="relative flex flex-col items-center">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 z-10 ${done ? 'bg-indigo-600 border-indigo-600' :
+                                        active ? 'bg-white dark:bg-gray-900 border-indigo-600 shadow-md shadow-indigo-100' :
+                                            'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700'
+                                        }`}>
+                                        {done
+                                            ? <CheckCircle2 className="w-5 h-5 text-white" />
+                                            : <Icon className={`w-4 h-4 ${active ? 'text-indigo-600' : 'text-gray-400'}`} />
+                                        }
+                                    </div>
+                                    {i < STEPS.length - 1 && (
+                                        <div className={`absolute top-10 w-0.5 rounded transition-all duration-500 ${done ? 'bg-indigo-600' : 'bg-gray-200 dark:bg-gray-700'}`} style={{ height: 'calc(100% + 24px)' }} />
+                                    )}
+                                </div>
+                                <div className="flex flex-col pt-2 pb-6">
+                                    <span className={`text-sm font-semibold ${active ? 'text-indigo-600' : done ? 'text-gray-600 dark:text-gray-400' : 'text-gray-400'}`}>
+                                        {s.label}
+                                    </span>
+                                </div>
                             </div>
                         );
                     })}
@@ -231,7 +258,7 @@ const Onboarding = () => {
 
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Workspace name</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Workspace name <span className="text-red-500">*</span></label>
                                         <input
                                             type="text"
                                             value={wsName}
@@ -242,7 +269,7 @@ const Onboarding = () => {
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Workspace URL</label>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Workspace URL <span className="text-red-500">*</span></label>
                                         <div className="flex rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500">
                                             <span className="flex items-center px-3 bg-gray-50 dark:bg-gray-800 text-gray-400 text-sm border-r border-gray-200 dark:border-gray-700 whitespace-nowrap">
                                                 brioright.online/
@@ -363,7 +390,7 @@ const Onboarding = () => {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project name</label>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Project name <span className="text-red-500">*</span></label>
                                     <input
                                         type="text"
                                         value={projectName}
@@ -453,7 +480,9 @@ const Onboarding = () => {
             </div>
 
             {/* Step counter */}
-            <p className="text-xs text-gray-400 mt-6">Step {step} of {STEPS.length}</p>
+            <p className="text-xs text-gray-400 mt-6 lg:hidden text-center">Step {step} of {STEPS.length}</p>
+            
+            </div>
         </div>
     );
 };

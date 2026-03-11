@@ -9,6 +9,7 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import AuthLayout from '../components/layout/AuthLayout';
 
 const schema = z.object({
     email: z.string().email('Please enter a valid email address'),
@@ -34,22 +35,8 @@ const ForgotPassword = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-indigo-50 dark:from-gray-950 dark:via-gray-900 dark:to-primary-950/20 flex items-center justify-center p-4">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="w-full max-w-md"
-            >
-                {/* Logo */}
-                <div className="flex flex-col items-center mb-8">
-                    <div className="w-14 h-14 rounded-2xl bg-primary-600 flex items-center justify-center mb-4 shadow-lg shadow-primary-200 dark:shadow-primary-900/50">
-                        <CheckSquare className="w-8 h-8 text-white" />
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Brioright</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Work with precision</p>
-                </div>
-
-                <div className="card p-8">
+        <AuthLayout>
+            <div className="card p-8">
                     {!submitted ? (
                         <>
                             <div className="flex items-center gap-3 mb-6">
@@ -67,6 +54,7 @@ const ForgotPassword = () => {
                                     label="Email address"
                                     type="email"
                                     placeholder="you@example.com"
+                                    required={true}
                                     error={errors.email?.message}
                                     {...register('email')}
                                 />
@@ -115,9 +103,8 @@ const ForgotPassword = () => {
                             </Link>
                         </motion.div>
                     )}
-                </div>
-            </motion.div>
-        </div>
+            </div>
+        </AuthLayout>
     );
 };
 
