@@ -431,7 +431,7 @@ const ProjectDetail = () => {
         <PageWrapper title={project?.name || 'Project Board'}>
             <div className="h-full flex flex-col pt-4">
                 {/* ── Primary toolbar ─────────────────────────────── */}
-                <div className="px-6 flex items-center gap-3 mb-2 shrink-0">
+                <div className="px-4 sm:px-6 flex flex-wrap items-center gap-3 mb-2 shrink-0">
                     {/* View toggle */}
                     <div className="flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
                         {[
@@ -456,7 +456,7 @@ const ProjectDetail = () => {
                     </div>
 
                     {/* Divider */}
-                    <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
+                    <div className="hidden sm:block h-5 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
 
                     {/* Member filter — labelled so users know it's interactive */}
                     {effectiveMembers.length > 0 && (
@@ -520,18 +520,18 @@ const ProjectDetail = () => {
                     )}
 
                     {/* Spacer */}
-                    <div className="flex-1" />
+                    <div className="flex-1 hidden sm:block" />
 
                     {/* Action Buttons — only in Kanban */}
                     {viewMode === 'kanban' && (
-                        <div className="hidden sm:flex gap-2 shrink-0 items-center">
-                            <Button variant="secondary" onClick={() => setIsImportModalOpen(true)} className="shadow-sm text-xs py-1.5">
+                        <div className="flex w-full sm:w-auto sm:justify-end gap-2 shrink-0 items-center mt-2 sm:mt-0">
+                            <Button variant="secondary" onClick={() => setIsImportModalOpen(true)} className="hidden sm:inline-flex shadow-sm text-xs py-1.5">
                                 Import CSV
                             </Button>
-                            <Button variant="secondary" onClick={handleExportCSV} className="shadow-sm text-xs py-1.5">
+                            <Button variant="secondary" onClick={handleExportCSV} className="hidden sm:inline-flex shadow-sm text-xs py-1.5">
                                 Export CSV
                             </Button>
-                            <Button onClick={() => { setNewTaskStatus('todo'); setShowAddTask(true); }} className="shadow-sm">
+                            <Button onClick={() => { setNewTaskStatus('todo'); setShowAddTask(true); }} className="w-full sm:w-auto shadow-sm">
                                 <Plus className="w-4 h-4 mr-1.5" />
                                 New Task
                             </Button>
@@ -541,7 +541,7 @@ const ProjectDetail = () => {
 
                 {/* ── Secondary toolbar: due-date filters (Kanban only) ── */}
                 {viewMode === 'kanban' && (
-                    <div className="px-6 flex items-center gap-1.5 mb-4 shrink-0 overflow-x-auto hide-scrollbar">
+                    <div className="px-4 sm:px-6 flex items-center gap-1.5 mb-4 shrink-0 overflow-x-auto hide-scrollbar">
                         {DUE_FILTERS.map((f) => (
                             <button
                                 key={f.value}
@@ -562,7 +562,7 @@ const ProjectDetail = () => {
                 {/* Board / Workload / Swimlane area */}
                 <div className={cn(
                     "flex-1 min-h-0",
-                    viewMode === 'kanban' ? "overflow-x-auto overflow-y-hidden px-6 pb-6 snap-x snap-mandatory hide-scrollbar" : "overflow-hidden"
+                    viewMode === 'kanban' ? "overflow-x-auto overflow-y-hidden px-4 sm:px-6 pb-6 snap-x snap-mandatory hide-scrollbar" : "overflow-hidden"
                 )}>
                     {viewMode === 'workload' ? (
                         <WorkloadView

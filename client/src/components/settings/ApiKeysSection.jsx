@@ -113,8 +113,8 @@ const ApiKeysSection = () => {
             )}
 
             {!newKey && (
-                <form onSubmit={handleCreate} className="mb-8 flex items-end gap-3">
-                    <div className="flex-1">
+                <form onSubmit={handleCreate} className="mb-8 flex flex-col sm:flex-row sm:items-end gap-3">
+                    <div className="flex-1 w-full">
                         <Input
                             label="Create New API Key"
                             placeholder="e.g., Claude Desktop, Cursor AI"
@@ -122,7 +122,7 @@ const ApiKeysSection = () => {
                             onChange={(e) => setNewName(e.target.value)}
                         />
                     </div>
-                    <Button type="submit" disabled={!newName.trim() || creating} className="mb-[2px]">
+                    <Button type="submit" disabled={!newName.trim() || creating} className="w-full sm:w-auto sm:mb-[2px]">
                         {creating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Plus className="w-4 h-4 mr-2" />}
                         Generate Key
                     </Button>
@@ -180,7 +180,7 @@ const ApiKeysSection = () => {
   "mcpServers": {
     "brioright": {
       "command": "npx",
-      "args": ["-y", "@brioright/mcp-server"],
+      "args": ["-y", "brioright-mcp@latest"],
       "env": {
         "BRIORIGHT_API_URL": "${window.location.origin}/api",
         "BRIORIGHT_API_KEY": "YOUR_GENERATED_API_KEY",
@@ -202,7 +202,7 @@ const ApiKeysSection = () => {
                     <p><strong>Auth / Server Secret:</strong> <code className="bg-gray-200 dark:bg-gray-700 px-1 py-0.5 rounded">brioright_mcp_secret_2026</code></p>
                     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                         <p className="text-sm">
-                            <span className="text-indigo-600 dark:text-indigo-400 font-medium">✨ Important:</span> Because this server is public, you must ask the AI to run its commands using <strong>your generated API Key above</strong>. (e.g., <em>"Please list my tasks and use my api key: br-..."</em>).
+                            <span className="text-indigo-600 dark:text-indigo-400 font-medium">✨ Important:</span> Because this server is public, you must ask the AI to run its commands using <strong>your generated API Key above</strong> and <strong>your workspace slug</strong>. (e.g., <em>"Please list my tasks in workspace 'my-team' using my api key: br-..."</em>).
                         </p>
                     </div>
                 </div>
