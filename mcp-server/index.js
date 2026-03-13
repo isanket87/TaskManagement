@@ -196,7 +196,7 @@ function buildServer() {
             const data = await call('POST', `/workspaces/${ws}/projects/${projectId}/tasks`, {
                 title, description, status, priority,
                 dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
-                assigneeId,
+                assigneeId: assigneeId || undefined,
             }, apiKey)
             const task = data.task || data
             return { content: [{ type: 'text', text: `✅ Task created!\n\n${JSON.stringify({ id: task.id, title: task.title, status: task.status, priority: task.priority, dueDate: task.dueDate }, null, 2)}` }] }
@@ -245,10 +245,12 @@ function buildServer() {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
             
-            // Format dates
+            // Format dates and sanitise strings
             const formattedTasks = tasks.map(t => ({
                 ...t,
-                dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : undefined
+                dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : undefined,
+                assigneeId: t.assigneeId || undefined,
+                parentTaskId: t.parentTaskId || undefined
             }))
             
             const data = await call('POST', `/workspaces/${ws}/projects/${projectId}/tasks/bulk`, {
@@ -275,7 +277,7 @@ function buildServer() {
         async ({ taskId, workspaceId, apiKey, ...fields }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
-            const updates = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined))
+            const updates = Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== undefined && v !== ''))
             if (updates.dueDate) updates.dueDate = new Date(updates.dueDate).toISOString()
             const data = await call('PATCH', `/workspaces/${ws}/tasks/${taskId}`, updates, apiKey)
             const task = data.task || data
