@@ -25,6 +25,7 @@ import { STATUS_OPTIONS, PRIORITY_OPTIONS } from '../../utils/constants';
 import TaskAttachments from '../tasks/TaskAttachments';
 import TaskDependencies from './TaskDependencies';
 import TaskSubtasks from './TaskSubtasks';
+import RichTextEditor from '../ui/RichTextEditor';
 
 // Helper for status colors
 const getStatusLabel = (status) => {
@@ -372,23 +373,13 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                     {/* DESCRIPTION AREA */}
                                     <div className="space-y-2 group/desc">
                                         {isEditingDescription ? (
-                                            <div className="border border-slate-200 dark:border-slate-700/80 rounded-xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm transition-colors focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-400/50">
-                                                {/* Formatting Toolbar */}
-                                                <div className="flex items-center gap-1 p-1.5 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/30">
-                                                    {['B', 'I', 'U', '~~', '<>', '• List', '🔗'].map((btn, i) => (
-                                                        <button key={i} className="px-2 py-1 rounded hover:bg-slate-200/50 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition-colors text-[11px] font-medium" onClick={(e) => { e.preventDefault(); toast('Formatting coming soon', { icon: '🚧' }); }}>
-                                                            {btn}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                <textarea
-                                                    autoFocus
+                                            <div className="flex flex-col gap-2">
+                                                <RichTextEditor
                                                     value={editDescriptionValue}
-                                                    onChange={(e) => setEditDescriptionValue(e.target.value)}
-                                                    placeholder="Describe this task... (supports **bold**, *italic*, `code`)"
-                                                    className="w-full min-h-[140px] p-4 text-[15px] text-slate-700 dark:text-slate-300 leading-relaxed resize-y focus:outline-none bg-transparent placeholder:text-slate-400/70 block"
+                                                    onChange={setEditDescriptionValue}
+                                                    placeholder="Describe this task... (supports basic formatting)"
                                                 />
-                                                <div className="flex justify-end gap-2 p-2.5 border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/30">
+                                                <div className="flex justify-end gap-2">
                                                     <button onClick={() => setIsEditingDescription(false)} className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-lg transition-colors">
                                                         Cancel
                                                     </button>
@@ -404,11 +395,9 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                         ) : detailedTask.description ? (
                                             <div
                                                 onClick={() => { setEditDescriptionValue(detailedTask.description); setIsEditingDescription(true); }}
-                                                className="prose prose-slate dark:prose-invert max-w-none text-[15px] text-slate-700 dark:text-slate-300 leading-relaxed cursor-text hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg p-2 -mx-2 transition-colors relative group/block whitespace-pre-wrap min-h-[100px]"
-                                            >
-                                                {/* Cheap markdown render for simple text until marked.js is added */}
-                                                {detailedTask.description}
-                                            </div>
+                                                className="prose prose-slate dark:prose-invert max-w-none text-[15px] text-slate-700 dark:text-slate-300 leading-relaxed cursor-text hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg p-2 -mx-2 transition-colors relative group/block min-h-[100px] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+                                                dangerouslySetInnerHTML={{ __html: detailedTask.description }}
+                                            />
                                         ) : (
                                             <div
                                                 onClick={() => { setEditDescriptionValue(''); setIsEditingDescription(true); }}
