@@ -203,6 +203,27 @@ function buildServer() {
         }
     )
 
+    // ── duplicate_task ────────────────────────────────────────────────────────
+    server.tool('duplicate_task', 'Duplicate an existing task',
+        {
+            taskId: z.string().describe('The ID of the task to duplicate'),
+            workspaceId: z.string().optional(),
+            apiKey: z.string().optional().describe('Brioright API Key')
+        },
+        async ({ taskId, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+
+            // We need to fetch the task first to find its projectId, as the /duplicate endpoint requires project ID via the URL path
+            const taskData = await call('GET', `/workspaces/${ws}/tasks/${taskId}`, null, apiKey)
+            const originalTask = taskData.task || taskData
+
+            const data = await call('POST', `/workspaces/${ws}/projects/${originalTask.projectId}/tasks/${taskId}/duplicate`, null, apiKey)
+            const clonedTask = data.task || data
+            return { content: [{ type: 'text', text: `✅ Task duplicated!\n\n${JSON.stringify({ id: clonedTask.id, title: clonedTask.title, status: clonedTask.status, position: clonedTask.position }, null, 2)}` }] }
+        }
+    )
+
     // ── bulk_create_tasks ─────────────────────────────────────────────────────
     server.tool('bulk_create_tasks', 'Create multiple tasks at once in a Brioright project',
         {

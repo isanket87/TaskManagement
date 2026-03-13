@@ -82,6 +82,7 @@ And pass the Authorization Header: `Bearer your_secure_bearer_token`.
 | `list_projects` | List projects in a workspace |
 | `list_tasks` | List tasks with optional status/priority filter |
 | `get_task` | Get full task details |
+| `duplicate_task` | Duplicate an existing task |
 | `create_task` | Create a task with title, priority, due date, assignee |
 | `update_task` | Update any fields on a task |
 | `complete_task` | Mark a task as done |
