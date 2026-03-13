@@ -55,11 +55,23 @@ class ErrorBoundary extends React.Component {
         return { hasError: true, error };
     }
     componentDidCatch(error, errorInfo) {
+        // Automatically reload the page if it's a Vite chunk load error
+        if (error?.message?.includes('Failed to fetch dynamically imported module')) {
+            console.log('🔄 New deployment detected (chunk load error). Silently reloading...');
+            window.location.reload();
+            return;
+        }
+
         console.error("ErrorBoundary caught an error", error, errorInfo);
         this.setState({ errorInfo });
     }
     render() {
         if (this.state.hasError) {
+            // If it's the chunk error, we don't want to flash the red error screen while it's reloading
+            if (this.state.error?.message?.includes('Failed to fetch dynamically imported module')) {
+                return <PageLoader />;
+            }
+            
             return (
                 <div style={{ padding: '2rem', backgroundColor: '#fee2e2', color: '#991b1b', height: '100vh' }}>
                     <h1>Something went wrong in the React Tree.</h1>
