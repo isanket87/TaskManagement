@@ -1,14 +1,14 @@
 import { useEffect } from 'react';
 import { io } from 'socket.io-client';
+import { useQueryClient } from '@tanstack/react-query';
 import useAuthStore from '../store/authStore';
-import useTaskStore from '../store/taskStore';
 import useNotificationStore from '../store/notificationStore';
 
 let socket = null;
 
 export const useSocket = (projectId = null) => {
     const { user } = useAuthStore();
-    const { updateTask, addTask, removeTask } = useTaskStore();
+    const queryClient = useQueryClient();
     const { addNotification, setDueDateSummary } = useNotificationStore();
 
     useEffect(() => {
@@ -22,15 +22,29 @@ export const useSocket = (projectId = null) => {
         socket.emit('join:user', user.id);
         if (projectId) socket.emit('join:project', projectId);
 
+        const updateTaskCache = (updater) => {
+            if (!projectId) return;
+            queryClient.setQueriesData({ queryKey: ['tasks', projectId] }, (old) => {
+                if (!old?.data?.tasks) return old;
+                return { ...old, data: { ...old.data, tasks: updater(old.data.tasks) } };
+            });
+        };
+
         // Task events
-        socket.on('task:created', ({ task }) => addTask(task.projectId, task));
-        socket.on('task:updated', ({ task }) => updateTask(task.projectId, task));
-        socket.on('task:deleted', ({ taskId, projectId: pid }) => removeTask(pid || projectId, taskId));
+        socket.on('task:created', ({ task }) => {
+            if (task.projectId === projectId) updateTaskCache(tasks => [...tasks, task]);
+        });
+        socket.on('task:updated', ({ task }) => {
+            if (task.projectId === projectId) updateTaskCache(tasks => tasks.map(t => t.id === task.id ? { ...t, ...task } : t));
+        });
+        socket.on('task:deleted', ({ taskId }) => {
+            updateTaskCache(tasks => tasks.filter(t => t.id !== taskId));
+        });
         socket.on('task:moved', ({ taskId, status, position }) => {
-            if (projectId) updateTask(projectId, { id: taskId, status, position });
+            updateTaskCache(tasks => tasks.map(t => t.id === taskId ? { ...t, ...(status && { status }), ...(position !== undefined && { position }) } : t));
         });
         socket.on('task:dueDateUpdated', ({ taskId, dueDate, dueDateStatus }) => {
-            if (projectId) updateTask(projectId, { id: taskId, dueDate, dueDateStatus });
+            updateTaskCache(tasks => tasks.map(t => t.id === taskId ? { ...t, dueDate, dueDateStatus } : t));
         });
 
         // Notification events
