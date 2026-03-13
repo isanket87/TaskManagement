@@ -155,6 +155,41 @@ function buildServer() {
         }
     )
 
+    // ── bulk_create_tasks ─────────────────────────────────────────────────────
+    server.tool('bulk_create_tasks', 'Create multiple tasks at once in a Brioright project',
+        {
+            projectId: z.string().describe('Project ID'),
+            tasks: z.array(z.object({
+                title: z.string().describe('Task title'),
+                description: z.string().optional(),
+                status: z.enum(['todo', 'in_progress', 'in_review', 'done']).optional().default('todo'),
+                priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().default('medium'),
+                dueDate: z.string().optional().describe('ISO date string e.g. 2026-03-15'),
+                assigneeId: z.string().optional(),
+                parentTaskId: z.string().optional(),
+                tags: z.array(z.string()).optional()
+            })).describe('Array of tasks to create'),
+            workspaceId: z.string().optional(),
+            apiKey: z.string().optional().describe('Brioright API Key')
+        },
+        async ({ projectId, tasks, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            
+            // Format dates
+            const formattedTasks = tasks.map(t => ({
+                ...t,
+                dueDate: t.dueDate ? new Date(t.dueDate).toISOString() : undefined
+            }))
+            
+            const data = await call('POST', `/workspaces/${ws}/projects/${projectId}/tasks/bulk`, {
+                tasks: formattedTasks
+            }, apiKey)
+            
+            return { content: [{ type: 'text', text: `✅ Successfully created ${data.count} tasks!` }] }
+        }
+    )
+
     // ── update_task ───────────────────────────────────────────────────────────
     server.tool('update_task', 'Update fields on an existing task',
         {
@@ -175,7 +210,7 @@ function buildServer() {
             if (updates.dueDate) updates.dueDate = new Date(updates.dueDate).toISOString()
             const data = await call('PATCH', `/workspaces/${ws}/tasks/${taskId}`, updates, apiKey)
             const task = data.task || data
-            return { content: [{ type: 'text', text: `✅ Task updated!\n\n${JSON.stringify({ id: task.id, title: task.title, status: task.status, priority: task.priority }, null, 2)}` }] }
+            return { content: [{ type: 'text', text: `✅ Task updated!\n\n${JSON.stringify({ id: task.id, title: task.title, status: task.status, priority: task.priority, description: task.description, dueDate: task.dueDate }, null, 2)}` }] }
         }
     )
 
@@ -228,6 +263,65 @@ function buildServer() {
             if (!ws) throw new Error('workspaceId is required')
             const data = await call('GET', `/workspaces/${ws}/dashboard/stats`, null, apiKey)
             return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] }
+        }
+    )
+
+    // ── add_comment ───────────────────────────────────────────────────────────
+    server.tool('add_comment', 'Add a comment to a task',
+        {
+            taskId: z.string(),
+            text: z.string().describe('The content of the comment'),
+            workspaceId: z.string().optional(),
+            apiKey: z.string().optional().describe('Brioright API Key')
+        },
+        async ({ taskId, text, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const data = await call('POST', `/workspaces/${ws}/tasks/${taskId}/comments`, { text }, apiKey)
+            const comment = data.comment || data
+            return { content: [{ type: 'text', text: `✅ Comment added!\n\n${JSON.stringify(comment, null, 2)}` }] }
+        }
+    )
+
+    // ── get_task_comments ─────────────────────────────────────────────────────
+    server.tool('get_task_comments', 'Get all comments for a given task',
+        {
+            taskId: z.string(),
+            workspaceId: z.string().optional(),
+            apiKey: z.string().optional().describe('Brioright API Key')
+        },
+        async ({ taskId, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const data = await call('GET', `/workspaces/${ws}/tasks/${taskId}/comments`, null, apiKey)
+            const comments = data.comments || data
+            return { content: [{ type: 'text', text: JSON.stringify(comments.map(c => ({ id: c.id, text: c.text, author: c.author?.name, createdAt: c.createdAt })), null, 2) }] }
+        }
+    )
+
+    // ── log_time ──────────────────────────────────────────────────────────────
+    server.tool('log_time', 'Log time entry for a project/task',
+        {
+            projectId: z.string(),
+            taskId: z.string().optional(),
+            description: z.string().optional(),
+            startTime: z.string().optional().describe('ISO date string for start time. Defaults to now.'),
+            endTime: z.string().optional().describe('ISO date string for end time. If omitted, starts a running timer.'),
+            workspaceId: z.string().optional(),
+            apiKey: z.string().optional().describe('Brioright API Key')
+        },
+        async ({ projectId, taskId, description, startTime, endTime, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const start = startTime ? new Date(startTime).toISOString() : new Date().toISOString()
+            const end = endTime ? new Date(endTime).toISOString() : undefined
+            
+            const payload = { projectId, description, startTime: start, endTime: end }
+            if (taskId) payload.taskId = taskId
+            
+            const data = await call('POST', `/workspaces/${ws}/time-entries`, payload, apiKey)
+            const entry = data.entry || data
+            return { content: [{ type: 'text', text: `✅ Time logged (Duration: ${entry.duration ? entry.duration + ' seconds' : 'Running timer ...'})!\n\n${JSON.stringify({ id: entry.id, description: entry.description, startTime: entry.startTime, endTime: entry.endTime, duration: entry.duration }, null, 2)}` }] }
         }
     )
 

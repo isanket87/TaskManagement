@@ -566,17 +566,26 @@ const bulkImportTasks = async (req, res, next) => {
         const tasksToCreate = tasks.map(t => {
             const pos = currentPosition
             currentPosition += 1024
+
+            const dueDate = t.dueDate ? new Date(t.dueDate) : null;
+            const status = t.status || 'todo';
+            const dueDateStatus = computeDueDateStatus(dueDate, status);
+
             return {
                 title: t.title || 'Untitled Task',
                 description: t.description || '',
-                status: t.status || 'todo',
+                status,
                 priority: t.priority || 'medium',
                 position: pos,
                 projectId,
                 createdById: userId,
+                assigneeId: t.assigneeId || null,
+                parentTaskId: t.parentTaskId || null,
+                tags: t.tags || [],
                 // Due date parsing if provided
-                dueDate: t.dueDate ? new Date(t.dueDate) : null,
-                hasDueTime: !!t.hasDueTime
+                dueDate,
+                hasDueTime: !!t.hasDueTime,
+                dueDateStatus
             }
         })
 
@@ -589,7 +598,7 @@ const bulkImportTasks = async (req, res, next) => {
             projectId,
             userId,
             type: 'IMPORT_TASKS',
-            message: `Imported ${tasks.length} tasks via CSV`
+            message: `Imported ${tasks.length} tasks`
         })
 
         // Invalidate caches — bulk import affects dashboard and analytics counts
