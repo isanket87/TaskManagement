@@ -88,3 +88,9 @@ And pass the Authorization Header: `Bearer your_secure_bearer_token`.
 | `create_project` | Create a new project |
 | `list_members` | List workspace members (for finding assignee IDs) |
 | `get_workspace_summary` | Dashboard stats: task counts by status/priority |
+| `bulk_create_tasks` | Create multiple tasks at once |
+| `add_comment` | Add a comment to a task |
+| `get_task_comments` | Get all comments for a given task |
+| `log_time` | Log time entry for a project/task |
+| `add_task_attachment` | Upload a file attachment to a task using a Base64 encoded string |
+| `get_task_attachments` | List all file attachments for a specific task |

@@ -41,16 +41,21 @@ const MCP_SECRET = process.env.MCP_SECRET // Optional bearer token for HTTP mode
 const USE_HTTP = process.env.MCP_TRANSPORT === 'http'
 
 // ── Axios client factory ──────────────────────────────────────────────────────
-async function call(method, path, data, overrideApiKey) {
+async function call(method, path, data, overrideApiKey, customHeaders = {}) {
     const key = overrideApiKey || ENV_API_KEY;
     if (!key) {
         throw new Error('Brioright API error: No API Key provided. Either set BRIORIGHT_API_KEY environment variable or provide apiKey in the tool arguments.');
     }
 
+    const headers = { 'X-API-Key': key, 'Content-Type': 'application/json', ...customHeaders }
+    if (headers['Content-Type'] === 'multipart/form-data' || headers['Content-Type'] === null) {
+        delete headers['Content-Type']; // Let axios auto-generate the multipart boundary
+    }
+
     const api = axios.create({
         baseURL: API_URL,
-        headers: { 'X-API-Key': key, 'Content-Type': 'application/json' },
-        timeout: 10000,
+        headers,
+        timeout: 30000,
     })
 
     try {
@@ -126,6 +131,49 @@ function buildServer() {
             if (!ws) throw new Error('workspaceId is required')
             const data = await call('GET', `/workspaces/${ws}/tasks/${taskId}`, null, apiKey)
             return { content: [{ type: 'text', text: JSON.stringify(data.task || data, null, 2) }] }
+        }
+    )
+
+    // ── get_task_attachments ──────────────────────────────────────────────────
+    server.tool('get_task_attachments', 'List all file attachments for a specific task',
+        {
+            taskId: z.string(),
+            workspaceId: z.string().optional(),
+            apiKey: z.string().optional().describe('Brioright API Key')
+        },
+        async ({ taskId, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const data = await call('GET', `/workspaces/${ws}/tasks/${taskId}/attachments`, null, apiKey)
+            const attachments = data.attachments || data
+            return { content: [{ type: 'text', text: JSON.stringify(attachments, null, 2) }] }
+        }
+    )
+
+    // ── add_task_attachment ───────────────────────────────────────────────────
+    server.tool('add_task_attachment', 'Upload a file attachment to a task using a Base64 encoded string',
+        {
+            taskId: z.string(),
+            fileName: z.string().describe('Name of the file to attach (e.g. image.png)'),
+            fileContent: z.string().describe('Base64 encoded string of the file content'),
+            mimeType: z.string().optional().describe('MIME type of the file (e.g. image/png)'),
+            workspaceId: z.string().optional(),
+            apiKey: z.string().optional().describe('Brioright API Key')
+        },
+        async ({ taskId, fileName, fileContent, mimeType, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            
+            // Convert base64 to Blob
+            const buffer = Buffer.from(fileContent, 'base64')
+            const blob = new Blob([buffer], { type: mimeType || 'application/octet-stream' })
+            
+            const formData = new FormData()
+            formData.append('file', blob, fileName)
+
+            const data = await call('POST', `/workspaces/${ws}/tasks/${taskId}/attachments`, formData, apiKey, { 'Content-Type': 'multipart/form-data' })
+            const attachment = data.attachment || data
+            return { content: [{ type: 'text', text: `✅ File attached successfully!\n\n${JSON.stringify({ id: attachment.id, name: attachment.name, url: attachment.url }, null, 2)}` }] }
         }
     )
 
