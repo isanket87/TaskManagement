@@ -5,6 +5,7 @@ export const taskService = {
     getOne: (projectId, taskId) => api.get(`/projects/${projectId}/tasks/${taskId}`),
     create: (projectId, data) => api.post(`/projects/${projectId}/tasks`, data),
     update: (projectId, taskId, data) => api.put(`/projects/${projectId}/tasks/${taskId}`, data),
+    duplicate: (projectId, taskId) => api.post(`/projects/${projectId}/tasks/${taskId}/duplicate`),
     delete: (projectId, taskId) => api.delete(`/projects/${projectId}/tasks/${taskId}`),
     getActivities: (projectId, taskId) => api.get(`/projects/${projectId}/tasks/${taskId}/activities`),
     updateStatus: (projectId, taskId, status) => api.patch(`/projects/${projectId}/tasks/${taskId}/status`, { status }),

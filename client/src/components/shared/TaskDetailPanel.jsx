@@ -185,6 +185,15 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
         }
     });
 
+    const duplicateMutation = useMutation({
+        mutationFn: () => taskService.duplicate(projectId, detailedTask.id),
+        onSuccess: () => {
+            toast.success('Task duplicated!');
+            onClose(); // Optional: close the panel after duplicating
+        },
+        onError: () => toast.error('Failed to duplicate task')
+    });
+
     // Comments Query
     const commentsQuery = useQuery({
         queryKey: ['task', projectId, detailedTask.id, 'comments'],
@@ -300,7 +309,11 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                 }
                                 items={[
                                     { label: 'Copy link', onClick: () => toast.success('Link copied') },
-                                    { label: 'Duplicate task', onClick: () => toast.success('Comming soon') },
+                                    { 
+                                        label: 'Duplicate task', 
+                                        onClick: () => duplicateMutation.mutate(),
+                                        disabled: duplicateMutation.isPending 
+                                    },
                                     { label: 'Delete task', danger: true, onClick: () => { } }
                                 ]}
                             />

@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import {
-    getTasks, createTask, getTask, updateTask, deleteTask,
+    getTasks, createTask, getTask, updateTask, deleteTask, duplicateTask,
     updateStatus, updatePosition, updateDueDate, snoozeTask,
     bulkUpdateDueDate, getDueDateSummary, getUpcomingTasks, getOverdueTasks,
     getCalendarTasks, getDashboardStats, getTaskActivities, bulkImportTasks
@@ -24,6 +24,7 @@ router.get('/dashboard/stats', getDashboardStats)
 router.get('/', getTasks)
 router.post('/bulk', bulkImportTasks)
 router.post('/', createTask)
+router.post('/:taskId/duplicate', duplicateTask)
 router.get('/:taskId', getTask)
 router.put('/:taskId', updateTask)
 router.patch('/:taskId', updateTask)

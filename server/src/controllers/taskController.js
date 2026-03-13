@@ -544,6 +544,80 @@ const getTaskActivities = async (req, res, next) => {
         next(err)
     }
 }
+
+// POST /api/projects/:id/tasks/:taskId/duplicate
+const duplicateTask = async (req, res, next) => {
+    try {
+        const { taskId, id: projectId } = req.params;
+        const userId = req.user.id;
+
+        // Fetch original with all needed properties
+        const original = await prisma.task.findUnique({
+            where: { id: taskId }
+        });
+
+        if (!original) {
+            return errorResponse(res, 'Task not found', 404);
+        }
+
+        // Calculate position - place immediately below original
+        // Shift all tasks in the same status that come after the original down by 1
+        await prisma.task.updateMany({
+            where: {
+                projectId,
+                status: original.status,
+                position: { gt: original.position }
+            },
+            data: {
+                position: { increment: 1 }
+            }
+        });
+
+        const newPosition = original.position + 1;
+
+        // Create the clone
+        const clone = await prisma.task.create({
+            data: {
+                title: `Copy of ${original.title}`,
+                description: original.description,
+                status: original.status,
+                priority: original.priority,
+                tags: original.tags,
+                dueDate: original.dueDate,
+                hasDueTime: original.hasDueTime,
+                dueDateStatus: original.dueDateStatus,
+                position: newPosition,
+                projectId: original.projectId,
+                assigneeId: original.assigneeId,
+                parentTaskId: original.parentTaskId,
+                createdById: userId,
+            },
+            select: taskSelect
+        });
+
+        // Log the duplication 
+        await logTaskActivity({
+            projectId,
+            taskId: clone.id,
+            userId,
+            type: 'task_duplicated',
+            message: `Duplicated from task "${original.title}"`,
+            metadata: { originalTaskId: original.id }
+        });
+
+        // Broadcast to clients so they update their boards in real-time
+        const io = req.app.get('io');
+        if (io) io.to(`project:${projectId}`).emit('task:created', { task: clone });
+
+        // Invalidate aggregations
+        await invalidateTaskCaches(req.workspace.id, projectId, userId);
+
+        return successResponse(res, { task: clone }, 'Task duplicated successfully', 201);
+    } catch (err) {
+        next(err);
+    }
+}
+
 // POST /api/projects/:id/tasks/bulk
 const bulkImportTasks = async (req, res, next) => {
     try {
@@ -611,7 +685,7 @@ const bulkImportTasks = async (req, res, next) => {
 }
 
 export {
-    getTasks, createTask, getTask, updateTask, deleteTask,
+    getTasks, createTask, getTask, updateTask, deleteTask, duplicateTask,
     updateStatus, updatePosition, updateDueDate, snoozeTask,
     bulkUpdateDueDate, getDueDateSummary, getUpcomingTasks, getOverdueTasks,
     getCalendarTasks, getDashboardStats, getTaskActivities, bulkImportTasks
