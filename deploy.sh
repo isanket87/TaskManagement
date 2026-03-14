@@ -26,13 +26,17 @@ echo "📦 Setting up Client..."
 cd $APP_DIR/client
 npm install
 
-# Load any variables with the VITE_ prefix from the server's .env.production
+# Create a clean .env.production for the Vite build by pulling VITE_ vars from the server config
+echo "# Auto-generated from server/.env.production during deploy" > .env.production
 if [ -f "$APP_DIR/server/.env.production" ]; then
-  echo "📄 Loading VITE_ variables from $APP_DIR/server/.env.production..."
-  export $(grep '^VITE_' "$APP_DIR/server/.env.production" | xargs)
+  echo "📄 Injecting VITE_ variables into client build..."
+  grep '^VITE_' "$APP_DIR/server/.env.production" >> .env.production
+else
+  echo "⚠️  Warning: $APP_DIR/server/.env.production not found. Analytics might be missing."
 fi
 
 npm run build
+rm .env.production # Clean up after build
 
 # ----- Sync Client Build to Server Public -----
 echo "📂 Updating public assets..."
