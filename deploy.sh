@@ -26,16 +26,23 @@ echo "📦 Setting up Client..."
 cd $APP_DIR/client
 npm install
 
+# Clear any old build artifacts that might be cached
+rm -rf dist
+
 # Create a clean .env.production for the Vite build by pulling VITE_ vars from the server config
+# Vite will automatically load .env.production when --mode production is used.
 echo "# Auto-generated from server/.env.production during deploy" > .env.production
 if [ -f "$APP_DIR/server/.env.production" ]; then
   echo "📄 Injecting VITE_ variables into client build..."
   grep '^VITE_' "$APP_DIR/server/.env.production" >> .env.production
+  # Debug: show what was injected (without revealing values)
+  grep '^VITE_' .env.production | cut -d'=' -f1 | sed 's/^/   - /'
 else
   echo "⚠️  Warning: $APP_DIR/server/.env.production not found. Analytics might be missing."
 fi
 
-npm run build
+# Build with explicit production mode
+npm run build -- --mode production
 rm .env.production # Clean up after build
 
 # ----- Sync Client Build to Server Public -----

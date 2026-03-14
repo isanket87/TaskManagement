@@ -1,0 +1,17 @@
+# Environment files
+.env*
+**/ .env*
+
+# Cloudflare R2 / AWS credentials
+*r2*
+*aws*
+*s3*
+
+# Database
+prisma/dev.db*
+*.db
+
+# Other sensitive files
+vps_info.json
+*.pem
+*.key

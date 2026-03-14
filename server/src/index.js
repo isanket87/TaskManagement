@@ -251,11 +251,19 @@ app.get('/api/timesheets/export', auth, exportTimesheet)
 // ── SERVE REACT IN PRODUCTION ──
 if (process.env.NODE_ENV === 'production') {
     const clientDist = path.join(__dirname, '../../client/dist')
+    
+    // Serve static assets with long-term caching
     app.use(express.static(clientDist, {
         maxAge: '1y',
-        etag: false
+        immutable: true,
+        index: false // Don't serve index.html via express.static
     }))
+
+    // Serve index.html for all other routes, but NEVER cache it
     app.get('*', (req, res) => {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
+        res.setHeader('Pragma', 'no-cache')
+        res.setHeader('Expires', '0')
         res.sendFile(path.join(clientDist, 'index.html'))
     })
 }

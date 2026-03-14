@@ -5,10 +5,11 @@ module.exports = {
             cwd: './server',
             script: 'src/index.js',
             interpreter: 'node',
-            instances: 'max',           // Use all CPU cores
+            instances: 2,               // 2 instances fit a 3.8 GB VPS alongside PostgreSQL + Nginx.
             exec_mode: 'cluster',       // Cluster mode for multi-core
             watch: false,               // Don't watch files in production
-            max_memory_restart: '1500M', // Restart if RAM exceeds 1500MB
+            max_memory_restart: '400M', // Restart if RAM exceeds 400MB
+            node_args: '--max-old-space-size=350', // Hard cap on V8 heap
             env_production: {
                 NODE_ENV: 'production',
                 PORT: 5000
