@@ -7,6 +7,9 @@ export default defineConfig(({ mode }) => ({
         react(),
         VitePWA({
             registerType: 'autoUpdate',
+            workbox: {
+                navigateFallbackDenylist: [/^\/api/],
+            },
             manifest: {
                 name: 'Brioright',
                 short_name: 'Brioright',
