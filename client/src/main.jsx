@@ -18,24 +18,39 @@ window.addEventListener('error', (event) => {
 });
 
 // PWA Service Worker Registration & Auto-Update
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js', { scope: '/' })
-            .then(registration => {
-                console.log('SW registered:', registration);
-                // If there's an updated service worker waiting, skip waiting and reload
-                registration.addEventListener('updatefound', () => {
-                    const newWorker = registration.installing;
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            console.log('New content available, reloading...');
-                            window.location.reload();
-                        }
+if ('serviceWorker' in navigator) {
+    // 1. Nuclear option: If the user is on a regular window and stuck, 
+    // we forcibly unregister everything once to clear the "broken" cache.
+    if (!localStorage.getItem('sw_fix_applied_v1')) {
+        navigator.serviceWorker.getRegistrations().then(registrations => {
+            for (let registration of registrations) {
+                registration.unregister();
+            }
+            localStorage.setItem('sw_fix_applied_v1', 'true');
+            console.log('Nuclear SW fix applied. Reloading...');
+            window.location.reload();
+        });
+    }
+
+    if (import.meta.env.PROD) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .then(registration => {
+                    console.log('SW registered:', registration);
+                    // If there's an updated service worker waiting, skip waiting and reload
+                    registration.addEventListener('updatefound', () => {
+                        const newWorker = registration.installing;
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                console.log('New content available, reloading...');
+                                window.location.reload();
+                            }
+                        });
                     });
-                });
-            })
-            .catch(error => console.error('SW registration failed:', error));
-    });
+                })
+                .catch(error => console.error('SW registration failed:', error));
+        });
+    }
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
