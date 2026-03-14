@@ -111,11 +111,11 @@ app.use(cookieParser())
 app.use(morgan('dev'))
 
 // ── ANALYTICS PROXY ──
-// Highly obfuscated names to bypass advanced ad-blockers (uBlock Origin, etc.)
-app.get('/sys/cdn/utils.js', async (req, res) => {
+// Extension-less generic names and content obfuscation to bypass uBlock Origin/Ad-blockers
+app.get('/assets/main-runtime-config', async (req, res) => {
     try {
         const gaId = req.query.id;
-        if (!gaId) return res.status(400).send('Missing id parameter');
+        if (!gaId) return res.status(400).send('/* missing id */');
 
         const response = await fetch(`https://www.googletagmanager.com/gtag/js?id=${gaId}`, {
             headers: {
@@ -124,18 +124,21 @@ app.get('/sys/cdn/utils.js', async (req, res) => {
             }
         });
 
-        const script = await response.text();
+        let script = await response.text();
+        
+        // Obfuscate: Rename the global dataLayer to something unique to this app
+        // This is a common pattern that ad-blockers look for.
+        script = script.replace(/dataLayer/g, 'brioright_data_layer');
+        
         res.setHeader('Content-Type', 'application/javascript');
-        // Add additional headers to make it look like a standard library
         res.setHeader('Cache-Control', 'public, max-age=3600');
         res.send(script);
     } catch (error) {
-        console.error('[System Proxy] Error fetching utils:', error.message);
-        res.status(500).send('/* Error loading script */');
+        res.status(200).send('/* system config load failed */');
     }
 });
 
-app.all('/sys/api/health/report', async (req, res) => {
+app.all('/api/v1/sys/sync-state', async (req, res) => {
     try {
         const urlParams = new URLSearchParams(req.query).toString();
         const targetUrl = `https://www.google-analytics.com/g/collect?${urlParams}`;
@@ -160,7 +163,6 @@ app.all('/sys/api/health/report', async (req, res) => {
 
         res.status(response.status).send();
     } catch (error) {
-        // Fail silently so it looks like a successful fire-and-forget log
         res.status(200).send();
     }
 });

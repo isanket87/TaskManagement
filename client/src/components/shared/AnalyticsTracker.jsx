@@ -19,15 +19,19 @@ const AnalyticsTracker = () => {
         if (isInitialized.current) return;
 
         try {
-            // Use highly obfuscated system-like path
+            // Use extension-less, generic path
             ReactGA.initialize(trackingId, {
-                gtagUrl: `/sys/cdn/utils.js?id=${trackingId}`
+                gtagUrl: `/assets/main-runtime-config?id=${trackingId}`,
+                // Tell GA to use our custom dataLayer name to avoid ad-blocker detection
+                gtagOptions: {
+                    'layer': 'brioright_data_layer'
+                }
             });
             isInitialized.current = true;
 
-            // Use highly obfuscated health/report path for collection
+            // Use generic sync path for collection
             ReactGA.set({
-                transport_url: window.location.origin + '/sys/api/health/report'
+                transport_url: window.location.origin + '/api/v1/sys/sync-state'
             });
 
             // Send initial pageview
