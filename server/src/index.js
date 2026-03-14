@@ -137,13 +137,23 @@ app.get('/api/gtag/js', async (req, res) => {
 // Using app.all to capture both GET and POST requests that GA4 might send
 app.all('/api/g/collect', async (req, res) => {
     try {
-        // Reconstruct the full Google Analytics URL including all query parameters
         const urlParams = new URLSearchParams(req.query).toString();
         const targetUrl = `https://www.google-analytics.com/g/collect?${urlParams}`;
 
+        // Get raw body as buffer for POST requests
+        let body = undefined;
+        if (req.method === 'POST') {
+            body = req.body;
+            // If express.json() already parsed it, we need to stringify it back
+            // or use the raw buffer if available. GA4 uses a custom format.
+            if (typeof body === 'object') {
+                body = JSON.stringify(body);
+            }
+        }
+
         const response = await fetch(targetUrl, {
             method: req.method,
-            body: req.method === 'POST' ? JSON.stringify(req.body) : undefined,
+            body: body,
             headers: {
                 'User-Agent': req.headers['user-agent'] || '',
                 'X-Forwarded-For': req.ip || '',
@@ -151,10 +161,8 @@ app.all('/api/g/collect', async (req, res) => {
             }
         });
 
-        // GA4 usually expects a 204 No Content response, but we'll proxy exactly what we get
         res.status(response.status).send();
     } catch (error) {
-        // We log it but still return a 200 so the client doesn't complain
         console.error('[Analytics Proxy] Error forwarding collect payload:', error.message);
         res.status(200).send();
     }
