@@ -25,6 +25,13 @@ npx prisma migrate deploy
 echo "📦 Setting up Client..."
 cd $APP_DIR/client
 npm install
+
+# Load any variables with the VITE_ prefix from the server's .env.production
+if [ -f "$APP_DIR/server/.env.production" ]; then
+  echo "📄 Loading VITE_ variables from $APP_DIR/server/.env.production..."
+  export $(grep '^VITE_' "$APP_DIR/server/.env.production" | xargs)
+fi
+
 npm run build
 
 # ----- Sync Client Build to Server Public -----

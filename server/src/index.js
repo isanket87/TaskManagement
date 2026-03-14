@@ -296,12 +296,17 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => console.log('Socket disconnected:', socket.id))
 })
 
-export { io }
+export { io, app, httpServer }
 
 // ── START ──
 const PORT = parseInt(process.env.PORT) || 5000
 
 const start = async () => {
+    // Skip auto-start if we are in a test environment
+    if (process.env.NODE_ENV === 'test') {
+        console.log('[Server] Test mode: skipping auto-start')
+        return
+    }
     try {
         await prisma.$connect()
         console.log('[Server] Database connected')

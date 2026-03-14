@@ -99,6 +99,9 @@ EMAIL_FROM="Brioright <noreply@brioright.app>"
 GOOGLE_CLIENT_ID="CHANGE_ME"
 GOOGLE_CLIENT_SECRET="CHANGE_ME"
 GOOGLE_CALLBACK_URL="http://15.235.202.51/api/auth/google/callback"
+
+# Analytics (Google Analytics ID e.g., G-XXXXXXXXXX)
+VITE_GA_TRACKING_ID="G-P5NHCX77XB"
 # ────────────────────────────────────────────────────
 
 # File storage — optional
