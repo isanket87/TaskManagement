@@ -17,7 +17,7 @@ git reset --hard origin/$BRANCH
 # ----- Server Setup -----
 echo "⚙️  Setting up Server..."
 cd $APP_DIR/server
-npm ci --omit=dev
+npm install --omit=dev
 npx prisma generate
 npx prisma migrate deploy
 
