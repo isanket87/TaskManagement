@@ -111,8 +111,8 @@ app.use(cookieParser())
 app.use(morgan('dev'))
 
 // ── ANALYTICS PROXY ──
-// Proxy the gtag.js script itself from Google
-app.get('/api/gtag/js', async (req, res) => {
+// Obfuscated names to bypass ad-blockers
+app.get('/api/v1/lib/core.js', async (req, res) => {
     try {
         const gaId = req.query.id;
         if (!gaId) return res.status(400).send('Missing id parameter');
@@ -128,24 +128,19 @@ app.get('/api/gtag/js', async (req, res) => {
         res.setHeader('Content-Type', 'application/javascript');
         res.send(script);
     } catch (error) {
-        console.error('[Analytics Proxy] Error fetching gtag:', error.message);
-        res.status(500).send('Error loading analytics script');
+        console.error('[Analytics Proxy] Error fetching core lib:', error.message);
+        res.status(500).send('Error loading script');
     }
 });
 
-// Proxy the actual tracking events sent to Google Analytics 4
-// Using app.all to capture both GET and POST requests that GA4 might send
-app.all('/api/g/collect', async (req, res) => {
+app.all('/api/v1/telemetry/send', async (req, res) => {
     try {
         const urlParams = new URLSearchParams(req.query).toString();
         const targetUrl = `https://www.google-analytics.com/g/collect?${urlParams}`;
 
-        // Get raw body as buffer for POST requests
         let body = undefined;
         if (req.method === 'POST') {
             body = req.body;
-            // If express.json() already parsed it, we need to stringify it back
-            // or use the raw buffer if available. GA4 uses a custom format.
             if (typeof body === 'object') {
                 body = JSON.stringify(body);
             }
@@ -163,7 +158,7 @@ app.all('/api/g/collect', async (req, res) => {
 
         res.status(response.status).send();
     } catch (error) {
-        console.error('[Analytics Proxy] Error forwarding collect payload:', error.message);
+        console.error('[Analytics Proxy] Error forwarding telemetry:', error.message);
         res.status(200).send();
     }
 });

@@ -19,17 +19,17 @@ const AnalyticsTracker = () => {
         if (isInitialized.current) return;
 
         try {
-            // Explicitly set the gtagUrl to ensure correct parameter structure (?id=)
-            // and handle potential issues with older versions of the library.
-            // Route the script fetch through our backend proxy
+            // Use obfuscated core library path
             ReactGA.initialize(trackingId, {
-                gtagUrl: `/api/gtag/js?id=${trackingId}`
+                gtagUrl: `/api/v1/lib/core.js?id=${trackingId}`
             });
             isInitialized.current = true;
 
-            // Override the transport URL so events go to our backend proxy too
+            // Use obfuscated telemetry collection path
+            // ReactGA4 will append '/g/collect' or similar if we just provide a base,
+            // so we set the transport_url to our specific obfuscated endpoint.
             ReactGA.set({
-                transport_url: window.location.origin + '/api'
+                transport_url: window.location.origin + '/api/v1/telemetry/send'
             });
 
             // Send initial pageview
