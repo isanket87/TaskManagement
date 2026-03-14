@@ -10,7 +10,7 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag, BarChart2, LayoutGrid, AlignLeft, Users } from 'lucide-react';
+import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag, BarChart2, LayoutGrid, AlignLeft, Users, Search } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import DueDateBadge from '../components/due-date/DueDateBadge';
 import DateTimePicker from '../components/due-date/DateTimePicker';
@@ -268,6 +268,7 @@ const ProjectDetail = () => {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState('kanban'); // 'kanban' | 'swimlane' | 'workload'
     const [focusedMemberId, setFocusedMemberId] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const toggleFocus = (memberId) => setFocusedMemberId(prev => prev === memberId ? null : memberId);
     const clearFocus = () => setFocusedMemberId(null);
@@ -309,9 +310,20 @@ const ProjectDetail = () => {
     // Swimlane/Workload: also include workspace members who have tasks assigned
     // but weren't explicitly added to the project's member list
     const tasksList = Array.isArray(tasks) ? tasks : [];
+    
+    // Apply local search filtering
+    const filteredTasks = tasksList.filter(task => {
+        if (!searchQuery.trim()) return true;
+        const query = searchQuery.toLowerCase();
+        const matchesTitle = task.title?.toLowerCase().includes(query);
+        const matchesTags = task.tags?.some(tag => tag.toLowerCase().includes(query));
+        const matchesAssignee = task.assignee?.name?.toLowerCase().includes(query);
+        return matchesTitle || matchesTags || matchesAssignee;
+    });
+
     const effectiveMembers = (() => {
         const seen = new Set(members.map((m) => m.user.id));
-        const extra = tasksList
+        const extra = filteredTasks
             .filter((t) => t.assignee && !seen.has(t.assignee.id))
             .reduce((acc, t) => {
                 if (!acc.find((m) => m.user.id === t.assignee.id)) {
@@ -390,7 +402,7 @@ const ProjectDetail = () => {
     };
 
     const tasksByStatus = KANBAN_COLUMNS.reduce((acc, col) => {
-        acc[col.id] = tasksList.filter((t) => {
+        acc[col.id] = filteredTasks.filter((t) => {
             if (t.status !== col.id) return false;
             if (focusedMemberId) return t.assignee?.id === focusedMemberId;
             return true;
@@ -453,6 +465,32 @@ const ProjectDetail = () => {
                                 {label}
                             </button>
                         ))}
+                    </div>
+
+                    {/* NEW: Local Board Filter */}
+                    <div className="relative flex items-center group">
+                        <Search className={cn(
+                            "w-3.5 h-3.5 absolute left-3 transition-colors",
+                            searchQuery ? "text-indigo-500" : "text-slate-400 group-hover:text-slate-500"
+                        )} />
+                        <input
+                            type="text"
+                            placeholder="Filter cards..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className={cn(
+                                "pl-8 pr-8 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 border-none rounded-lg focus:ring-2 focus:ring-indigo-500/20 w-32 sm:w-48 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500",
+                                searchQuery && "bg-white dark:bg-slate-700 shadow-sm ring-1 ring-slate-200 dark:ring-slate-600"
+                            )}
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-2 p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <X className="w-3 h-3" />
+                            </button>
+                        )}
                     </div>
 
                     {/* Divider */}
@@ -566,7 +604,7 @@ const ProjectDetail = () => {
                 )}>
                     {viewMode === 'workload' ? (
                         <WorkloadView
-                            tasks={tasksList}
+                            tasks={filteredTasks}
                             members={effectiveMembers}
                             projectId={projectId}
                             focusedMemberId={focusedMemberId}
@@ -574,7 +612,7 @@ const ProjectDetail = () => {
                         />
                     ) : viewMode === 'swimlane' ? (
                         <SwimlaneView
-                            tasks={tasksList}
+                            tasks={filteredTasks}
                             members={effectiveMembers}
                             projectId={projectId}
                             focusedMemberId={focusedMemberId}
