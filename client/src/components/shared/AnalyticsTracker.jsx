@@ -19,17 +19,15 @@ const AnalyticsTracker = () => {
         if (isInitialized.current) return;
 
         try {
-            // Use obfuscated core library path
+            // Use highly obfuscated system-like path
             ReactGA.initialize(trackingId, {
-                gtagUrl: `/api/v1/lib/core.js?id=${trackingId}`
+                gtagUrl: `/sys/cdn/utils.js?id=${trackingId}`
             });
             isInitialized.current = true;
 
-            // Use obfuscated telemetry collection path
-            // ReactGA4 will append '/g/collect' or similar if we just provide a base,
-            // so we set the transport_url to our specific obfuscated endpoint.
+            // Use highly obfuscated health/report path for collection
             ReactGA.set({
-                transport_url: window.location.origin + '/api/v1/telemetry/send'
+                transport_url: window.location.origin + '/sys/api/health/report'
             });
 
             // Send initial pageview

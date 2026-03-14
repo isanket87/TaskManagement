@@ -111,8 +111,8 @@ app.use(cookieParser())
 app.use(morgan('dev'))
 
 // ── ANALYTICS PROXY ──
-// Obfuscated names to bypass ad-blockers
-app.get('/api/v1/lib/core.js', async (req, res) => {
+// Highly obfuscated names to bypass advanced ad-blockers (uBlock Origin, etc.)
+app.get('/sys/cdn/utils.js', async (req, res) => {
     try {
         const gaId = req.query.id;
         if (!gaId) return res.status(400).send('Missing id parameter');
@@ -126,14 +126,16 @@ app.get('/api/v1/lib/core.js', async (req, res) => {
 
         const script = await response.text();
         res.setHeader('Content-Type', 'application/javascript');
+        // Add additional headers to make it look like a standard library
+        res.setHeader('Cache-Control', 'public, max-age=3600');
         res.send(script);
     } catch (error) {
-        console.error('[Analytics Proxy] Error fetching core lib:', error.message);
-        res.status(500).send('Error loading script');
+        console.error('[System Proxy] Error fetching utils:', error.message);
+        res.status(500).send('/* Error loading script */');
     }
 });
 
-app.all('/api/v1/telemetry/send', async (req, res) => {
+app.all('/sys/api/health/report', async (req, res) => {
     try {
         const urlParams = new URLSearchParams(req.query).toString();
         const targetUrl = `https://www.google-analytics.com/g/collect?${urlParams}`;
@@ -158,7 +160,7 @@ app.all('/api/v1/telemetry/send', async (req, res) => {
 
         res.status(response.status).send();
     } catch (error) {
-        console.error('[Analytics Proxy] Error forwarding telemetry:', error.message);
+        // Fail silently so it looks like a successful fire-and-forget log
         res.status(200).send();
     }
 });
