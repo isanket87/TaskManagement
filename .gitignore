@@ -24,3 +24,11 @@ Thumbs.db
 
 # Uploads (user files stored locally in dev)
 server/uploads/
+
+# Temporary and ad-hoc files
+client/vite.config.js.timestamp-*
+server/out.json
+server/out_*.json
+server/tmp-*
+server/test_*.js
+server/trigger_backup.js
