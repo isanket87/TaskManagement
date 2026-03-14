@@ -126,9 +126,13 @@ app.get('/assets/main-runtime-config', async (req, res) => {
 
         let script = await response.text();
         
-        // Obfuscate: Rename the global dataLayer to something unique to this app
-        // This is a common pattern that ad-blockers look for.
+        // 1. Rename dataLayer to bypass pattern matching
         script = script.replace(/dataLayer/g, 'brioright_data_layer');
+        
+        // 2. Replace all Google domains with our own proxy path
+        // This forces any sub-scripts loaded by the main script to also go through our proxy
+        script = script.replace(/https:\/\/www\.googletagmanager\.com\/gtag\/js/g, `/assets/main-runtime-config`);
+        script = script.replace(/https:\/\/www\.google-analytics\.com\/g\/collect/g, `/api/v1/sys/sync-state`);
         
         res.setHeader('Content-Type', 'application/javascript');
         res.setHeader('Cache-Control', 'public, max-age=3600');
