@@ -433,11 +433,21 @@ const ProjectDetail = () => {
 
     const DUE_FILTERS = [
         { label: 'All', value: '' },
-        { label: '🔴 Overdue', value: 'overdue' },
-        { label: '🔵 Today', value: 'today' },
-        { label: '🟡 This Week', value: 'this_week' },
-        { label: '⚪ No Date', value: 'no_date' },
+        { label: 'Overdue', value: 'overdue' },
+        { label: 'Today', value: 'today' },
+        { label: 'This Week', value: 'this_week' },
+        { label: 'No Date', value: 'no_date' },
     ];
+
+    const getFilterColor = (value) => {
+        switch (value) {
+            case 'overdue': return 'bg-red-500';
+            case 'today': return 'bg-blue-500';
+            case 'this_week': return 'bg-yellow-500';
+            case 'no_date': return 'bg-slate-300';
+            default: return null;
+        }
+    };
 
     return (
         <PageWrapper title={project?.name || 'Project Board'}>
@@ -585,12 +595,15 @@ const ProjectDetail = () => {
                                 key={f.value}
                                 onClick={() => setFilter(f.value)}
                                 className={cn(
-                                    'px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all border',
+                                    'px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all border flex items-center gap-1.5',
                                     filter === f.value
                                         ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/10 dark:border-indigo-500/30 dark:text-indigo-300'
                                         : 'bg-transparent border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700'
                                 )}
                             >
+                                {getFilterColor(f.value) && (
+                                    <span className={cn("w-2 h-2 rounded-full", getFilterColor(f.value))} />
+                                )}
                                 {f.label}
                             </button>
                         ))}
