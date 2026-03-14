@@ -370,6 +370,22 @@ function buildServer() {
         }
     )
 
+    // ── get_task_activities ───────────────────────────────────────────────────
+    server.tool('get_task_activities', 'Get the activity history for a specific task',
+        {
+            taskId: z.string(),
+            workspaceId: z.string().optional(),
+            apiKey: z.string().optional().describe('Brioright API Key')
+        },
+        async ({ taskId, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const data = await call('GET', `/workspaces/${ws}/tasks/${taskId}/activities`, null, apiKey)
+            const activities = data.activities || data
+            return { content: [{ type: 'text', text: JSON.stringify(activities.map(a => ({ id: a.id, type: a.type, message: a.message, user: a.user?.name, createdAt: a.createdAt })), null, 2) }] }
+        }
+    )
+
     // ── log_time ──────────────────────────────────────────────────────────────
     server.tool('log_time', 'Log time entry for a project/task',
         {
