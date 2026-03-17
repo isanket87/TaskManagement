@@ -4,6 +4,7 @@ import { computeDueDateStatus } from '../utils/dueDateUtils.js'
 import { z } from 'zod'
 import { startOfDay, endOfDay, addDays, startOfMonth, endOfMonth } from 'date-fns'
 import { logTaskActivity } from '../services/activityService.js'
+import { calculateNextOccurrence } from '../utils/recurrenceUtils.js'
 import cache, { TTL } from '../utils/cache.js'
 
 // Bust all task-aggregation caches for a workspace after any mutation
@@ -28,6 +29,11 @@ const taskSelect = {
     dueDateStatus: true,
     snoozedUntil: true,
     remindersSent: true,
+    isRecurring: true,
+    recurrenceRule: true,
+    recurrenceConfig: true,
+    nextOccurrence: true,
+    lastRecurrenceId: true,
     projectId: true,
     assigneeId: true,
     createdById: true,
@@ -48,7 +54,10 @@ const createTaskSchema = z.object({
     dueDate: z.string().optional().nullable(),
     hasDueTime: z.boolean().optional(),
     assigneeId: z.string().optional().nullable(),
-    parentTaskId: z.string().optional().nullable()
+    parentTaskId: z.string().optional().nullable(),
+    isRecurring: z.boolean().optional(),
+    recurrenceRule: z.string().optional().nullable(),
+    recurrenceConfig: z.any().optional().nullable()
 })
 
 // GET /api/projects/:id/tasks
@@ -104,11 +113,19 @@ const createTask = async (req, res, next) => {
         const dueDate = data.dueDate ? new Date(data.dueDate) : null
         const dueDateStatus = computeDueDateStatus(dueDate, data.status || 'todo')
 
+        // Calculate next occurrence if recurring
+        let nextOccurrence = null
+        if (data.isRecurring && data.recurrenceRule) {
+            // First occurrence is usually the due date, or today if no due date
+            nextOccurrence = calculateNextOccurrence(dueDate || new Date(), data.recurrenceRule, data.recurrenceConfig || {})
+        }
+
         const task = await prisma.task.create({
             data: {
                 ...data,
                 dueDate,
                 dueDateStatus,
+                nextOccurrence,
                 projectId,
                 createdById: userId,
                 position: (maxPosition._max.position || 0) + 1
@@ -187,6 +204,60 @@ const updateTask = async (req, res, next) => {
         const dueDate = data.dueDate !== undefined ? (data.dueDate ? new Date(data.dueDate) : null) : undefined
         const dueDateStatus = dueDate !== undefined ? computeDueDateStatus(dueDate, data.status || 'todo') : undefined
 
+        // Handle recurrence updates
+        let nextOccurrence = undefined
+        const currentTask = await prisma.task.findUnique({ 
+            where: { id: taskId },
+            include: { assignee: true }
+        })
+
+        if (data.isRecurring !== undefined || data.recurrenceRule !== undefined || data.recurrenceConfig !== undefined || dueDate !== undefined) {
+            const isRec = data.isRecurring !== undefined ? data.isRecurring : currentTask.isRecurring
+            const rule = data.recurrenceRule !== undefined ? data.recurrenceRule : currentTask.recurrenceRule
+            const config = data.recurrenceConfig !== undefined ? data.recurrenceConfig : currentTask.recurrenceConfig
+            const dDate = dueDate !== undefined ? dueDate : currentTask.dueDate
+
+            if (isRec && rule) {
+                nextOccurrence = calculateNextOccurrence(dDate || new Date(), rule, config || {})
+            } else if (isRec === false) {
+                nextOccurrence = null
+            }
+        }
+
+        // --- Audit Logging Logic ---
+        const changes = []
+        const metadata = { before: {}, after: {} }
+
+        const logChange = (field, label, formatFn = (v) => v) => {
+            if (data[field] !== undefined && data[field] !== currentTask[field]) {
+                const oldVal = formatFn(currentTask[field])
+                const newVal = formatFn(data[field])
+                changes.push(`${label} from "${oldVal || 'None'}" to "${newVal || 'None'}"`)
+                metadata.before[field] = currentTask[field]
+                metadata.after[field] = data[field]
+            }
+        }
+
+        logChange('title', 'title')
+        logChange('status', 'status', (v) => v?.replace('_', ' '))
+        logChange('priority', 'priority')
+        
+        if (data.assigneeId !== undefined && data.assigneeId !== currentTask.assigneeId) {
+            const newAssignee = data.assigneeId 
+                ? await prisma.user.findUnique({ where: { id: data.assigneeId }, select: { name: true } })
+                : null
+            changes.push(`assignee from "${currentTask.assignee?.name || 'Unassigned'}" to "${newAssignee?.name || 'Unassigned'}"`)
+            metadata.before.assignee = currentTask.assignee?.name
+            metadata.after.assignee = newAssignee?.name
+        }
+
+        if (dueDate !== undefined && String(dueDate) !== String(currentTask.dueDate)) {
+            const oldDate = currentTask.dueDate ? new Date(currentTask.dueDate).toLocaleDateString() : 'None'
+            const newDate = dueDate ? new Date(dueDate).toLocaleDateString() : 'None'
+            changes.push(`due date from "${oldDate}" to "${newDate}"`)
+        }
+        // --- End Audit Logging ---
+
         const task = await prisma.task.update({
             where: { id: taskId },
             data: {
@@ -198,17 +269,14 @@ const updateTask = async (req, res, next) => {
                 ...(data.assigneeId !== undefined && { assigneeId: data.assigneeId }),
                 ...(dueDate !== undefined && { dueDate }),
                 ...(data.hasDueTime !== undefined && { hasDueTime: data.hasDueTime }),
-                ...(dueDateStatus !== undefined && { dueDateStatus })
+                ...(dueDateStatus !== undefined && { dueDateStatus }),
+                ...(data.isRecurring !== undefined && { isRecurring: data.isRecurring }),
+                ...(data.recurrenceRule !== undefined && { recurrenceRule: data.recurrenceRule }),
+                ...(data.recurrenceConfig !== undefined && { recurrenceConfig: data.recurrenceConfig }),
+                ...(nextOccurrence !== undefined && { nextOccurrence })
             },
             select: taskSelect
         })
-
-        const userId = req.user.id
-        const changes = []
-        if (data.status) changes.push(`Status changed to ${data.status}`)
-        if (data.priority) changes.push(`Priority changed to ${data.priority}`)
-        if (data.assigneeId) changes.push(`Reassigned task`)
-        if (dueDate !== undefined) changes.push(dueDate ? `Due date set to ${dueDate.toDateString()}` : 'Due date removed')
 
         if (changes.length > 0) {
             await logTaskActivity({
@@ -216,8 +284,8 @@ const updateTask = async (req, res, next) => {
                 taskId,
                 userId,
                 type: 'task_updated',
-                message: changes.join(', '),
-                metadata: { changes }
+                message: `Updated ${changes.join(', ')}`,
+                metadata
             })
         }
 

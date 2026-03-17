@@ -108,6 +108,11 @@ model Task {
   lastReminderSent DateTime?
   remindersSent    String[]         @default([])
   snoozedUntil     DateTime?
+  isRecurring      Boolean          @default(false)
+  recurrenceRule   String?          // daily, weekly, monthly, yearly
+  recurrenceConfig Json?            // e.g., { "interval": 1, "daysOfWeek": [1, 3] }
+  nextOccurrence   DateTime?
+  lastRecurrenceId String?          // ID of the task this was recreated from
   projectId        String
   assigneeId       String?
   createdById      String

@@ -87,7 +87,7 @@ const ImportCsvModal = ({ isOpen, onClose, onImport, isImporting }) => {
                                     : "border-slate-300 dark:border-slate-700 hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-slate-50 dark:hover:bg-slate-800/50"
                             )}
                         >
-                            <input {...getInputProps()} ref={inputRef} />
+                            <input {...getInputProps()} />
                             <div className={cn(
                                 "mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-colors",
                                 isDragActive ? "bg-indigo-200 dark:bg-indigo-900/50" : "bg-indigo-100 dark:bg-indigo-900/30"

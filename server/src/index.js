@@ -68,6 +68,7 @@ import { startDueDateReminderJob } from './jobs/dueDateReminder.js'
 import { startDailyDigest } from './jobs/dailyDigest.js'
 import { startWeeklyDigest } from './jobs/weeklyDigest.js'
 import { startDatabaseBackupJob } from './jobs/databaseBackup.js'
+import { startRecurringTasksJob } from './jobs/recurringTasks.js'
 import { runDatabaseBackup } from './services/backupService.js'
 
 
@@ -353,7 +354,8 @@ const start = async () => {
                 startDueDateReminderJob(io),
                 startDailyDigest(),
                 startWeeklyDigest(),
-                startDatabaseBackupJob()
+                startDatabaseBackupJob(),
+                startRecurringTasksJob(io)
             ]
         }
 

@@ -5,6 +5,7 @@ import {
     bulkUpdateDueDate, getDueDateSummary, getUpcomingTasks, getOverdueTasks,
     getCalendarTasks, getDashboardStats, getTaskActivities, bulkImportTasks
 } from '../controllers/taskController.js'
+import { suggestPriority } from '../controllers/aiController.js'
 import { getDependencies, addDependency, removeDependency } from '../controllers/taskDependencyController.js'
 import auth from '../middleware/auth.js'
 
@@ -258,6 +259,31 @@ router.get('/', getTasks)
  *         description: Tasks imported
  */
 router.post('/bulk', bulkImportTasks)
+
+/**
+ * @swagger
+ * /api/workspaces/{slug}/tasks/ai/suggest-priority:
+ *   post:
+ *     summary: Suggest a priority for a task using AI
+ *     tags: [Tasks]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Priority suggested
+ */
+router.post('/ai/suggest-priority', suggestPriority)
 
 /**
  * @swagger

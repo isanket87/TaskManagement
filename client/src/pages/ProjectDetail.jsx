@@ -10,7 +10,7 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag, BarChart2, LayoutGrid, AlignLeft, Users, Search } from 'lucide-react';
+import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag, BarChart2, LayoutGrid, AlignLeft, Users, Search, Sparkles, Check } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import DueDateBadge from '../components/due-date/DueDateBadge';
 import DateTimePicker from '../components/due-date/DateTimePicker';
@@ -202,8 +202,26 @@ const TaskCard = ({ task, projectId, onDueDateUpdate, onDelete, onSelect }) => {
 };
 
 // Kanban Column
-const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onAddTask, onSelectTask }) => {
+const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onAddTask, onSelectTask, createMutation }) => {
     const { setNodeRef, isOver } = useDroppable({ id: column.id });
+    const [isQuickAdding, setIsQuickAdding] = useState(false);
+    const [quickAddTitle, setQuickAddTitle] = useState('');
+
+    const handleQuickAdd = () => {
+        if (!quickAddTitle.trim()) {
+            setIsQuickAdding(false);
+            return;
+        }
+        createMutation.mutate({ 
+            title: quickAddTitle.trim(), 
+            status: column.id 
+        }, {
+            onSuccess: () => {
+                setQuickAddTitle('');
+                setIsQuickAdding(false);
+            }
+        });
+    };
 
     return (
         <div className="flex flex-col w-[300px] sm:w-[320px] shrink-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl h-full max-h-full snap-center md:snap-align-none">
@@ -215,12 +233,22 @@ const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onA
                         {tasks.length}
                     </span>
                 </div>
-                <button
-                    onClick={() => onAddTask(column.id)}
-                    className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
-                >
-                    <Plus className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => setIsQuickAdding(true)}
+                        className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                        title="Quick add task"
+                    >
+                        <Plus className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => onAddTask(column.id)}
+                        className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                        title="Open full create modal"
+                    >
+                        <LayoutGrid className="w-4 h-4" />
+                    </button>
+                </div>
             </div>
 
             <div
@@ -230,6 +258,51 @@ const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onA
                     isOver ? "bg-indigo-50/50 dark:bg-indigo-900/10" : "bg-transparent"
                 )}
             >
+                {/* QUICK ADD INPUT */}
+                <AnimatePresence>
+                    {isQuickAdding && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="bg-white dark:bg-slate-800 rounded-xl p-2 shadow-sm border-2 border-indigo-500 dark:border-indigo-500/50 mb-3"
+                        >
+                            <input
+                                autoFocus
+                                value={quickAddTitle}
+                                onChange={(e) => setQuickAddTitle(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleQuickAdd();
+                                    if (e.key === 'Escape') {
+                                        setIsQuickAdding(false);
+                                        setQuickAddTitle('');
+                                    }
+                                }}
+                                onBlur={() => {
+                                    if (!quickAddTitle.trim()) setIsQuickAdding(false);
+                                }}
+                                placeholder="What needs to be done?"
+                                className="w-full text-sm bg-transparent border-none focus:ring-0 p-1 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
+                            />
+                            <div className="flex justify-end gap-1 mt-1">
+                                <button 
+                                    onClick={() => { setIsQuickAdding(false); setQuickAddTitle(''); }}
+                                    className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 transition-colors"
+                                >
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                                <button 
+                                    onClick={handleQuickAdd}
+                                    disabled={createMutation.isPending || !quickAddTitle.trim()}
+                                    className="p-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                                >
+                                    <Check className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                     {tasks.map((task) => (
                         <TaskCard
@@ -261,7 +334,27 @@ const ProjectDetail = () => {
     const [activeTask, setActiveTask] = useState(null);
     const [showAddTask, setShowAddTask] = useState(false);
     const [newTaskStatus, setNewTaskStatus] = useState('todo');
+    const [newTaskPriority, setNewTaskPriority] = useState('medium');
+    const [isSuggestingPriority, setIsSuggestingPriority] = useState(false);
     const [newTaskTitle, setNewTaskTitle] = useState('');
+
+    const handleSuggestPriority = async () => {
+        if (!newTaskTitle) return toast.error('Enter a title first');
+        setIsSuggestingPriority(true);
+        try {
+            const res = await taskService.suggestPriority({ title: newTaskTitle });
+            const suggested = res.data?.data?.priority;
+            if (suggested) {
+                setNewTaskPriority(suggested);
+                toast.success(`AI suggested "${suggested}" priority`);
+            }
+        } catch (err) {
+            toast.error('AI suggestion failed');
+        } finally {
+            setIsSuggestingPriority(false);
+        }
+    };
+
     const [filter, setFilter] = useState('');
     const [selectedTask, setSelectedTask] = useState(null);
     const [taskAttachments, setTaskAttachments] = useState([]);
@@ -346,11 +439,13 @@ const ProjectDetail = () => {
     });
 
     const handleImportCSV = (file) => {
+        console.log('handleImportCSV called with file:', file);
         if (!file) return;
         Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
             complete: (results) => {
+                console.log('CSV Parse complete. Results:', results);
                 const mapped = results.data.map(row => ({
                     title: row.Title || row.title || row.TITLE,
                     description: row.Description || row.description || row.DESCRIPTION,
@@ -359,16 +454,20 @@ const ProjectDetail = () => {
                     dueDate: row.DueDate || row.dueDate || row['Due Date'] || null,
                 })).filter(t => t.title);
 
+                console.log('Mapped tasks:', mapped);
+
                 if (mapped.length === 0) {
                     toast.error('No valid tasks found in CSV');
                     return;
                 }
                 importMutation.mutate(mapped);
             },
-            error: () => toast.error('Failed to parse CSV')
+            error: (err) => {
+                console.error('CSV Parse error:', err);
+                toast.error('Failed to parse CSV');
+            }
         });
     };
-
     const handleExportCSV = () => {
         if (!tasks.length) {
             toast.error('No tasks to export');
@@ -652,6 +751,7 @@ const ProjectDetail = () => {
                                         onDelete={(task) => deleteMutation.mutate({ taskId: task.id })}
                                         onAddTask={(status) => { setNewTaskStatus(status); setShowAddTask(true); }}
                                         onSelectTask={handleSelectTask}
+                                        createMutation={createMutation}
                                     />
                                 ))}
                             </div>
@@ -671,15 +771,33 @@ const ProjectDetail = () => {
             <Modal isOpen={showAddTask} onClose={() => setShowAddTask(false)} title="New Task">
                 <div className="space-y-4">
                     <Input label="Task Title" placeholder="What needs to be done?" value={newTaskTitle} onChange={(e) => setNewTaskTitle(e.target.value)} autoFocus />
-                    <div>
-                        <label className="label">Status</label>
-                        <select className="input" value={newTaskStatus} onChange={(e) => setNewTaskStatus(e.target.value)}>
-                            {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <label className="label">Status</label>
+                            <select className="input" value={newTaskStatus} onChange={(e) => setNewTaskStatus(e.target.value)}>
+                                {STATUS_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Priority</label>
+                                <button
+                                    onClick={handleSuggestPriority}
+                                    disabled={isSuggestingPriority || !newTaskTitle}
+                                    className="text-[10px] flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 font-bold disabled:opacity-50"
+                                >
+                                    <Sparkles className={cn("w-3 h-3", isSuggestingPriority && "animate-pulse")} />
+                                    AI SUGGEST
+                                </button>
+                            </div>
+                            <select className="input" value={newTaskPriority} onChange={(e) => setNewTaskPriority(e.target.value)}>
+                                {PRIORITY_OPTIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                            </select>
+                        </div>
                     </div>
                     <div className="flex gap-2 justify-end">
                         <Button variant="secondary" onClick={() => setShowAddTask(false)}>Cancel</Button>
-                        <Button isLoading={createMutation.isPending} onClick={() => createMutation.mutate({ title: newTaskTitle, status: newTaskStatus })} disabled={!newTaskTitle}>Add Task</Button>
+                        <Button isLoading={createMutation.isPending} onClick={() => createMutation.mutate({ title: newTaskTitle, status: newTaskStatus, priority: newTaskPriority })} disabled={!newTaskTitle}>Add Task</Button>
                     </div>
                 </div>
             </Modal>

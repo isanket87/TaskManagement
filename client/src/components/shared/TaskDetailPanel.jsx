@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, MoreHorizontal, ArrowLeft,
     MessageSquare, Clock, AlignLeft,
-    CheckCircle2, AlertCircle, PlayCircle,
+    CheckCircle2, AlertCircle, PlayCircle, RefreshCw,
     Flag, User, Calendar, Plus, Tag, CircleDashed, Layout, AlertTriangle, Paperclip
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -633,6 +633,31 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                                 />
                                             )}
                                         </div>
+                                    </PropertyRow>
+
+                                    {/* RECURRENCE */}
+                                    <PropertyRow icon={RefreshCw} label="Recurrence">
+                                        <Dropdown
+                                            align="left"
+                                            trigger={
+                                                <button className="flex items-center gap-2 px-2 py-1 -ml-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors text-sm font-medium text-slate-700 dark:text-slate-200 group/btn h-8">
+                                                    {detailedTask.isRecurring ? (
+                                                        <span className="text-indigo-600 dark:text-indigo-400 capitalize">
+                                                            {detailedTask.recurrenceRule}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-400">None</span>
+                                                    )}
+                                                </button>
+                                            }
+                                            items={[
+                                                { label: 'None', active: !detailedTask.isRecurring, onClick: () => propertyMutation.mutate({ isRecurring: false, recurrenceRule: null }) },
+                                                { label: 'Daily', active: detailedTask.recurrenceRule === 'daily', onClick: () => propertyMutation.mutate({ isRecurring: true, recurrenceRule: 'daily' }) },
+                                                { label: 'Weekly', active: detailedTask.recurrenceRule === 'weekly', onClick: () => propertyMutation.mutate({ isRecurring: true, recurrenceRule: 'weekly' }) },
+                                                { label: 'Monthly', active: detailedTask.recurrenceRule === 'monthly', onClick: () => propertyMutation.mutate({ isRecurring: true, recurrenceRule: 'monthly' }) },
+                                                { label: 'Yearly', active: detailedTask.recurrenceRule === 'yearly', onClick: () => propertyMutation.mutate({ isRecurring: true, recurrenceRule: 'yearly' }) },
+                                            ]}
+                                        />
                                     </PropertyRow>
 
                                     {/* PROJECT */}
