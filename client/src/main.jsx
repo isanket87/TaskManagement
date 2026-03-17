@@ -7,6 +7,7 @@ import './index.css';
 window.addEventListener('error', (event) => {
     const msg = event?.message || '';
     if (msg.includes('Failed to fetch dynamically imported module') ||
+        msg.includes('error loading dynamically imported module') ||
         msg.includes('Importing a module script failed')) {
         const lastReload = sessionStorage.getItem('chunk_reload_at');
         const now = Date.now();

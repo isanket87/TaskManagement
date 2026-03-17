@@ -56,7 +56,13 @@ class ErrorBoundary extends React.Component {
     }
     componentDidCatch(error, errorInfo) {
         // Automatically reload the page if it's a Vite chunk load error
-        if (error?.message?.includes('Failed to fetch dynamically imported module')) {
+        const errorMsg = error?.message || '';
+        const isChunkError = 
+            errorMsg.includes('Failed to fetch dynamically imported module') || 
+            errorMsg.includes('error loading dynamically imported module') ||
+            errorMsg.includes('Importing a module script failed');
+
+        if (isChunkError) {
             console.log('🔄 New deployment detected (chunk load error). Silently reloading...');
             window.location.reload();
             return;
@@ -68,7 +74,13 @@ class ErrorBoundary extends React.Component {
     render() {
         if (this.state.hasError) {
             // If it's the chunk error, we don't want to flash the red error screen while it's reloading
-            if (this.state.error?.message?.includes('Failed to fetch dynamically imported module')) {
+            const errorMsg = this.state.error?.message || '';
+            const isChunkError = 
+                errorMsg.includes('Failed to fetch dynamically imported module') || 
+                errorMsg.includes('error loading dynamically imported module') ||
+                errorMsg.includes('Importing a module script failed');
+
+            if (isChunkError) {
                 return <PageLoader />;
             }
             
