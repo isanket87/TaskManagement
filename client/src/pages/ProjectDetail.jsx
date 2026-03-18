@@ -1,8 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useRef, useCallback } from 'react';
-import WorkloadView from '../components/views/WorkloadView';
-import SwimlaneView from '../components/views/SwimlaneView';
+import { useState, useRef, useCallback, lazy, Suspense } from 'react';
 import {
     DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
     closestCorners, useDroppable,
@@ -10,13 +8,12 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag, BarChart2, LayoutGrid, AlignLeft, Users, Search, Sparkles, Check } from 'lucide-react';
+import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag, BarChart2, LayoutGrid, AlignLeft, Users, Search, Sparkles, Check, Loader2 } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import DueDateBadge from '../components/due-date/DueDateBadge';
 import DateTimePicker from '../components/due-date/DateTimePicker';
 import BulkActionBar from '../components/shared/BulkActionBar';
 import AttachmentPanel from '../components/shared/AttachmentPanel';
-import TaskDetailPanel from '../components/shared/TaskDetailPanel';
 import Avatar from '../components/ui/Avatar';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
@@ -32,7 +29,21 @@ import { KANBAN_COLUMNS, PRIORITY_OPTIONS, STATUS_OPTIONS } from '../utils/const
 import { getPriorityBadgeClass, cn } from '../utils/helpers';
 import toast from 'react-hot-toast';
 import Papa from 'papaparse';
-import ImportCsvModal from '../components/shared/ImportCsvModal';
+
+// Lazy loaded heavy components
+const WorkloadView = lazy(() => import('../components/views/WorkloadView'));
+const SwimlaneView = lazy(() => import('../components/views/SwimlaneView'));
+const TaskDetailPanel = lazy(() => import('../components/shared/TaskDetailPanel'));
+const ImportCsvModal = lazy(() => import('../components/shared/ImportCsvModal'));
+
+const ViewFallback = () => (
+    <div className="flex items-center justify-center h-full w-full py-24">
+        <div className="flex flex-col items-center gap-3">
+            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+            <p className="text-sm font-medium text-slate-500">Loading view...</p>
+        </div>
+    </div>
+);
 
 // Task Card
 const TaskCard = ({ task, projectId, onDueDateUpdate, onDelete, onSelect }) => {
@@ -714,56 +725,58 @@ const ProjectDetail = () => {
                     "flex-1 min-h-0",
                     viewMode === 'kanban' ? "overflow-x-auto overflow-y-hidden px-4 sm:px-6 pb-6 snap-x snap-mandatory hide-scrollbar" : "overflow-hidden"
                 )}>
-                    {viewMode === 'workload' ? (
-                        <WorkloadView
-                            tasks={filteredTasks}
-                            members={effectiveMembers}
-                            projectId={projectId}
-                            focusedMemberId={focusedMemberId}
-                            onFocusChange={toggleFocus}
-                        />
-                    ) : viewMode === 'swimlane' ? (
-                        <SwimlaneView
-                            tasks={filteredTasks}
-                            members={effectiveMembers}
-                            projectId={projectId}
-                            focusedMemberId={focusedMemberId}
-                            onFocusChange={toggleFocus}
-                        />
-                    ) : isLoading ? (
-                        <div className="flex gap-6 h-full">
-                            {KANBAN_COLUMNS.map((col) => (
-                                <div key={col.id} className="w-[300px] shrink-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 space-y-3">
-                                    {[1, 2, 3].map(i => <TaskCardSkeleton key={i} />)}
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-                            <div className="flex gap-6 h-full items-start">
+                    <Suspense fallback={<ViewFallback />}>
+                        {viewMode === 'workload' ? (
+                            <WorkloadView
+                                tasks={filteredTasks}
+                                members={effectiveMembers}
+                                projectId={projectId}
+                                focusedMemberId={focusedMemberId}
+                                onFocusChange={toggleFocus}
+                            />
+                        ) : viewMode === 'swimlane' ? (
+                            <SwimlaneView
+                                tasks={filteredTasks}
+                                members={effectiveMembers}
+                                projectId={projectId}
+                                focusedMemberId={focusedMemberId}
+                                onFocusChange={toggleFocus}
+                            />
+                        ) : isLoading ? (
+                            <div className="flex gap-6 h-full">
                                 {KANBAN_COLUMNS.map((col) => (
-                                    <KanbanColumn
-                                        key={col.id}
-                                        column={col}
-                                        tasks={tasksByStatus[col.id] || []}
-                                        projectId={projectId}
-                                        onDueDateUpdate={(task, date, hasDueTime) => updateDueDateMutation.mutate({ taskId: task.id, dueDate: date, hasDueTime })}
-                                        onDelete={(task) => deleteMutation.mutate({ taskId: task.id })}
-                                        onAddTask={(status) => { setNewTaskStatus(status); setShowAddTask(true); }}
-                                        onSelectTask={handleSelectTask}
-                                        createMutation={createMutation}
-                                    />
+                                    <div key={col.id} className="w-[300px] shrink-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl p-3 space-y-3">
+                                        {[1, 2, 3].map(i => <TaskCardSkeleton key={i} />)}
+                                    </div>
                                 ))}
                             </div>
-                            <DragOverlay>
-                                {activeTask && (
-                                    <div className="card p-3 w-72 shadow-2xl rotate-2 opacity-90">
-                                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{activeTask.title}</p>
-                                    </div>
-                                )}
-                            </DragOverlay>
-                        </DndContext>
-                    )}
+                        ) : (
+                            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                                <div className="flex gap-6 h-full items-start">
+                                    {KANBAN_COLUMNS.map((col) => (
+                                        <KanbanColumn
+                                            key={col.id}
+                                            column={col}
+                                            tasks={tasksByStatus[col.id] || []}
+                                            projectId={projectId}
+                                            onDueDateUpdate={(task, date, hasDueTime) => updateDueDateMutation.mutate({ taskId: task.id, dueDate: date, hasDueTime })}
+                                            onDelete={(task) => deleteMutation.mutate({ taskId: task.id })}
+                                            onAddTask={(status) => { setNewTaskStatus(status); setShowAddTask(true); }}
+                                            onSelectTask={handleSelectTask}
+                                            createMutation={createMutation}
+                                        />
+                                    ))}
+                                </div>
+                                <DragOverlay>
+                                    {activeTask && (
+                                        <div className="card p-3 w-72 shadow-2xl rotate-2 opacity-90">
+                                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{activeTask.title}</p>
+                                        </div>
+                                    )}
+                                </DragOverlay>
+                            </DndContext>
+                        )}
+                    </Suspense>
                 </div>
             </div>
 
@@ -805,22 +818,26 @@ const ProjectDetail = () => {
             <BulkActionBar projectId={projectId} onComplete={() => queryClient.invalidateQueries(['tasks', projectId])} />
 
             {/* Task Detail Side Panel */}
-            {selectedTask && (
-                <TaskDetailPanel
-                    task={selectedTask}
-                    projectId={projectId}
-                    onClose={() => setSelectedTask(null)}
-                    onTaskSelect={setSelectedTask}
-                />
-            )}
+            <Suspense fallback={null}>
+                {selectedTask && (
+                    <TaskDetailPanel
+                        task={selectedTask}
+                        projectId={projectId}
+                        onClose={() => setSelectedTask(null)}
+                        onTaskSelect={setSelectedTask}
+                    />
+                )}
+            </Suspense>
 
             {/* Import CSV Modal */}
-            <ImportCsvModal
-                isOpen={isImportModalOpen}
-                onClose={() => { setIsImportModalOpen(false); importMutation.reset(); }}
-                onImport={handleImportCSV}
-                isImporting={importMutation.isPending}
-            />
+            <Suspense fallback={null}>
+                <ImportCsvModal
+                    isOpen={isImportModalOpen}
+                    onClose={() => { setIsImportModalOpen(false); importMutation.reset(); }}
+                    onImport={handleImportCSV}
+                    isImporting={importMutation.isPending}
+                />
+            </Suspense>
         </PageWrapper>
     );
 };
