@@ -306,7 +306,7 @@ const updateTask = async (req, res, next) => {
             await logTaskActivity({
                 projectId,
                 taskId,
-                userId,
+                userId: req.user.id,
                 type: 'task_updated',
                 message: `Updated ${changes.join(', ')}`,
                 metadata
