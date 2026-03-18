@@ -120,6 +120,7 @@ app.get('/assets/main-runtime-config', async (req, res) => {
         const gaId = req.query.id;
         if (!gaId) return res.status(400).send('/* missing id */');
 
+        // Note: gaId already contains the tracking ID from the client request
         const response = await fetch(`https://www.googletagmanager.com/gtag/js?id=${gaId}`, {
             headers: {
                 'User-Agent': req.headers['user-agent'] || '',
