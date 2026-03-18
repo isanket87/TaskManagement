@@ -21,7 +21,7 @@ const AnalyticsTracker = () => {
         try {
             // Use extension-less, generic path
             ReactGA.initialize(trackingId, {
-                gtagUrl: `/assets/main-runtime-config?id=${trackingId}`,
+                gtagUrl: `/assets/main-runtime-config`,
                 // Tell GA to use our custom dataLayer name to avoid ad-blocker detection
                 gtagOptions: {
                     'layer': 'brioright_data_layer'
