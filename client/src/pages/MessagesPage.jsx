@@ -50,8 +50,8 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
 
     if (message.deletedAt) {
         return (
-            <div className="px-6 py-1 group/msg">
-                <span className="text-xs text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded">This message was deleted</span>
+            <div className="px-6 py-1 flex justify-center">
+                <span className="text-[10px] text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded-full">This message was deleted</span>
             </div>
         );
     }
@@ -70,90 +70,109 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
 
     return (
         <div className={cn(
-            "group/msg relative flex gap-4 px-6 py-2 transition-all duration-200",
-            showAvatar ? "mt-4" : "mt-0.5",
-            "hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10"
+            "group/msg relative flex gap-3 px-4 sm:px-6 py-1 transition-all duration-200",
+            isOwn ? "flex-row-reverse" : "flex-row",
+            showAvatar ? "mt-4" : "mt-0.5"
         )}
             onMouseEnter={() => setShowActions(true)} onMouseLeave={() => setShowActions(false)}>
             
-            {showAvatar ? (
-                <div className="relative shrink-0 mt-1">
-                    <Avatar user={message.author} size="sm" className="rounded-xl shadow-sm" />
-                </div>
-            ) : (
-                <div className="w-8 shrink-0 flex justify-center opacity-0 group-hover/msg:opacity-100 transition-opacity">
-                    <span className="text-[10px] text-slate-400 mt-1 font-medium">{format(new Date(message.createdAt), 'HH:mm')}</span>
+            {/* AVATAR */}
+            {!isOwn && (
+                <div className="w-8 shrink-0 flex items-end mb-1">
+                    {showAvatar ? (
+                        <Avatar user={message.author} size="xs" className="rounded-lg shadow-sm" />
+                    ) : (
+                        <div className="w-8" />
+                    )}
                 </div>
             )}
 
-            <div className="flex-1 min-w-0">
-                {showAvatar && (
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100 hover:underline cursor-pointer">{message.author?.name}</span>
-                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-tighter">{format(new Date(message.createdAt), 'h:mm a')}</span>
-                        {message.editedAt && <span className="text-[10px] text-slate-400 font-medium italic">(edited)</span>}
-                    </div>
+            <div className={cn(
+                "flex flex-col max-w-[80%] sm:max-w-[70%]",
+                isOwn ? "items-end" : "items-start"
+            )}>
+                {showAvatar && !isOwn && (
+                    <span className="text-[10px] font-bold text-slate-500 mb-1 ml-1">{message.author?.name}</span>
                 )}
                 
-                {editing ? (
-                    <form onSubmit={handleEditSubmit} className="flex flex-col gap-2 bg-white dark:bg-slate-800 p-2 rounded-xl border-2 border-indigo-500 shadow-lg">
-                        <textarea 
-                            value={editContent} 
-                            onChange={e => setEditContent(e.target.value)}
-                            rows={3}
-                            className="w-full text-sm p-2 bg-transparent text-slate-900 dark:text-slate-100 outline-none resize-none" 
-                            autoFocus 
-                        />
-                        <div className="flex justify-end gap-2">
-                            <button type="button" onClick={() => setEditing(false)} className="text-xs font-bold text-slate-500 px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Cancel</button>
-                            <button type="submit" className="text-xs font-bold bg-indigo-600 text-white px-4 py-1.5 rounded-lg hover:bg-indigo-700 shadow-sm shadow-indigo-200 dark:shadow-none transition-all">Save Changes</button>
+                <div className="relative group">
+                    {editing ? (
+                        <form onSubmit={handleEditSubmit} className="flex flex-col gap-2 bg-white dark:bg-slate-800 p-2 rounded-2xl border-2 border-indigo-500 shadow-lg min-w-[240px]">
+                            <textarea 
+                                value={editContent} 
+                                onChange={e => setEditContent(e.target.value)}
+                                rows={3}
+                                className="w-full text-sm p-2 bg-transparent text-slate-900 dark:text-slate-100 outline-none resize-none" 
+                                autoFocus 
+                            />
+                            <div className="flex justify-end gap-2">
+                                <button type="button" onClick={() => setEditing(false)} className="text-[10px] font-bold text-slate-500 px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">Cancel</button>
+                                <button type="submit" className="text-[10px] font-bold bg-indigo-600 text-white px-3 py-1 rounded-lg hover:bg-indigo-700 transition-all">Save</button>
+                            </div>
+                        </form>
+                    ) : (
+                        <div className={cn(
+                            "px-4 py-2.5 text-sm leading-relaxed break-words",
+                            isOwn 
+                                ? "bg-indigo-600 text-white rounded-[20px] rounded-tr-none shadow-sm shadow-indigo-100 dark:shadow-none" 
+                                : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-[20px] rounded-tl-none shadow-sm"
+                        )}>
+                            <p className="whitespace-pre-wrap">{message.content}</p>
                         </div>
-                    </form>
-                ) : (
-                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words leading-relaxed selection:bg-indigo-100 dark:selection:bg-indigo-900">{message.content}</p>
-                )}
+                    )}
+
+                    {/* ACTIONS POPUP */}
+                    <AnimatePresence>
+                        {showActions && !editing && (
+                            <motion.div 
+                                initial={{ opacity: 0, scale: 0.9 }} 
+                                animate={{ opacity: 1, scale: 1 }} 
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className={cn(
+                                    "absolute -top-10 flex items-center gap-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-1 z-10",
+                                    isOwn ? "right-0" : "left-0"
+                                )}
+                            >
+                                {['👍', '❤️', '🔥'].map(emoji => (
+                                    <button key={emoji} onClick={() => onReact(message.id, emoji)}
+                                        className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-sm transition-all active:scale-125">{emoji}</button>
+                                ))}
+                                <div className="w-px h-3 bg-slate-200 dark:bg-slate-700 mx-1" />
+                                <button onClick={() => onReply(message)} className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-indigo-600 transition-colors"><Reply size={14} /></button>
+                                {isOwn && <>
+                                    <button onClick={() => setEditing(true)} className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-indigo-600 transition-colors"><Edit2 size={14} /></button>
+                                    <button onClick={() => onDelete(message.id)} className="w-7 h-7 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-slate-500 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                                </>}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
 
                 {/* Reactions */}
                 {Object.entries(reactionMap).length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
+                    <div className={cn("flex flex-wrap gap-1 mt-1.5", isOwn ? "justify-end" : "justify-start")}>
                         {Object.entries(reactionMap).map(([emoji, users]) => (
                             <button key={emoji} onClick={() => onReact(message.id, emoji)}
                                 className={cn(
-                                    "flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-xs font-bold border transition-all active:scale-95",
+                                    "flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold border transition-all",
                                     users.includes(currentUserId) 
-                                        ? "bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-100 dark:ring-0" 
-                                        : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                                        ? "bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400" 
+                                        : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300"
                                 )}>
                                 <span>{emoji}</span> 
-                                <span className="text-[10px]">{users.length}</span>
+                                <span>{users.length}</span>
                             </button>
                         ))}
                     </div>
                 )}
-            </div>
 
-            {/* Action bar */}
-            <AnimatePresence>
-                {showActions && !editing && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 10 }} 
-                        animate={{ opacity: 1, y: 0 }} 
-                        exit={{ opacity: 0, y: 10 }}
-                        className="absolute right-6 -top-3 flex items-center gap-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl shadow-slate-200/50 dark:shadow-none p-1 z-10"
-                    >
-                        {['👍', '❤️', '🔥', '🎉'].map(emoji => (
-                            <button key={emoji} onClick={() => onReact(message.id, emoji)}
-                                className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-base transition-all active:scale-125">{emoji}</button>
-                        ))}
-                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
-                        <button onClick={() => onReply(message)} className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-indigo-600 transition-colors" title="Reply in thread"><Reply size={16} /></button>
-                        {isOwn && <>
-                            <button onClick={() => setEditing(true)} className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-indigo-600 transition-colors"><Edit2 size={16} /></button>
-                            <button onClick={() => onDelete(message.id)} className="w-8 h-8 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-slate-500 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
-                        </>}
-                    </motion.div>
+                {showAvatar && (
+                    <span className="text-[9px] font-medium text-slate-400 mt-1 uppercase tracking-tighter">
+                        {format(new Date(message.createdAt), 'h:mm a')}
+                        {message.editedAt && " (edited)"}
+                    </span>
                 )}
-            </AnimatePresence>
+            </div>
         </div>
     );
 };
