@@ -8,19 +8,18 @@ import { cn } from '../../utils/helpers';
 const WorkspaceSwitcher = ({ collapsed }) => {
     const { workspace, workspaces, isAdmin } = useWorkspaceStore();
     const navigate = useNavigate();
-    const location = useLocation();
 
     if (!workspace) return null;
 
     return (
-        <Menu as="div" className="relative inline-block w-full text-left">
+        <Menu as="div" className="relative w-full">
             <div>
                 <Menu.Button className={cn(
                     "group flex w-full items-center gap-3 p-3 rounded-[24px] bg-white dark:bg-white/5 border border-slate-200 dark:border-white/5 transition-all duration-300 hover:shadow-xl hover:border-indigo-500/30",
                     collapsed ? "justify-center" : "justify-between px-4"
                 )}>
                     <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shadow-inner group-hover:scale-105 transition-transform duration-300">
+                        <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 shadow-inner group-hover:scale-105 transition-transform duration-300 shrink-0">
                             {workspace.logo ? (
                                 <img src={workspace.logo} alt="" className="h-10 w-10 rounded-2xl object-cover" />
                             ) : (
@@ -39,20 +38,23 @@ const WorkspaceSwitcher = ({ collapsed }) => {
                             </div>
                         )}
                     </div>
-                    {!collapsed && <ChevronDown className="h-4 w-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />}
+                    {!collapsed && <ChevronDown className="h-4 w-4 text-slate-400 group-hover:text-indigo-600 transition-colors shrink-0" />}
                 </Menu.Button>
             </div>
 
             <Transition
                 as={Fragment}
                 enter="transition ease-out duration-200"
-                enterFrom="transform opacity-0 scale-95 -translate-y-2"
-                enterTo="transform opacity-100 scale-100 translate-y-0"
+                enterFrom="transform opacity-0 scale-95 -translate-x-2"
+                enterTo="transform opacity-100 scale-100 translate-x-0"
                 leave="transition ease-in duration-150"
-                leaveFrom="transform opacity-100 scale-100 translate-y-0"
-                leaveTo="transform opacity-0 scale-95 -translate-y-2"
+                leaveFrom="transform opacity-100 scale-100 translate-x-0"
+                leaveTo="transform opacity-0 scale-95 -translate-x-2"
             >
-                <Menu.Items className="absolute left-0 top-[calc(100%+8px)] z-[100] w-72 origin-top-left rounded-[28px] bg-white dark:bg-slate-900 shadow-2xl shadow-slate-200 dark:shadow-none ring-1 ring-black ring-opacity-5 focus:outline-none border border-slate-100 dark:border-white/5 overflow-hidden p-2">
+                <Menu.Items className={cn(
+                    "absolute z-[100] w-72 origin-top-left rounded-[28px] bg-white dark:bg-slate-900 shadow-[0_20px_70px_-10px_rgba(0,0,0,0.15)] dark:shadow-none ring-1 ring-black/5 focus:outline-none border border-slate-100 dark:border-white/5 overflow-hidden p-2",
+                    collapsed ? "left-[calc(100%+12px)] top-0" : "left-0 top-[calc(100%+8px)]"
+                )}>
                     <div className="px-4 py-3 mb-2">
                         <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
                             Switch Environment

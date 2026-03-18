@@ -102,6 +102,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                 "shadow-[20px_0_40px_-15px_rgba(0,0,0,0.03)] dark:shadow-none"
             )}
         >
+
             {/* Header / Logo */}
             <div className="h-20 flex items-center px-6 shrink-0 relative overflow-hidden">
                 <div className="flex items-center gap-3.5 z-10">
