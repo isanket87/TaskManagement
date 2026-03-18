@@ -53,12 +53,19 @@ const createTaskSchema = z.object({
     tags: z.array(z.string()).optional(),
     dueDate: z.string().optional().nullable(),
     hasDueTime: z.boolean().optional(),
-    assigneeId: z.string().optional().nullable(),
-    parentTaskId: z.string().optional().nullable(),
+    assigneeId: z.string().optional().nullable().transform(val => val === '' ? null : val),
+    parentTaskId: z.string().optional().nullable().transform(val => val === '' ? null : val),
     isRecurring: z.boolean().optional(),
     recurrenceRule: z.string().optional().nullable(),
     recurrenceConfig: z.any().optional().nullable()
 })
+
+// Helper to validate assignee existence
+const validateAssignee = async (assigneeId) => {
+    if (!assigneeId) return null;
+    const user = await prisma.user.findUnique({ where: { id: assigneeId }, select: { id: true } });
+    return user ? user.id : null;
+};
 
 // GET /api/projects/:id/tasks
 const getTasks = async (req, res, next) => {
@@ -104,6 +111,14 @@ const createTask = async (req, res, next) => {
         const { id: projectId } = req.params
         const data = createTaskSchema.parse(req.body)
         const userId = req.user.id
+
+        // Validate assignee existence to prevent FK crashes
+        if (data.assigneeId) {
+            const validId = await validateAssignee(data.assigneeId);
+            if (!validId) {
+                data.assigneeId = null; // Default to unassigned if user not found instead of crashing
+            }
+        }
 
         const maxPosition = await prisma.task.aggregate({
             where: { projectId, status: data.status || 'todo' },
@@ -243,12 +258,21 @@ const updateTask = async (req, res, next) => {
         logChange('priority', 'priority')
         
         if (data.assigneeId !== undefined && data.assigneeId !== currentTask.assigneeId) {
-            const newAssignee = data.assigneeId 
-                ? await prisma.user.findUnique({ where: { id: data.assigneeId }, select: { name: true } })
-                : null
-            changes.push(`assignee from "${currentTask.assignee?.name || 'Unassigned'}" to "${newAssignee?.name || 'Unassigned'}"`)
+            // Clean empty string from frontend
+            if (data.assigneeId === '') data.assigneeId = null;
+
+            const validId = data.assigneeId ? await validateAssignee(data.assigneeId) : null;
+            if (data.assigneeId && !validId) {
+                data.assigneeId = null; // Reset to null if invalid
+            }
+
+            const newAssigneeName = data.assigneeId 
+                ? (await prisma.user.findUnique({ where: { id: data.assigneeId }, select: { name: true } }))?.name
+                : 'Unassigned'
+            
+            changes.push(`assignee from "${currentTask.assignee?.name || 'Unassigned'}" to "${newAssigneeName}"`)
             metadata.before.assignee = currentTask.assignee?.name
-            metadata.after.assignee = newAssignee?.name
+            metadata.after.assignee = newAssigneeName
         }
 
         if (dueDate !== undefined && String(dueDate) !== String(currentTask.dueDate)) {
@@ -644,6 +668,12 @@ const duplicateTask = async (req, res, next) => {
         const newPosition = original.position + 1;
 
         // Create the clone
+        let assigneeId = original.assigneeId;
+        if (assigneeId) {
+            const validId = await validateAssignee(assigneeId);
+            if (!validId) assigneeId = null;
+        }
+
         const clone = await prisma.task.create({
             data: {
                 title: `Copy of ${original.title}`,
@@ -656,7 +686,7 @@ const duplicateTask = async (req, res, next) => {
                 dueDateStatus: original.dueDateStatus,
                 position: newPosition,
                 projectId: original.projectId,
-                assigneeId: original.assigneeId,
+                assigneeId,
                 parentTaskId: original.parentTaskId,
                 createdById: userId,
             },
@@ -705,13 +735,20 @@ const bulkImportTasks = async (req, res, next) => {
         })
         let currentPosition = maxPositionTask ? maxPositionTask.position + 1024 : 1024
 
-        const tasksToCreate = tasks.map(t => {
+        const tasksToCreate = await Promise.all(tasks.map(async (t) => {
             const pos = currentPosition
             currentPosition += 1024
 
             const dueDate = t.dueDate ? new Date(t.dueDate) : null;
             const status = t.status || 'todo';
             const dueDateStatus = computeDueDateStatus(dueDate, status);
+
+            // Clean empty string and validate existence
+            let assigneeId = t.assigneeId === '' ? null : (t.assigneeId || null);
+            if (assigneeId) {
+                const validId = await validateAssignee(assigneeId);
+                if (!validId) assigneeId = null;
+            }
 
             return {
                 title: t.title || 'Untitled Task',
@@ -721,7 +758,7 @@ const bulkImportTasks = async (req, res, next) => {
                 position: pos,
                 projectId,
                 createdById: userId,
-                assigneeId: t.assigneeId || null,
+                assigneeId,
                 parentTaskId: t.parentTaskId || null,
                 tags: t.tags || [],
                 // Due date parsing if provided
@@ -729,7 +766,7 @@ const bulkImportTasks = async (req, res, next) => {
                 hasDueTime: !!t.hasDueTime,
                 dueDateStatus
             }
-        })
+        }))
 
         const created = await prisma.task.createMany({
             data: tasksToCreate
