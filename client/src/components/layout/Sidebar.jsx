@@ -3,36 +3,37 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     LayoutDashboard, FolderKanban, Calendar, BarChart3,
     Bell, Settings, ChevronLeft, ChevronRight, CheckSquare, Plus,
-    MessageSquare, Clock, User, LogOut, ChevronDown
+    MessageSquare, Clock, User, LogOut, ChevronDown, Sparkles,
+    Search, Command, PanelLeft
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useNotificationStore from '../../store/notificationStore';
 import useChatStore from '../../store/chatStore';
 import Avatar from '../ui/Avatar';
 import Dropdown from '../ui/Dropdown';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '../../utils/helpers';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import useWorkspaceStore from '../../store/workspaceStore';
 
 const NAV_GROUPS = [
     {
-        label: 'Main',
+        label: 'Platform',
         items: [
             { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-            { to: '/projects', icon: FolderKanban, label: 'Projects', badgeKey: 'projects' }, // Using badgeKey to hook into counts later if needed
+            { to: '/projects', icon: FolderKanban, label: 'Projects', badgeKey: 'projects' },
             { to: '/calendar', icon: Calendar, label: 'Calendar' },
         ],
     },
     {
-        label: 'Team',
+        label: 'Collaboration',
         items: [
             { to: '/messages', icon: MessageSquare, label: 'Messages', badgeKey: 'messages' },
-            { to: '/notifications', icon: Bell, label: 'Notifications', badgeKey: 'notifications', dangerBadge: true },
+            { to: '/notifications', icon: Bell, label: 'Activity', badgeKey: 'notifications', dangerBadge: true },
         ]
     },
     {
-        label: 'Tracking',
+        label: 'Insight',
         items: [
             { to: '/timesheets', icon: Clock, label: 'Timesheets' },
             { to: '/analytics', icon: BarChart3, label: 'Analytics' },
@@ -45,27 +46,42 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
         const saved = localStorage.getItem('sidebar_collapsed');
         return saved === 'true';
     });
+    
     const { user, logout } = useAuthStore();
     const { unreadCount: notifCount } = useNotificationStore();
     const { unreadCounts: chatCounts } = useChatStore();
     const { workspace } = useWorkspaceStore();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const _totalChatsUnread = Object.values(chatCounts || {}).reduce((s, c) => s + c, 0);
 
     const getBadgeCount = (key) => {
         if (key === 'notifications') return notifCount;
         if (key === 'messages') return _totalChatsUnread;
-        return 0; // default for others
+        return 0;
     };
 
     const userMenuItems = [
-        { icon: <User className="w-4 h-4" />, label: 'Profile Settings', onClick: () => navigate(workspace ? `/workspace/${workspace.slug}/profile` : '/settings') },
+        { 
+            icon: <User className="w-4 h-4" />, 
+            label: 'My Profile', 
+            onClick: () => navigate(workspace ? `/workspace/${workspace.slug}/profile` : '/profile') 
+        },
+        { 
+            icon: <Settings className="w-4 h-4" />, 
+            label: 'Preferences', 
+            onClick: () => navigate(workspace ? `/workspace/${workspace.slug}/settings` : '/settings') 
+        },
         { separator: true },
-        { icon: <LogOut className="w-4 h-4" />, label: 'Sign out', danger: true, onClick: async () => { await logout(); navigate('/login'); } },
+        { 
+            icon: <LogOut className="w-4 h-4" />, 
+            label: 'Sign out', 
+            danger: true, 
+            onClick: async () => { await logout(); navigate('/login'); } 
+        },
     ];
 
-    // On mobile, close sidebar after clicking a nav link
     const handleNavClick = () => {
         if (isMobileOpen && onMobileClose) {
             onMobileClose();
@@ -74,188 +90,187 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
 
     return (
         <motion.aside
-            animate={{ width: collapsed ? 64 : 240 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
+            initial={false}
+            animate={{ 
+                width: collapsed ? 80 : 280,
+                x: isMobileOpen || !isMobileOpen && window.innerWidth >= 768 ? 0 : -280
+            }}
+            transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
             className={cn(
-                "flex flex-col h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 shrink-0 z-50",
-                "fixed inset-y-0 left-0 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0",
-                isMobileOpen ? "translate-x-0" : "-translate-x-full"
+                "flex flex-col h-full bg-slate-50 dark:bg-gray-950 border-r border-slate-200 dark:border-white/5 shrink-0 z-50",
+                "fixed inset-y-0 left-0 md:relative",
+                "shadow-[20px_0_40px_-15px_rgba(0,0,0,0.03)] dark:shadow-none"
             )}
         >
-            {/* Logo */}
-            <div className="flex items-center gap-3 px-4 h-14 border-b border-slate-200 dark:border-slate-800">
-                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shrink-0 shadow-sm">
-                    <CheckSquare className="w-5 h-5 text-white" />
-                </div>
-                <AnimatePresence>
+            {/* Header / Logo */}
+            <div className="h-20 flex items-center px-6 shrink-0 relative overflow-hidden">
+                <div className="flex items-center gap-3.5 z-10">
+                    <div className="relative group cursor-pointer" onClick={() => navigate('/')}>
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none transition-transform group-hover:scale-105 active:scale-95 duration-300">
+                            <CheckSquare size={22} strokeWidth={2.5} />
+                        </div>
+                        <div className="absolute -inset-1 bg-indigo-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    
                     {!collapsed && (
-                        <motion.span
+                        <motion.div
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -10 }}
-                            className="font-bold text-slate-800 dark:text-slate-100 text-lg whitespace-nowrap"
+                            className="flex flex-col"
                         >
-                            Brioright
-                        </motion.span>
+                            <span className="font-black text-slate-900 dark:text-white text-lg tracking-tight leading-none mb-1">
+                                Brioright
+                            </span>
+                            <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest opacity-80">
+                                Enterprise
+                            </span>
+                        </motion.div>
                     )}
-                </AnimatePresence>
+                </div>
+
+                {/* Collapse Toggle - Only visible on desktop */}
                 <button
-                    onClick={() => setCollapsed((c) => {
-                        const next = !c;
+                    onClick={() => {
+                        const next = !collapsed;
+                        setCollapsed(next);
                         localStorage.setItem('sidebar_collapsed', String(next));
-                        return next;
-                    })}
-                    className="ml-auto p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 shrink-0 transition-colors"
+                    }}
+                    className={cn(
+                        "hidden md:flex ml-auto w-8 h-8 items-center justify-center rounded-xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/5 text-slate-400 hover:text-indigo-600 transition-all hover:shadow-sm",
+                        collapsed && "absolute left-1/2 -translate-x-1/2 ml-0"
+                    )}
                 >
-                    {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+                    {collapsed ? <PanelLeft size={16} /> : <ChevronLeft size={16} />}
                 </button>
             </div>
 
-            {/* Nav */}
-            <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto overflow-x-hidden">
-                <div className="mb-4">
+            {/* Main Navigation */}
+            <div className="flex-1 flex flex-col px-4 py-4 overflow-y-auto no-scrollbar gap-8">
+                
+                {/* Workspace Context */}
+                <div className="relative">
                     <WorkspaceSwitcher collapsed={collapsed} />
                 </div>
-                {NAV_GROUPS.map((group, groupIdx) => (
-                    <div key={groupIdx}>
-                        {/* Section Label */}
-                        <AnimatePresence>
+
+                <nav className="space-y-8">
+                    {NAV_GROUPS.map((group, groupIdx) => (
+                        <div key={groupIdx} className="space-y-2">
+                            {/* Section Header */}
                             {!collapsed && (
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2"
-                                >
-                                    {group.label}
-                                </motion.div>
+                                <div className="flex items-center px-4 mb-3">
+                                    <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+                                        {group.label}
+                                    </span>
+                                    <div className="h-px flex-1 bg-slate-200/50 dark:bg-white/5 ml-4" />
+                                </div>
                             )}
-                        </AnimatePresence>
 
-                        <div className="space-y-1">
-                            {group.items.map(({ to, icon: Icon, label, badgeKey, dangerBadge }, i) => {
-                                const count = getBadgeCount(badgeKey);
-                                const currentTo = workspace ? `/workspace/${workspace.slug}${to}` : to;
-                                return (
-                                    <NavLink
-                                        key={to}
-                                        to={currentTo}
-                                        onClick={handleNavClick}
-                                        title={collapsed ? label : undefined}
-                                        className={({ isActive }) => cn(
-                                            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 relative group",
-                                            isActive
-                                                ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
-                                                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100",
-                                            collapsed && "justify-center"
-                                        )}
-                                    >
-                                        <Icon className="w-4.5 h-4.5 shrink-0" />
+                            <div className="space-y-1">
+                                {group.items.map(({ to, icon: Icon, label, badgeKey, dangerBadge }) => {
+                                    const count = getBadgeCount(badgeKey);
+                                    const currentTo = workspace ? `/workspace/${workspace.slug}${to}` : to;
+                                    const isActive = location.pathname.startsWith(currentTo);
 
-                                        <AnimatePresence>
-                                            {!collapsed && (
-                                                <motion.span
-                                                    initial={{ opacity: 0, x: -8 }}
-                                                    animate={{ opacity: 1, x: 0 }}
-                                                    exit={{ opacity: 0, x: -8 }}
-                                                    className="whitespace-nowrap flex-1"
-                                                >
-                                                    {label}
-                                                </motion.span>
+                                    return (
+                                        <NavLink
+                                            key={to}
+                                            to={currentTo}
+                                            onClick={handleNavClick}
+                                            title={collapsed ? label : undefined}
+                                            className={({ isActive }) => cn(
+                                                "group flex items-center gap-3.5 px-4 py-3 rounded-[20px] text-sm font-bold transition-all duration-300 relative overflow-hidden",
+                                                isActive
+                                                    ? "bg-white dark:bg-white/10 text-indigo-600 dark:text-white shadow-xl shadow-slate-200/50 dark:shadow-none translate-x-1"
+                                                    : "text-slate-500 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-200 hover:translate-x-1",
+                                                collapsed && "justify-center px-0 translate-x-0 hover:translate-x-0"
                                             )}
-                                        </AnimatePresence>
+                                        >
+                                            {/* Active Indicator Bar */}
+                                            {isActive && (
+                                                <motion.div 
+                                                    layoutId="active-pill"
+                                                    className="absolute left-0 w-1.5 h-6 bg-indigo-600 dark:bg-indigo-500 rounded-r-full"
+                                                />
+                                            )}
 
-                                        {/* Badge full text when expanded */}
-                                        {!collapsed && count > 0 && (
-                                            <span className={cn(
-                                                "ml-auto text-xs font-medium px-2 py-0.5 rounded-full shrink-0",
-                                                dangerBadge
-                                                    ? "bg-red-500 text-white"
-                                                    : "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300"
-                                            )}>
-                                                {count > 99 ? '99+' : count}
-                                            </span>
-                                        )}
+                                            <Icon 
+                                                size={20} 
+                                                className={cn(
+                                                    "shrink-0 transition-all duration-300",
+                                                    isActive ? "text-indigo-600 dark:text-indigo-400 scale-110" : "text-slate-400 group-hover:text-indigo-500"
+                                                )} 
+                                            />
 
-                                        {/* Badge dot when collapsed */}
-                                        {collapsed && count > 0 && (
-                                            <span className={cn(
-                                                "absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900",
-                                                dangerBadge ? "bg-red-500" : "bg-indigo-500"
-                                            )} />
-                                        )}
-                                    </NavLink>
-                                );
-                            })}
+                                            {!collapsed && (
+                                                <span className="flex-1 truncate tracking-tight">{label}</span>
+                                            )}
+
+                                            {/* Badges */}
+                                            {count > 0 && (
+                                                <span className={cn(
+                                                    "shrink-0 flex items-center justify-center rounded-full text-[10px] font-black min-w-[20px] h-5 px-1.5",
+                                                    collapsed ? "absolute top-2 right-2 w-2 h-2 p-0 min-w-0 ring-2 ring-slate-50 dark:ring-gray-950" : "",
+                                                    dangerBadge
+                                                        ? "bg-red-500 text-white shadow-lg shadow-red-200 dark:shadow-none"
+                                                        : "bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none"
+                                                )}>
+                                                    {!collapsed && (count > 99 ? '99+' : count)}
+                                                </span>
+                                            )}
+                                        </NavLink>
+                                    );
+                                })}
+                            </div>
                         </div>
+                    ))}
+                </nav>
+
+                {/* Quick Shortcuts Card - Only when expanded */}
+                {!collapsed && (
+                    <div className="mt-4 p-5 rounded-[28px] bg-gradient-to-br from-indigo-600 to-violet-700 text-white shadow-2xl shadow-indigo-200 dark:shadow-none relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-3 opacity-20 transform translate-x-2 -translate-y-2 group-hover:scale-110 transition-transform">
+                            <Sparkles size={48} />
+                        </div>
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">Power User</p>
+                        <p className="text-xs font-bold leading-relaxed mb-4 relative z-10">Use <kbd className="bg-white/20 px-1.5 py-0.5 rounded text-[10px] font-mono">CMD + K</kbd> to search everything.</p>
+                        <button className="w-full py-2 bg-white/20 hover:bg-white/30 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">
+                            Upgrade Plan
+                        </button>
                     </div>
-                ))}
+                )}
+            </div>
 
-                {/* Settings outside of groups at bottom of nav */}
-                <div className="pt-4 mt-6 border-t border-slate-100 dark:border-slate-800">
-                    <NavLink
-                        to={workspace ? `/workspace/${workspace.slug}/profile` : '/settings'}
-                        onClick={handleNavClick}
-                        title={collapsed ? "Settings" : undefined}
-                        className={({ isActive }) => cn(
-                            "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 relative",
-                            isActive
-                                ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400"
-                                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-100",
-                            collapsed && "justify-center"
-                        )}
-                    >
-                        <Settings className="w-4.5 h-4.5 shrink-0" />
-                        <AnimatePresence>
-                            {!collapsed && (
-                                <motion.span
-                                    initial={{ opacity: 0, x: -8 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -8 }}
-                                    className="whitespace-nowrap flex-1"
-                                >
-                                    Settings
-                                </motion.span>
-                            )}
-                        </AnimatePresence>
-                    </NavLink>
-                </div>
-            </nav>
-
-            {/* User Profile Footer */}
-            <Dropdown
-                align="left"
-                position="top"
-                items={userMenuItems}
-                trigger={
-                    <div className={cn(
-                        "p-3 border-t border-slate-200 dark:border-slate-800 flex items-center gap-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors",
-                        collapsed ? "justify-center" : "px-4"
-                    )}>
-                        <div className="relative shrink-0">
-                            <Avatar user={user} size="sm" />
-                            {/* Online dot */}
-                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white dark:border-slate-900" />
-                        </div>
-                        <AnimatePresence>
+            {/* Footer / User Profile */}
+            <div className="p-4 shrink-0">
+                <Dropdown
+                    align="left"
+                    position="top"
+                    items={userMenuItems}
+                    trigger={
+                        <div className={cn(
+                            "group flex items-center gap-3 p-3 rounded-[24px] bg-white dark:bg-white/5 border border-slate-200 dark:border-white/5 cursor-pointer hover:shadow-xl transition-all duration-300",
+                            collapsed ? "justify-center px-0" : "px-4"
+                        )}>
+                            <div className="relative shrink-0 transition-transform group-hover:scale-105">
+                                <Avatar user={user} size={collapsed ? "sm" : "md"} className="rounded-2xl shadow-lg" />
+                                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-emerald-500 border-4 border-white dark:border-slate-900" />
+                            </div>
+                            
                             {!collapsed && (
                                 <>
-                                    <motion.div
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        className="min-w-0 flex-1"
-                                    >
-                                        <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{user?.name || 'User'}</p>
-                                        <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{user?.email}</p>
-                                    </motion.div>
-                                    <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[13px] font-black text-slate-900 dark:text-white truncate tracking-tight">{user?.name || 'Explorer'}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 truncate uppercase tracking-widest opacity-70">
+                                            {workspace?.role || 'Member'}
+                                        </p>
+                                    </div>
+                                    <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 transition-colors" />
                                 </>
                             )}
-                        </AnimatePresence>
-                    </div>
-                }
-            />
+                        </div>
+                    }
+                />
+            </div>
         </motion.aside>
     );
 };
