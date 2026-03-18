@@ -35,13 +35,32 @@ npm install
 
 # Create a clean .env.production for the Vite build
 echo "📝 Generating .env.production for Vite..."
-echo "# Auto-generated from server/.env.production during deploy" > .env.production
+echo "# Auto-generated during deploy" > .env.production
+
+# 1. Pull VITE_ variables from the server's .env.production
 if [ -f "$APP_DIR/server/.env.production" ]; then
   grep '^VITE_' "$APP_DIR/server/.env.production" >> .env.production || true
-  echo "📄 Injected VITE_ variables."
-else
-  echo "⚠️  Warning: $APP_DIR/server/.env.production not found."
 fi
+
+# 2. Pull from a PERSISTENT shared file (this stays on the server forever)
+if [ -f "$APP_DIR/.env.shared" ]; then
+  echo "📄 Merging persistent variables from .env.shared..."
+  grep '^VITE_' "$APP_DIR/.env.shared" >> .env.production || true
+fi
+
+# 3. Pull from GitHub environment variables (if any)
+if [ ! -z "$VITE_GA_TRACKING_ID" ]; then
+  if grep -q "VITE_GA_TRACKING_ID=" .env.production; then
+    sed -i "s/VITE_GA_TRACKING_ID=.*/VITE_GA_TRACKING_ID=$VITE_GA_TRACKING_ID/" .env.production
+  else
+    echo "VITE_GA_TRACKING_ID=$VITE_GA_TRACKING_ID" >> .env.production
+  fi
+  echo "📄 Injected VITE_GA_TRACKING_ID from GitHub."
+fi
+
+# Clean up any potential Windows line endings (\r) that break Vite
+sed -i 's/\r//' .env.production
+echo "✅ .env.production ready for build."
 
 # Build the client
 echo "🏗️  Building client..."
