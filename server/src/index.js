@@ -146,20 +146,16 @@ app.get('/assets/main-runtime-config', async (req, res) => {
     }
 });
 
-app.all('/api/v1/sys/g/collect', async (req, res) => {
+// Analytics Proxy Collection Handler
+const handleAnalyticsHit = async (req, res) => {
     try {
         const urlParams = new URLSearchParams(req.query).toString();
         const targetUrl = `https://www.google-analytics.com/g/collect?${urlParams}`;
 
-        // Get raw body for forwarding
-        let rawBody = req.body;
-        if (typeof rawBody === 'object' && Object.keys(rawBody).length > 0) {
-            rawBody = JSON.stringify(rawBody);
-        }
-
+        // Forward the raw body if it exists
         const response = await fetch(targetUrl, {
             method: req.method,
-            body: req.method === 'POST' ? rawBody : undefined,
+            body: req.method === 'POST' ? JSON.stringify(req.body) : undefined,
             headers: {
                 'User-Agent': req.headers['user-agent'] || '',
                 'X-Forwarded-For': req.ip || '',
@@ -167,12 +163,14 @@ app.all('/api/v1/sys/g/collect', async (req, res) => {
             }
         });
 
-        res.status(204).send(); // Always 204 No Content for tracking
+        res.status(204).send();
     } catch (error) {
-        console.warn('[Analytics Proxy] Request failed:', error.message);
         res.status(204).send();
     }
-});
+};
+
+app.all('/api/v1/sys/g/collect', handleAnalyticsHit);
+app.all('/api/v1/sys/sync-state', handleAnalyticsHit); // Legacy fallback
 
 // ── RESPONSE TIMER & DEBUG ──
 app.use((req, res, next) => {

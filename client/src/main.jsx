@@ -21,7 +21,7 @@ window.addEventListener('error', (event) => {
 // PWA Service Worker Registration & Auto-Update
 if ('serviceWorker' in navigator) {
     // 1. Nuclear option v2: Force a clean slate for everyone one time.
-    if (localStorage.getItem('sw_fix_version') !== '2') {
+    if (localStorage.getItem('sw_fix_version') !== '3') {
         navigator.serviceWorker.getRegistrations().then(registrations => {
             for (let registration of registrations) {
                 registration.unregister();
@@ -32,8 +32,8 @@ if ('serviceWorker' in navigator) {
                     for (let name of names) caches.delete(name);
                 });
             }
-            localStorage.setItem('sw_fix_version', '2');
-            console.log('Force Reset v2 applied. Reloading for clean slate...');
+            localStorage.setItem('sw_fix_version', '3');
+            console.log('Force Reset v3 applied. Reloading for clean slate...');
             window.location.reload();
         });
     }
