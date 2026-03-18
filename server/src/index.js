@@ -272,10 +272,10 @@ app.get('/api/timesheets/export', auth, exportTimesheet)
 
 // ── SERVE REACT IN PRODUCTION ──
 if (process.env.NODE_ENV === 'production') {
-    const clientDist = path.join(__dirname, '../../client/dist')
+    const publicPath = path.join(__dirname, '../public')
     
     // Serve static assets with long-term caching
-    app.use(express.static(clientDist, {
+    app.use(express.static(publicPath, {
         maxAge: '1y',
         immutable: true,
         index: false // Don't serve index.html via express.static
@@ -286,7 +286,7 @@ if (process.env.NODE_ENV === 'production') {
         res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate')
         res.setHeader('Pragma', 'no-cache')
         res.setHeader('Expires', '0')
-        res.sendFile(path.join(clientDist, 'index.html'))
+        res.sendFile(path.join(publicPath, 'index.html'))
     })
 }
 
