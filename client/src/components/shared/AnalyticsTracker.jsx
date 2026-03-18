@@ -25,9 +25,10 @@ const AnalyticsTracker = () => {
                 // Tell GA to use our custom dataLayer name to avoid ad-blocker detection
                 gtagOptions: {
                     'layer': 'brioright_data_layer',
-                    'transport_url': window.location.origin + '/api/v1/sys/sync-state'
+                    'transport_url': window.location.origin + '/api/v1/sys'
                 }
             });
+
             isInitialized.current = true;
 
             // Send initial pageview

@@ -146,7 +146,7 @@ app.get('/assets/main-runtime-config', async (req, res) => {
     }
 });
 
-app.all('/api/v1/sys/sync-state', async (req, res) => {
+app.all('/api/v1/sys/g/collect', async (req, res) => {
     try {
         const urlParams = new URLSearchParams(req.query).toString();
         const targetUrl = `https://www.google-analytics.com/g/collect?${urlParams}`;
