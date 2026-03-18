@@ -457,7 +457,7 @@ const MessagesPage = () => {
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto py-4 space-y-6 no-scrollbar scroll-smooth">
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 space-y-6 no-scrollbar scroll-smooth">
                         <div className="px-4 hidden sm:block">
                             <div className="relative group">
                                 <Search className="absolute left-4 top-2.5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={14} />
