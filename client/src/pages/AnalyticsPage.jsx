@@ -108,6 +108,42 @@ const BarChart = ({ data }) => {
     );
 };
 
+// ── Stacked Bar Chart (Creation vs Completion) ─────────────────────────────
+const StackedBarChart = ({ creation = [], completion = [] }) => {
+    if (!creation.length) return null;
+    const max = Math.max(...creation.map(d => d.count), ...completion.map(d => d.count), 1);
+    
+    return (
+        <div className="flex items-end gap-1.5 h-32 pt-6">
+            {creation.map((d, i) => (
+                <div key={d.date} className="flex-1 flex flex-col items-center gap-1 group relative">
+                    {/* Tooltip */}
+                    <div className="absolute bottom-full mb-2 hidden group-hover:block z-10">
+                        <div className="bg-slate-900 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap shadow-xl">
+                            {new Date(d.date).toLocaleDateString([], { month: 'short', day: 'numeric' })}<br/>
+                            Created: {d.count}<br/>
+                            Done: {completion[i]?.count || 0}
+                        </div>
+                    </div>
+                    
+                    <div className="w-full flex flex-col-reverse justify-start h-24 gap-0.5">
+                        <div 
+                            className="w-full bg-indigo-500 rounded-sm transition-all" 
+                            style={{ height: `${(d.count / max) * 100}%` }}
+                            title={`Created: ${d.count}`}
+                        />
+                        <div 
+                            className="w-full bg-emerald-500 rounded-sm transition-all opacity-80" 
+                            style={{ height: `${((completion[i]?.count || 0) / max) * 100}%` }}
+                            title={`Done: ${completion[i]?.count || 0}`}
+                        />
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
 // ── Main Page ──────────────────────────────────────────────────────────────────
 const AnalyticsPage = () => {
     const workspace = useWorkspaceStore(s => s.workspace);
@@ -164,6 +200,31 @@ const AnalyticsPage = () => {
                         <h2 className="font-semibold text-slate-900 dark:text-slate-100">Task Completion — Last 30 Days</h2>
                     </div>
                     <LineChart data={data?.completionTrend || []} />
+                    <div className="flex justify-between mt-1">
+                        <span className="text-xs text-slate-400">30 days ago</span>
+                        <span className="text-xs text-slate-400">Today</span>
+                    </div>
+                </div>
+
+                {/* Productivity Breakdown (Creation vs Completion) */}
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Layers className="w-5 h-5 text-indigo-500" />
+                            <h2 className="font-semibold text-slate-900 dark:text-slate-100">Productivity Breakdown</h2>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-2.5 h-2.5 rounded-sm bg-indigo-500" />
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Created</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" />
+                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Completed</span>
+                            </div>
+                        </div>
+                    </div>
+                    <StackedBarChart creation={data?.creationTrend} completion={data?.completionTrend} />
                     <div className="flex justify-between mt-1">
                         <span className="text-xs text-slate-400">30 days ago</span>
                         <span className="text-xs text-slate-400">Today</span>

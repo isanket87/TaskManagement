@@ -631,6 +631,7 @@ const getWorkspaceAnalytics = async (req, res, next) => {
             totalTasks,
             completedTasks,
             completedLast30,
+            createdLast30,
             projectProgress,
             memberLeaderboard
         ] = await Promise.all([
@@ -655,6 +656,11 @@ const getWorkspaceAnalytics = async (req, res, next) => {
                 where: { project: { workspaceId }, status: 'done', updatedAt: { gte: thirtyDaysAgo } },
                 select: { updatedAt: true }
             }),
+            // Created tasks in last 30 days
+            prisma.task.findMany({
+                where: { project: { workspaceId }, createdAt: { gte: thirtyDaysAgo } },
+                select: { createdAt: true }
+            }),
             // Top 5 projects with task counts
             prisma.project.findMany({
                 where: { workspaceId },
@@ -675,17 +681,25 @@ const getWorkspaceAnalytics = async (req, res, next) => {
             })
         ])
 
-        // Build daily completion trend for last 30 days
+        // Build daily completion & creation trend for last 30 days
         const trendMap = {}
+        const createTrendMap = {}
         for (let i = 29; i >= 0; i--) {
             const d = new Date(now.getTime() - i * 86400000)
-            trendMap[d.toISOString().split('T')[0]] = 0
+            const key = d.toISOString().split('T')[0]
+            trendMap[key] = 0
+            createTrendMap[key] = 0
         }
         completedLast30.forEach(({ updatedAt }) => {
             const key = new Date(updatedAt).toISOString().split('T')[0]
             if (trendMap[key] !== undefined) trendMap[key]++
         })
+        createdLast30.forEach(({ createdAt }) => {
+            const key = new Date(createdAt).toISOString().split('T')[0]
+            if (createTrendMap[key] !== undefined) createTrendMap[key]++
+        })
         const completionTrend = Object.entries(trendMap).map(([date, count]) => ({ date, count }))
+        const creationTrend = Object.entries(createTrendMap).map(([date, count]) => ({ date, count }))
 
         // Resolve member names for leaderboard
         const memberIds = memberLeaderboard.map(m => m.assigneeId)
@@ -722,6 +736,7 @@ const getWorkspaceAnalytics = async (req, res, next) => {
             byStatus: Object.fromEntries(byStatus.map(r => [r.status, r._count._all])),
             byPriority: Object.fromEntries(byPriority.map(r => [r.priority, r._count._all])),
             completionTrend,
+            creationTrend,
             projects,
             leaderboard
         }

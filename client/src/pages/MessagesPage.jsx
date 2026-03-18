@@ -1,31 +1,40 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hash, Plus, MessageSquare, Send, Smile, Paperclip, MoreVertical, Reply, Edit2, Trash2, X, Users, Lock, ChevronRight } from 'lucide-react';
+import { 
+    Hash, Plus, MessageSquare, Send, Smile, Paperclip, 
+    MoreVertical, Reply, Edit2, Trash2, X, Users, Lock, 
+    ChevronRight, Bell, Search, Info, AtSign, Settings,
+    Layout, Sidebar as SidebarIcon, Sparkles, Image as ImageIcon,
+    Mic, Video, Phone, Globe
+} from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import useAuthStore from '../store/authStore';
 import useChatStore from '../store/chatStore';
 import * as chatService from '../services/chatService';
 import toast from 'react-hot-toast';
 import useWorkspaceStore from '../store/workspaceStore';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
 import { useSocket } from '../hooks/useSocket';
+import Avatar from '../components/ui/Avatar';
+import { cn, getInitials } from '../utils/helpers';
+import { taskService } from '../services/taskService';
 
 // ── Presence dot ──────────────────────────────────────────────────────────────
-const PresenceDot = ({ status }) => {
-    const colors = { online: 'bg-green-400', away: 'bg-yellow-400', offline: 'bg-gray-400' };
-    return <span className={`inline-block w-2 h-2 rounded-full ${colors[status] || colors.offline}`} />;
+const PresenceDot = ({ status, className }) => {
+    const colors = { online: 'bg-emerald-500', away: 'bg-amber-400', offline: 'bg-slate-400' };
+    return <span className={cn("inline-block w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-slate-900", colors[status] || colors.offline, className)} />;
 };
 
 // ── Typing indicator ──────────────────────────────────────────────────────────
 const TypingIndicator = ({ typingUsers }) => {
-    if (!typingUsers?.length) return null;
+    if (!typingUsers?.length) return <div className="h-6" />;
     const names = typingUsers.map(u => u.userName).join(', ');
     return (
-        <div className="flex items-center gap-2 px-4 py-1 text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-2 px-6 py-1 text-[11px] text-slate-500 dark:text-slate-400 font-medium italic">
             <span className="flex gap-0.5">
                 {[0, 1, 2].map(i => (
-                    <motion.span key={i} className="w-1.5 h-1.5 rounded-full bg-primary-500"
-                        animate={{ y: [0, -4, 0] }} transition={{ duration: 0.6, delay: i * 0.15, repeat: Infinity }} />
+                    <motion.span key={i} className="w-1 h-1 rounded-full bg-indigo-500"
+                        animate={{ opacity: [0.4, 1, 0.4] }} transition={{ duration: 1, delay: i * 0.2, repeat: Infinity }} />
                 ))}
             </span>
             <span>{names} {typingUsers.length === 1 ? 'is' : 'are'} typing…</span>
@@ -34,15 +43,15 @@ const TypingIndicator = ({ typingUsers }) => {
 };
 
 // ── Message bubble ─────────────────────────────────────────────────────────────
-const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUserId }) => {
+const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUserId, showAvatar = true }) => {
     const [showActions, setShowActions] = useState(false);
     const [editing, setEditing] = useState(false);
     const [editContent, setEditContent] = useState(message.content);
 
     if (message.deletedAt) {
         return (
-            <div className="px-4 py-1">
-                <span className="text-xs text-gray-400 italic">This message was deleted</span>
+            <div className="px-6 py-1 group/msg">
+                <span className="text-xs text-slate-400 italic bg-slate-50 dark:bg-slate-800/50 px-2 py-0.5 rounded">This message was deleted</span>
             </div>
         );
     }
@@ -60,63 +69,87 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
     };
 
     return (
-        <div className="group relative flex gap-3 px-4 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+        <div className={cn(
+            "group/msg relative flex gap-4 px-6 py-2 transition-all duration-200",
+            showAvatar ? "mt-4" : "mt-0.5",
+            "hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10"
+        )}
             onMouseEnter={() => setShowActions(true)} onMouseLeave={() => setShowActions(false)}>
-            <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center flex-shrink-0 mt-0.5">
-                {message.author?.avatar
-                    ? <img src={message.author.avatar} className="w-8 h-8 rounded-full object-cover" alt="" />
-                    : <span className="text-xs font-semibold text-primary-600">{message.author?.name?.[0]}</span>}
-            </div>
-            <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2 mb-0.5">
-                    <span className="font-semibold text-sm text-gray-900 dark:text-white">{message.author?.name}</span>
-                    <span className="text-xs text-gray-400">{formatDistanceToNow(new Date(message.createdAt), { addSuffix: true })}</span>
-                    {message.editedAt && <span className="text-xs text-gray-400 italic">(edited)</span>}
+            
+            {showAvatar ? (
+                <div className="relative shrink-0 mt-1">
+                    <Avatar user={message.author} size="sm" className="rounded-xl shadow-sm" />
                 </div>
+            ) : (
+                <div className="w-8 shrink-0 flex justify-center opacity-0 group-hover/msg:opacity-100 transition-opacity">
+                    <span className="text-[10px] text-slate-400 mt-1 font-medium">{format(new Date(message.createdAt), 'HH:mm')}</span>
+                </div>
+            )}
+
+            <div className="flex-1 min-w-0">
+                {showAvatar && (
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-sm text-slate-900 dark:text-slate-100 hover:underline cursor-pointer">{message.author?.name}</span>
+                        <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-tighter">{format(new Date(message.createdAt), 'h:mm a')}</span>
+                        {message.editedAt && <span className="text-[10px] text-slate-400 font-medium italic">(edited)</span>}
+                    </div>
+                )}
+                
                 {editing ? (
-                    <form onSubmit={handleEditSubmit} className="flex gap-2">
-                        <input value={editContent} onChange={e => setEditContent(e.target.value)}
-                            className="flex-1 text-sm px-3 py-1.5 rounded-lg border border-primary-300 dark:border-primary-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500" autoFocus />
-                        <button type="submit" className="text-xs bg-primary-600 text-white px-3 py-1 rounded-lg hover:bg-primary-700">Save</button>
-                        <button type="button" onClick={() => setEditing(false)} className="text-xs text-gray-500 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">Cancel</button>
+                    <form onSubmit={handleEditSubmit} className="flex flex-col gap-2 bg-white dark:bg-slate-800 p-2 rounded-xl border-2 border-indigo-500 shadow-lg">
+                        <textarea 
+                            value={editContent} 
+                            onChange={e => setEditContent(e.target.value)}
+                            rows={3}
+                            className="w-full text-sm p-2 bg-transparent text-slate-900 dark:text-slate-100 outline-none resize-none" 
+                            autoFocus 
+                        />
+                        <div className="flex justify-end gap-2">
+                            <button type="button" onClick={() => setEditing(false)} className="text-xs font-bold text-slate-500 px-3 py-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">Cancel</button>
+                            <button type="submit" className="text-xs font-bold bg-indigo-600 text-white px-4 py-1.5 rounded-lg hover:bg-indigo-700 shadow-sm shadow-indigo-200 dark:shadow-none transition-all">Save Changes</button>
+                        </div>
                     </form>
                 ) : (
-                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">{message.content}</p>
+                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap break-words leading-relaxed selection:bg-indigo-100 dark:selection:bg-indigo-900">{message.content}</p>
                 )}
 
                 {/* Reactions */}
                 {Object.entries(reactionMap).length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1.5">
+                    <div className="flex flex-wrap gap-1.5 mt-2">
                         {Object.entries(reactionMap).map(([emoji, users]) => (
                             <button key={emoji} onClick={() => onReact(message.id, emoji)}
-                                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors ${users.includes(currentUserId) ? 'bg-primary-100 dark:bg-primary-900/30 border-primary-300' : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600'}`}>
-                                {emoji} <span>{users.length}</span>
+                                className={cn(
+                                    "flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-xs font-bold border transition-all active:scale-95",
+                                    users.includes(currentUserId) 
+                                        ? "bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-100 dark:ring-0" 
+                                        : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300"
+                                )}>
+                                <span>{emoji}</span> 
+                                <span className="text-[10px]">{users.length}</span>
                             </button>
                         ))}
                     </div>
-                )}
-
-                {/* Thread replies count */}
-                {message.replies?.length > 0 && (
-                    <button onClick={() => onReply(message)} className="mt-1 text-xs text-primary-600 hover:underline">
-                        {message.replies.length} {message.replies.length === 1 ? 'reply' : 'replies'}
-                    </button>
                 )}
             </div>
 
             {/* Action bar */}
             <AnimatePresence>
-                {showActions && (
-                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
-                        className="absolute right-4 top-1 flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm px-1 py-0.5">
-                        {['👍', '❤️', '😂', '🎉'].map(emoji => (
+                {showActions && !editing && (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10 }} 
+                        animate={{ opacity: 1, y: 0 }} 
+                        exit={{ opacity: 0, y: 10 }}
+                        className="absolute right-6 -top-3 flex items-center gap-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl shadow-slate-200/50 dark:shadow-none p-1 z-10"
+                    >
+                        {['👍', '❤️', '🔥', '🎉'].map(emoji => (
                             <button key={emoji} onClick={() => onReact(message.id, emoji)}
-                                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-sm transition-colors">{emoji}</button>
+                                className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-base transition-all active:scale-125">{emoji}</button>
                         ))}
-                        <button onClick={() => onReply(message)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 transition-colors" title="Reply in thread"><Reply size={14} /></button>
+                        <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1" />
+                        <button onClick={() => onReply(message)} className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-indigo-600 transition-colors" title="Reply in thread"><Reply size={16} /></button>
                         {isOwn && <>
-                            <button onClick={() => setEditing(true)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500 transition-colors"><Edit2 size={14} /></button>
-                            <button onClick={() => onDelete(message.id)} className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded text-red-500 transition-colors"><Trash2 size={14} /></button>
+                            <button onClick={() => setEditing(true)} className="w-8 h-8 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-indigo-600 transition-colors"><Edit2 size={16} /></button>
+                            <button onClick={() => onDelete(message.id)} className="w-8 h-8 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-slate-500 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
                         </>}
                     </motion.div>
                 )}
@@ -129,14 +162,17 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
 const MessagesPage = () => {
     const { user } = useAuthStore();
     const { channels, setChannels, activeChannelId, setActiveChannel, messages, setMessages, appendMessage,
-        updateMessage, removeMessage, unreadCounts, setUnreadCounts, clearUnread, typingUsers, setTyping, setPresence, threadMessageId, setThreadMessage } = useChatStore();
+        updateMessage, removeMessage, unreadCounts, setUnreadCounts, clearUnread, typingUsers, setTyping, setPresence, onlineUsers, threadMessageId, setThreadMessage } = useChatStore();
     const socket = useSocket();
     const queryClient = useQueryClient();
-    const workspace = useWorkspaceStore(s => s.workspace);
+    const { workspace, workspaces, switchWorkspace } = useWorkspaceStore();
 
     const [newMessage, setNewMessage] = useState('');
     const [showNewChannel, setShowNewChannel] = useState(false);
     const [newChannelName, setNewChannelName] = useState('');
+    const [showInfoPanel, setShowInfoPanel] = useState(true);
+    const [isSuggestingResponse, setIsSuggestingResponse] = useState(false);
+    
     const feedRef = useRef(null);
     const typingTimerRef = useRef(null);
 
@@ -175,7 +211,7 @@ const MessagesPage = () => {
     useEffect(() => {
         if (feedRef.current) {
             const el = feedRef.current;
-            const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+            const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
             if (isAtBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
         }
     }, [messages[activeChannelId]?.length]);
@@ -238,13 +274,29 @@ const MessagesPage = () => {
         }, 2000);
     };
 
+    const handleSuggestResponse = async () => {
+        const lastMessages = (messages[activeChannelId] || []).slice(-5);
+        if (!lastMessages.length) return;
+        
+        setIsSuggestingResponse(true);
+        try {
+            // Mock AI call (Reuse existing AI controller idea)
+            const prompt = lastMessages.map(m => `${m.author?.name}: ${m.content}`).join('\n');
+            const res = await taskService.suggestPriority({ title: "Draft a reply to:", description: prompt });
+            setNewMessage(prev => prev + (prev ? ' ' : '') + `Replying with: ${res.data?.data?.priority}...`);
+        } catch (err) {
+            toast.error('AI draft failed');
+        } finally {
+            setIsSuggestingResponse(false);
+        }
+    };
+
     const handleReact = async (msgId, emoji) => {
         try {
             const res = await chatService.addReaction(activeChannelId, msgId, emoji);
             const msgs = messages[activeChannelId] || [];
             const msg = msgs.find(m => m.id === msgId);
             if (!msg) return;
-            const existingReaction = msg.reactions?.find(r => r.emoji === emoji && r.userId === user.id);
             const updated = {
                 ...msg,
                 reactions: res.data.data.action === 'removed'
@@ -285,126 +337,385 @@ const MessagesPage = () => {
     };
 
     const activeChannel = channels.find(c => c.id === activeChannelId);
+    const directOther = activeChannel?.type === 'direct' ? activeChannel.members?.find(m => m.userId !== user.id)?.user : null;
 
     return (
-        <div className="flex h-full bg-white dark:bg-gray-900">
-            {/* Sidebar */}
-            <div className="w-64 border-r border-gray-200 dark:border-gray-700 flex flex-col flex-shrink-0">
-                <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="font-semibold text-gray-900 dark:text-white">Messages</h2>
+        <div className="flex h-full bg-[#f8fafc] dark:bg-slate-950 overflow-hidden font-sans">
+            
+            {/* ── Leftmost: Workspace Switcher ─────────────────── */}
+            <div className="w-[68px] bg-slate-100 dark:bg-slate-900 flex flex-col items-center py-4 gap-4 border-r border-slate-200 dark:border-slate-800 shrink-0 overflow-y-auto no-scrollbar">
+                {workspaces.map(ws => (
+                    <button 
+                        key={ws.id} 
+                        onClick={() => switchWorkspace(ws.slug)}
+                        className={cn(
+                            "group relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300",
+                            workspace?.id === ws.id 
+                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none" 
+                                : "bg-white dark:bg-slate-800 text-slate-500 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-600"
+                        )}
+                        title={ws.name}
+                    >
+                        <div className={cn(
+                            "absolute left-0 w-1 bg-indigo-600 rounded-r-full transition-all duration-300",
+                            workspace?.id === ws.id ? "h-8" : "h-0 group-hover:h-4"
+                        )} />
+                        {ws.logo ? (
+                            <img src={ws.logo} className="w-8 h-8 rounded-lg object-cover" alt="" />
+                        ) : (
+                            <span className="text-lg font-bold">{getInitials(ws.name)}</span>
+                        )}
+                    </button>
+                ))}
+                <div className="w-8 h-px bg-slate-200 dark:bg-slate-800 my-1" />
+                <button className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 text-slate-400 hover:text-indigo-600 flex items-center justify-center transition-all border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-500">
+                    <Plus size={20} />
+                </button>
+            </div>
+
+            {/* ── Pane 2: Channel Navigator ─────────────────── */}
+            <div className="w-72 bg-white dark:bg-slate-950 flex flex-col shrink-0 border-r border-slate-200 dark:border-slate-800">
+                <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100 dark:border-slate-900 shrink-0">
+                    <h2 className="font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                        {workspace?.name}
+                        <ChevronRight size={14} className="text-slate-400" />
+                    </h2>
+                    <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl text-slate-400 transition-colors">
+                        <MoreVertical size={18} />
+                    </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto py-2">
-                    <div className="px-3 mb-1">
-                        <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Channels</span>
-                            <button onClick={() => setShowNewChannel(true)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded text-gray-500"><Plus size={14} /></button>
+                <div className="flex-1 overflow-y-auto py-6 space-y-8 no-scrollbar">
+                    {/* SEARCH */}
+                    <div className="px-4">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                            <input 
+                                placeholder="Jump to..." 
+                                className="w-full bg-slate-50 dark:bg-slate-900/50 border-none rounded-xl pl-10 pr-4 py-2 text-sm text-slate-600 dark:text-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                            />
                         </div>
-                        {isLoading && <div className="text-xs text-gray-400 px-2">Loading…</div>}
-                        {channels.filter(c => c.type !== 'direct').map(ch => (
-                            <button key={ch.id} onClick={() => setActiveChannel(ch.id)}
-                                className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-colors text-left ${activeChannelId === ch.id ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-                                <Hash size={14} />
-                                <span className="flex-1 truncate">{ch.name}</span>
-                                {unreadCounts[ch.id] > 0 && (
-                                    <span className="bg-primary-600 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center">{unreadCounts[ch.id]}</span>
-                                )}
-                            </button>
-                        ))}
                     </div>
 
-                    {channels.filter(c => c.type === 'direct').length > 0 && (
-                        <div className="px-3 mt-3">
-                            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Direct</span>
+                    {/* CHANNELS */}
+                    <div className="px-3">
+                        <div className="flex items-center justify-between px-3 mb-3">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">Channels</span>
+                            <button onClick={() => setShowNewChannel(true)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg text-slate-400 hover:text-indigo-600 transition-all">
+                                <Plus size={16} />
+                            </button>
+                        </div>
+                        <div className="space-y-0.5">
+                            {channels.filter(c => c.type !== 'direct').map(ch => (
+                                <button key={ch.id} onClick={() => setActiveChannel(ch.id)}
+                                    className={cn(
+                                        "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all group",
+                                        activeChannelId === ch.id 
+                                            ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400" 
+                                            : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/50 hover:text-slate-700"
+                                    )}>
+                                    <Hash size={18} className={cn("transition-colors", activeChannelId === ch.id ? "text-indigo-500" : "text-slate-300 dark:text-slate-600 group-hover:text-slate-400")} />
+                                    <span className="flex-1 truncate">{ch.name}</span>
+                                    {unreadCounts[ch.id] > 0 && (
+                                        <span className="bg-indigo-600 text-white text-[10px] font-bold rounded-lg px-2 py-0.5 min-w-[20px] text-center shadow-lg shadow-indigo-200 dark:shadow-none">
+                                            {unreadCounts[ch.id]}
+                                        </span>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* DIRECT MESSAGES */}
+                    <div className="px-3">
+                        <div className="flex items-center justify-between px-3 mb-3">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">Direct Messages</span>
+                            <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg text-slate-400 hover:text-indigo-600 transition-all">
+                                <Plus size={16} />
+                            </button>
+                        </div>
+                        <div className="space-y-0.5">
                             {channels.filter(c => c.type === 'direct').map(ch => {
-                                const other = ch.members?.find(m => m.userId !== user.id);
+                                const other = ch.members?.find(m => m.userId !== user.id)?.user;
+                                const status = onlineUsers[other?.id] || 'offline';
                                 return (
                                     <button key={ch.id} onClick={() => setActiveChannel(ch.id)}
-                                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-sm transition-colors text-left ${activeChannelId === ch.id ? 'bg-primary-100 dark:bg-primary-900/30 text-primary-700' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+                                        className={cn(
+                                            "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all group",
+                                            activeChannelId === ch.id 
+                                                ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400" 
+                                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/50 hover:text-slate-700"
+                                        )}>
                                         <div className="relative">
-                                            <div className="w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center text-xs font-semibold">{other?.user?.name?.[0]}</div>
+                                            <Avatar user={other} size="xs" className="rounded-lg shadow-sm" />
+                                            <PresenceDot status={status} className="absolute -bottom-0.5 -right-0.5" />
                                         </div>
-                                        <span className="flex-1 truncate">{other?.user?.name}</span>
-                                        {unreadCounts[ch.id] > 0 && <span className="bg-primary-600 text-white text-xs rounded-full px-1.5 min-w-[18px] text-center">{unreadCounts[ch.id]}</span>}
+                                        <span className="flex-1 truncate">{other?.name}</span>
+                                        {unreadCounts[ch.id] > 0 && (
+                                            <span className="bg-indigo-600 text-white text-[10px] font-bold rounded-lg px-2 py-0.5 min-w-[20px] text-center">
+                                                {unreadCounts[ch.id]}
+                                            </span>
+                                        )}
                                     </button>
                                 );
                             })}
                         </div>
-                    )}
+                    </div>
+                </div>
+
+                {/* USER PROFILE MINICARD */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-3">
+                        <div className="relative">
+                            <Avatar user={user} size="sm" className="rounded-xl shadow-md" />
+                            <PresenceDot status="online" className="absolute -bottom-0.5 -right-0.5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{user.name}</p>
+                            <p className="text-[10px] text-slate-500 font-medium truncate capitalize">Active now</p>
+                        </div>
+                        <button className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-all">
+                            <Settings size={16} />
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Message feed */}
-            {activeChannelId ? (
-                <div className="flex-1 flex flex-col min-w-0">
-                    {/* Header */}
-                    <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-                        <Hash size={18} className="text-gray-400" />
-                        <h3 className="font-semibold text-gray-900 dark:text-white">{activeChannel?.name}</h3>
-                        {activeChannel?.description && (
-                            <span className="text-sm text-gray-500 hidden md:block">— {activeChannel.description}</span>
-                        )}
-                        <div className="ml-auto flex items-center gap-2">
-                            <button onClick={() => setThreadMessage(activeChannelId === threadMessageId ? null : activeChannelId)}
-                                className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-                                <Users size={15} />
-                                <span className="hidden sm:block">{activeChannel?.members?.length} members</span>
-                            </button>
+            {/* ── Pane 3: Chat Area ─────────────────── */}
+            <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-slate-950 shadow-2xl relative z-10">
+                {activeChannelId ? (
+                    <>
+                        {/* HEADER */}
+                        <div className="h-16 flex items-center gap-4 px-6 border-b border-slate-100 dark:border-slate-900 shrink-0">
+                            {activeChannel?.type === 'direct' ? (
+                                <>
+                                    <div className="relative">
+                                        <Avatar user={directOther} size="sm" className="rounded-xl shadow-sm" />
+                                        <PresenceDot status={onlineUsers[directOther?.id] || 'offline'} className="absolute -bottom-0.5 -right-0.5" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-bold text-slate-900 dark:text-white truncate">{directOther?.name}</h3>
+                                        <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Online</p>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                        <Hash size={24} />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-bold text-slate-900 dark:text-white truncate">{activeChannel?.name}</h3>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{activeChannel?.members?.length} members</span>
+                                            {activeChannel?.description && <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />}
+                                            <span className="text-xs text-slate-400 truncate max-w-[300px]">{activeChannel?.description}</span>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                            
+                            <div className="flex items-center gap-2">
+                                <button className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl text-slate-400 transition-all"><Phone size={18} /></button>
+                                <button className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl text-slate-400 transition-all"><Video size={18} /></button>
+                                <button 
+                                    onClick={() => setShowInfoPanel(!showInfoPanel)}
+                                    className={cn(
+                                        "p-2.5 rounded-xl transition-all",
+                                        showInfoPanel ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900"
+                                    )}
+                                >
+                                    <Info size={18} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* MESSAGES */}
+                        <div ref={feedRef} className="flex-1 overflow-y-auto pt-8 pb-4 space-y-0.5 no-scrollbar scroll-smooth">
+                            {(messages[activeChannelId] || []).map((msg, i, arr) => {
+                                const prevMsg = arr[i - 1];
+                                const isSameAuthor = prevMsg && prevMsg.authorId === msg.authorId;
+                                const isRecent = prevMsg && (new Date(msg.createdAt) - new Date(prevMsg.createdAt)) < 5 * 60 * 1000;
+                                const showAvatar = !isSameAuthor || !isRecent;
+                                
+                                return (
+                                    <MessageBubble 
+                                        key={msg.id} 
+                                        message={msg} 
+                                        currentUserId={user.id}
+                                        showAvatar={showAvatar}
+                                        onReply={setThreadMessage} 
+                                        onReact={handleReact}
+                                        onEdit={handleEdit} 
+                                        onDelete={handleDelete} 
+                                    />
+                                );
+                            })}
+                        </div>
+
+                        {/* FOOTER: INPUT */}
+                        <div className="px-6 py-4 bg-white dark:bg-slate-950">
+                            <TypingIndicator typingUsers={typingUsers[activeChannelId]} />
+                            
+                            <form onSubmit={sendMsg} className="mt-1">
+                                <div className="bg-[#f1f5f9] dark:bg-slate-900/80 rounded-2xl border-2 border-transparent focus-within:border-indigo-500/50 focus-within:bg-white dark:focus-within:bg-slate-900 shadow-sm transition-all overflow-hidden">
+                                    <textarea 
+                                        value={newMessage} 
+                                        onChange={handleTyping}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(e); }
+                                        }}
+                                        placeholder={`Message #${activeChannel?.name || '...'}`}
+                                        className="w-full bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none p-4 resize-none max-h-32" 
+                                        rows={1}
+                                    />
+                                    
+                                    <div className="px-3 py-2 flex items-center justify-between border-t border-slate-200/50 dark:border-slate-800/50">
+                                        <div className="flex items-center gap-1">
+                                            <button type="button" className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-all"><Paperclip size={18} /></button>
+                                            <button type="button" className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-all"><Smile size={18} /></button>
+                                            <button type="button" className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-all"><AtSign size={18} /></button>
+                                            <div className="w-px h-4 bg-slate-300 dark:bg-slate-700 mx-1" />
+                                            <button 
+                                                type="button" 
+                                                onClick={handleSuggestResponse}
+                                                disabled={isSuggestingResponse}
+                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all disabled:opacity-50"
+                                            >
+                                                <Sparkles size={14} className={cn(isSuggestingResponse && "animate-pulse")} />
+                                                Magic Draft
+                                            </button>
+                                        </div>
+                                        
+                                        <button 
+                                            type="submit" 
+                                            disabled={!newMessage.trim()}
+                                            className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-95 disabled:opacity-30 disabled:shadow-none transition-all"
+                                        >
+                                            <Send size={18} />
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+                            <p className="text-[10px] text-center text-slate-400 font-medium mt-3">
+                                Press <strong>Enter</strong> to send • <strong>Shift + Enter</strong> for new line
+                            </p>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex-1 flex flex-col items-center justify-center p-12 text-center bg-slate-50/50 dark:bg-slate-900/20">
+                        <div className="w-24 h-24 rounded-[32px] bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-8 animate-bounce-subtle">
+                            <MessageSquare size={48} />
+                        </div>
+                        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-3">Welcome back, {user.name.split(' ')[0]}!</h3>
+                        <p className="text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
+                            Select a channel or teammate from the left to start collaborating on your next big thing.
+                        </p>
+                        <div className="mt-8 flex gap-3">
+                            <button onClick={() => setShowNewChannel(true)} className="px-6 py-2.5 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-all">Create Channel</button>
+                            <button className="px-6 py-2.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-2xl font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">Quick Search</button>
                         </div>
                     </div>
+                )}
+            </div>
 
-                    {/* Messages */}
-                    <div ref={feedRef} className="flex-1 overflow-y-auto py-4 space-y-0.5">
-                        {(messages[activeChannelId] || []).map(msg => (
-                            <MessageBubble key={msg.id} message={msg} currentUserId={user.id}
-                                onReply={setThreadMessage} onReact={handleReact}
-                                onEdit={handleEdit} onDelete={handleDelete} />
-                        ))}
-                    </div>
-
-                    {/* Typing indicator */}
-                    <TypingIndicator typingUsers={typingUsers[activeChannelId]} />
-
-                    {/* Input */}
-                    <form onSubmit={sendMsg} className="px-4 py-3 border-t border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2">
-                            <input value={newMessage} onChange={handleTyping}
-                                placeholder={`Message #${activeChannel?.name || '...'}`}
-                                className="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none" />
-                            <button type="submit" disabled={!newMessage.trim()}
-                                className="p-1.5 bg-primary-600 text-white rounded-lg disabled:opacity-40 hover:bg-primary-700 transition-colors">
-                                <Send size={15} />
-                            </button>
+            {/* ── Pane 4: Info Panel ─────────────────── */}
+            <AnimatePresence>
+                {showInfoPanel && activeChannelId && (
+                    <motion.div 
+                        initial={{ width: 0, opacity: 0 }} 
+                        animate={{ width: 320, opacity: 1 }} 
+                        exit={{ width: 0, opacity: 0 }}
+                        className="bg-slate-50 dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 shrink-0 overflow-y-auto no-scrollbar hidden xl:flex flex-col"
+                    >
+                        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100 dark:border-slate-900 shrink-0">
+                            <h3 className="font-bold text-slate-900 dark:text-white">Details</h3>
+                            <button onClick={() => setShowInfoPanel(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-all"><X size={18} /></button>
                         </div>
-                    </form>
-                </div>
-            ) : (
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center">
-                        <MessageSquare size={48} className="text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                        <h3 className="text-gray-500 font-medium">Select a channel to start chatting</h3>
-                    </div>
-                </div>
-            )}
+                        
+                        <div className="p-8 flex flex-col items-center text-center">
+                            {activeChannel?.type === 'direct' ? (
+                                <>
+                                    <Avatar user={directOther} size="xl" className="rounded-3xl shadow-xl mb-4" />
+                                    <h4 className="font-black text-lg text-slate-900 dark:text-white mb-1">{directOther?.name}</h4>
+                                    <p className="text-sm text-slate-500 mb-6">{directOther?.email}</p>
+                                    
+                                    <div className="w-full grid grid-cols-2 gap-3 mb-8">
+                                        <button className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 transition-all">
+                                            <Bell size={20} className="text-slate-400" />
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mute</span>
+                                        </button>
+                                        <button className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 transition-all">
+                                            <Globe size={20} className="text-slate-400" />
+                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Profile</span>
+                                        </button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="w-20 h-20 rounded-3xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4 shadow-inner">
+                                        <Hash size={40} />
+                                    </div>
+                                    <h4 className="font-black text-lg text-slate-900 dark:text-white mb-1">#{activeChannel?.name}</h4>
+                                    <p className="text-sm text-slate-500 mb-8">Created {format(new Date(activeChannel?.createdAt || new Date()), 'MMM d, yyyy')}</p>
+                                </>
+                            )}
+                            
+                            <div className="w-full space-y-6">
+                                <div className="text-left">
+                                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Description</h5>
+                                    <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 leading-relaxed italic">
+                                        {activeChannel?.description || "No description set for this conversation."}
+                                    </div>
+                                </div>
+                                
+                                <div className="text-left">
+                                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Shortcuts</h5>
+                                    <div className="space-y-1">
+                                        {[
+                                            { icon: <Search size={14} />, label: 'Search in chat' },
+                                            { icon: <Lock size={14} />, label: 'Privacy settings' },
+                                            { icon: <Users size={14} />, label: 'View members' },
+                                            { icon: <ImageIcon size={14} />, label: 'Shared media' },
+                                        ].map((item, i) => (
+                                            <button key={i} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-400 text-xs font-bold transition-all group">
+                                                <span className="text-slate-400 group-hover:text-indigo-500 transition-colors">{item.icon}</span>
+                                                {item.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* New channel modal */}
             <AnimatePresence>
                 {showNewChannel && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
-                            className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-semibold text-gray-900 dark:text-white">Create Channel</h3>
-                                <button onClick={() => setShowNewChannel(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"><X size={18} /></button>
+                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+                            className="bg-white dark:bg-slate-900 rounded-[32px] p-8 w-full max-w-md shadow-2xl border border-white/20">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                    <Plus size={24} />
+                                </div>
+                                <button onClick={() => setShowNewChannel(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400"><X size={20} /></button>
                             </div>
-                            <form onSubmit={createChannel} className="space-y-4">
-                                <input value={newChannelName} onChange={e => setNewChannelName(e.target.value)}
-                                    placeholder="channel-name" autoFocus
-                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-primary-500" />
-                                <div className="flex gap-2 justify-end">
-                                    <button type="button" onClick={() => setShowNewChannel(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl">Cancel</button>
-                                    <button type="submit" className="px-4 py-2 text-sm bg-primary-600 text-white rounded-xl hover:bg-primary-700">Create</button>
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Create a Channel</h3>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm mb-8">Channels are where your team communicates. They’re best when organized around a topic.</p>
+                            
+                            <form onSubmit={createChannel} className="space-y-6">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-1">Channel Name</label>
+                                    <input value={newChannelName} onChange={e => setNewChannelName(e.target.value)}
+                                        placeholder="e.g. project-apollo" autoFocus
+                                        className="w-full px-5 py-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-indigo-500 transition-all font-bold" />
+                                </div>
+                                <div className="flex gap-3">
+                                    <button type="button" onClick={() => setShowNewChannel(false)} className="flex-1 px-6 py-4 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all">Cancel</button>
+                                    <button type="submit" className="flex-1 px-6 py-4 text-sm font-bold bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-all">Create Channel</button>
                                 </div>
                             </form>
                         </motion.div>
