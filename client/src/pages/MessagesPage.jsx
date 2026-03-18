@@ -22,7 +22,7 @@ import { taskService } from '../services/taskService';
 // ── Presence dot ──────────────────────────────────────────────────────────────
 const PresenceDot = ({ status, className }) => {
     const colors = { online: 'bg-emerald-500', away: 'bg-amber-400', offline: 'bg-slate-400' };
-    return <span className={cn("inline-block w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-slate-900", colors[status] || colors.offline, className)} />;
+    return <span className={cn("inline-block w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-slate-900 shadow-sm", colors[status] || colors.offline, className)} />;
 };
 
 // ── Typing indicator ──────────────────────────────────────────────────────────
@@ -30,7 +30,7 @@ const TypingIndicator = ({ typingUsers }) => {
     if (!typingUsers?.length) return <div className="h-6" />;
     const names = typingUsers.map(u => u.userName).join(', ');
     return (
-        <div className="flex items-center gap-2 px-6 py-1 text-[11px] text-slate-500 dark:text-slate-400 font-medium italic">
+        <div className="flex items-center gap-2 px-6 py-1 text-[11px] text-slate-500 dark:text-slate-400 font-medium italic animate-in fade-in slide-in-from-bottom-1">
             <span className="flex gap-0.5">
                 {[0, 1, 2].map(i => (
                     <motion.span key={i} className="w-1 h-1 rounded-full bg-indigo-500"
@@ -80,7 +80,7 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
             {!isOwn && (
                 <div className="w-8 shrink-0 flex items-end mb-1">
                     {showAvatar ? (
-                        <Avatar user={message.author} size="xs" className="rounded-lg shadow-sm" />
+                        <Avatar user={message.author} size="xs" className="rounded-lg shadow-sm ring-1 ring-slate-100 dark:ring-white/5" />
                     ) : (
                         <div className="w-8" />
                     )}
@@ -97,7 +97,7 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
                 
                 <div className="relative group">
                     {editing ? (
-                        <form onSubmit={handleEditSubmit} className="flex flex-col gap-2 bg-white dark:bg-slate-800 p-2 rounded-2xl border-2 border-indigo-500 shadow-lg min-w-[240px]">
+                        <form onSubmit={handleEditSubmit} className="flex flex-col gap-2 bg-white dark:bg-slate-800 p-2 rounded-2xl border-2 border-indigo-500 shadow-2xl min-w-[240px] z-20">
                             <textarea 
                                 value={editContent} 
                                 onChange={e => setEditContent(e.target.value)}
@@ -114,8 +114,8 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
                         <div className={cn(
                             "px-4 py-2.5 text-sm leading-relaxed break-words",
                             isOwn 
-                                ? "bg-indigo-600 text-white rounded-[20px] rounded-tr-none shadow-sm shadow-indigo-100 dark:shadow-none" 
-                                : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-[20px] rounded-tl-none shadow-sm"
+                                ? "bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-[20px] rounded-tr-none shadow-lg shadow-indigo-200 dark:shadow-none" 
+                                : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-[20px] rounded-tl-none shadow-sm border border-slate-100 dark:border-white/5"
                         )}>
                             <p className="whitespace-pre-wrap">{message.content}</p>
                         </div>
@@ -125,11 +125,11 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
                     <AnimatePresence>
                         {showActions && !editing && (
                             <motion.div 
-                                initial={{ opacity: 0, scale: 0.9 }} 
-                                animate={{ opacity: 1, scale: 1 }} 
-                                exit={{ opacity: 0, scale: 0.9 }}
+                                initial={{ opacity: 0, scale: 0.9, y: 5 }} 
+                                animate={{ opacity: 1, scale: 1, y: 0 }} 
+                                exit={{ opacity: 0, scale: 0.9, y: 5 }}
                                 className={cn(
-                                    "absolute -top-10 flex items-center gap-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-1 z-10",
+                                    "absolute -top-10 flex items-center gap-0.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl p-1 z-10",
                                     isOwn ? "right-0" : "left-0"
                                 )}
                             >
@@ -156,7 +156,7 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
                                 className={cn(
                                     "flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold border transition-all",
                                     users.includes(currentUserId) 
-                                        ? "bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400" 
+                                        ? "bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 shadow-sm" 
                                         : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300"
                                 )}>
                                 <span>{emoji}</span> 
@@ -167,9 +167,9 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
                 )}
 
                 {showAvatar && (
-                    <span className="text-[9px] font-medium text-slate-400 mt-1 uppercase tracking-tighter">
+                    <span className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-widest opacity-70">
                         {format(new Date(message.createdAt), 'h:mm a')}
-                        {message.editedAt && " (edited)"}
+                        {message.editedAt && " • EDITED"}
                     </span>
                 )}
             </div>
@@ -199,8 +199,8 @@ const NewDirectMessageModal = ({ isOpen, onClose, onSelect, currentUserId }) => 
                     <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
                         className="bg-white dark:bg-slate-900 rounded-[32px] p-8 w-full max-w-md shadow-2xl border border-white/20 flex flex-col max-h-[80vh]">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-2xl font-black text-slate-900 dark:text-white">New Message</h3>
-                            <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400"><X size={20} /></button>
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">New Message</h3>
+                            <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-all"><X size={20} /></button>
                         </div>
                         
                         <div className="relative mb-6">
@@ -216,7 +216,7 @@ const NewDirectMessageModal = ({ isOpen, onClose, onSelect, currentUserId }) => 
 
                         <div className="flex-1 overflow-y-auto no-scrollbar space-y-1">
                             {isLoading ? (
-                                [1,2,3].map(i => <div key={i} className="h-16 bg-slate-50 dark:bg-slate-800/50 animate-pulse rounded-2xl" />)
+                                [1,2,3].map(i => <div key={i} className="h-16 bg-slate-50 dark:bg-slate-800/50 animate-pulse rounded-2xl mb-2" />)
                             ) : members.length > 0 ? (
                                 members.map(m => (
                                     <button 
@@ -224,19 +224,22 @@ const NewDirectMessageModal = ({ isOpen, onClose, onSelect, currentUserId }) => 
                                         onClick={() => onSelect(m.user.id)}
                                         className="w-full flex items-center gap-4 p-3 rounded-2xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all group text-left"
                                     >
-                                        <Avatar user={m.user} size="md" className="rounded-xl shadow-sm" />
+                                        <Avatar user={m.user} size="md" className="rounded-xl shadow-sm border border-white dark:border-slate-800" />
                                         <div className="flex-1 min-w-0">
                                             <p className="font-bold text-slate-900 dark:text-white truncate">{m.user.name}</p>
-                                            <p className="text-xs text-slate-500 truncate">{m.user.email}</p>
+                                            <p className="text-xs text-slate-500 truncate font-medium">{m.user.email}</p>
                                         </div>
-                                        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity translate-x-2 group-hover:translate-x-0">
                                             <ChevronRight size={18} />
                                         </div>
                                     </button>
                                 ))
                             ) : (
                                 <div className="py-12 text-center">
-                                    <p className="text-slate-400 font-medium">No team members found.</p>
+                                    <div className="w-16 h-16 rounded-2xl bg-slate-50 dark:bg-white/5 flex items-center justify-center mx-auto mb-4 text-slate-300">
+                                        <Users size={32} />
+                                    </div>
+                                    <p className="text-slate-400 font-bold">No team members found.</p>
                                 </div>
                             )}
                         </div>
@@ -315,7 +318,6 @@ const MessagesPage = () => {
         socket.emit('join:user', user.id);
 
         const onNew = ({ message }) => {
-            // Only append if it's for the current active channel
             if (message.channelId === activeChannelId) {
                 appendMessage(activeChannelId, message);
             }
@@ -385,7 +387,6 @@ const MessagesPage = () => {
         
         setIsSuggestingResponse(true);
         try {
-            // Mock AI call (Reuse existing AI controller idea)
             const prompt = lastMessages.map(m => `${m.author?.name}: ${m.content}`).join('\n');
             const res = await taskService.suggestPriority({ title: "Draft a reply to:", description: prompt });
             setNewMessage(prev => prev + (prev ? ' ' : '') + `Replying with: ${res.data?.data?.priority}...`);
@@ -445,12 +446,9 @@ const MessagesPage = () => {
         try {
             const res = await chatService.getOrCreateDM(targetUserId);
             const dmChannel = res.data.data.channel;
-            
-            // Add to channels list if not already there
             if (!channels.find(c => c.id === dmChannel.id)) {
                 setChannels([dmChannel, ...channels]);
             }
-            
             setActiveChannel(dmChannel.id);
             setShowNewDM(false);
         } catch (error) {
@@ -462,7 +460,7 @@ const MessagesPage = () => {
     const directOther = activeChannel?.type === 'direct' ? activeChannel.members?.find(m => m.userId !== user.id)?.user : null;
 
     return (
-        <div className="flex h-full bg-[#f8fafc] dark:bg-slate-950 overflow-hidden font-sans">
+        <div className="flex h-full bg-[#f1f5f9] dark:bg-gray-950 overflow-hidden font-sans p-2 sm:p-4 gap-2 sm:gap-4">
             <NewDirectMessageModal 
                 isOpen={showNewDM} 
                 onClose={() => setShowNewDM(false)} 
@@ -470,82 +468,54 @@ const MessagesPage = () => {
                 currentUserId={user.id}
             />
             
-            {/* ── Leftmost: Workspace Switcher ─────────────────── */}
-            <div className="w-[68px] bg-slate-100 dark:bg-slate-900 flex flex-col items-center py-4 gap-4 border-r border-slate-200 dark:border-slate-800 shrink-0 overflow-y-auto no-scrollbar">
-                {workspaces.map(ws => (
-                    <button 
-                        key={ws.id} 
-                        onClick={() => switchWorkspace(ws.slug)}
-                        className={cn(
-                            "group relative w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300",
-                            workspace?.id === ws.id 
-                                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 dark:shadow-none" 
-                                : "bg-white dark:bg-slate-800 text-slate-500 hover:bg-indigo-500 hover:text-white dark:hover:bg-indigo-600"
-                        )}
-                        title={ws.name}
-                    >
-                        <div className={cn(
-                            "absolute left-0 w-1 bg-indigo-600 rounded-r-full transition-all duration-300",
-                            workspace?.id === ws.id ? "h-8" : "h-0 group-hover:h-4"
-                        )} />
-                        {ws.logo ? (
-                            <img src={ws.logo} className="w-8 h-8 rounded-lg object-cover" alt="" />
-                        ) : (
-                            <span className="text-lg font-bold">{getInitials(ws.name)}</span>
-                        )}
-                    </button>
-                ))}
-                <div className="w-8 h-px bg-slate-200 dark:bg-slate-800 my-1" />
-                <button className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 text-slate-400 hover:text-indigo-600 flex items-center justify-center transition-all border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-500">
-                    <Plus size={20} />
-                </button>
-            </div>
-
-            {/* ── Pane 2: Channel Navigator ─────────────────── */}
-            <div className="w-72 bg-white dark:bg-slate-950 flex flex-col shrink-0 border-r border-slate-200 dark:border-slate-800">
-                <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100 dark:border-slate-900 shrink-0">
-                    <h2 className="font-extrabold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-                        {workspace?.name}
-                        <ChevronRight size={14} className="text-slate-400" />
-                    </h2>
-                    <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl text-slate-400 transition-colors">
-                        <MoreVertical size={18} />
+            {/* ── Pane 1: Navigator ─────────────────── */}
+            <div className="w-20 sm:w-80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex flex-col shrink-0 rounded-[32px] border border-white/20 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden transition-all duration-500">
+                <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100 dark:border-white/5 shrink-0">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none shrink-0">
+                            <MessageSquare size={20} />
+                        </div>
+                        <h2 className="hidden sm:block font-black text-slate-900 dark:text-white tracking-tight truncate uppercase tracking-widest text-sm">Chats</h2>
+                    </div>
+                    <button onClick={() => setShowNewDM(true)} className="p-2 bg-slate-50 dark:bg-white/5 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 rounded-xl text-slate-400 hover:text-indigo-600 transition-all">
+                        <Plus size={20} />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto py-6 space-y-8 no-scrollbar">
-                    {/* SEARCH */}
-                    <div className="px-4">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                <div className="flex-1 overflow-y-auto py-6 space-y-8 no-scrollbar scroll-smooth">
+                    {/* SEARCH - SM only */}
+                    <div className="px-4 hidden sm:block">
+                        <div className="relative group">
+                            <Search className="absolute left-4 top-3 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
                             <input 
-                                placeholder="Jump to..." 
-                                className="w-full bg-slate-50 dark:bg-slate-900/50 border-none rounded-xl pl-10 pr-4 py-2 text-sm text-slate-600 dark:text-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                                placeholder="Search conversations..." 
+                                className="w-full bg-slate-100/50 dark:bg-white/5 border-none rounded-2xl pl-11 pr-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 transition-all font-bold"
                             />
                         </div>
                     </div>
 
                     {/* CHANNELS */}
                     <div className="px-3">
-                        <div className="flex items-center justify-between px-3 mb-3">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">Channels</span>
-                            <button onClick={() => setShowNewChannel(true)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg text-slate-400 hover:text-indigo-600 transition-all">
-                                <Plus size={16} />
-                            </button>
+                        <div className="flex items-center justify-between px-4 mb-4">
+                            <span className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Channels</span>
+                            <div className="h-px flex-1 bg-slate-100 dark:bg-white/5 ml-4 hidden sm:block" />
                         </div>
-                        <div className="space-y-0.5">
+                        <div className="space-y-1">
                             {channels.filter(c => c.type !== 'direct').map(ch => (
                                 <button key={ch.id} onClick={() => setActiveChannel(ch.id)}
                                     className={cn(
-                                        "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all group",
+                                        "w-full flex items-center justify-center sm:justify-start gap-3 px-3 sm:px-4 py-3.5 rounded-[20px] text-sm font-bold transition-all duration-300 group",
                                         activeChannelId === ch.id 
-                                            ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400" 
-                                            : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/50 hover:text-slate-700"
+                                            ? "bg-indigo-600 text-white shadow-xl shadow-indigo-200 dark:shadow-indigo-900/20 scale-[1.02]" 
+                                            : "text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-white/5 hover:shadow-md"
                                     )}>
-                                    <Hash size={18} className={cn("transition-colors", activeChannelId === ch.id ? "text-indigo-500" : "text-slate-300 dark:text-slate-600 group-hover:text-slate-400")} />
-                                    <span className="flex-1 truncate">{ch.name}</span>
+                                    <Hash size={20} className={cn("transition-colors shrink-0", activeChannelId === ch.id ? "text-indigo-200" : "text-slate-300 dark:text-slate-600 group-hover:text-indigo-400")} />
+                                    <span className="hidden sm:block flex-1 truncate">{ch.name}</span>
                                     {unreadCounts[ch.id] > 0 && (
-                                        <span className="bg-indigo-600 text-white text-[10px] font-bold rounded-lg px-2 py-0.5 min-w-[20px] text-center shadow-lg shadow-indigo-200 dark:shadow-none">
+                                        <span className={cn(
+                                            "rounded-full px-2 py-0.5 text-[10px] font-black min-w-[20px] text-center",
+                                            activeChannelId === ch.id ? "bg-white text-indigo-600" : "bg-indigo-600 text-white shadow-lg shadow-indigo-200"
+                                        )}>
                                             {unreadCounts[ch.id]}
                                         </span>
                                     )}
@@ -556,31 +526,32 @@ const MessagesPage = () => {
 
                     {/* DIRECT MESSAGES */}
                     <div className="px-3">
-                        <div className="flex items-center justify-between px-3 mb-3">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">Direct Messages</span>
-                            <button onClick={() => setShowNewDM(true)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg text-slate-400 hover:text-indigo-600 transition-all">
-                                <Plus size={16} />
-                            </button>
+                        <div className="flex items-center justify-between px-4 mb-4">
+                            <span className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Direct</span>
+                            <div className="h-px flex-1 bg-slate-100 dark:bg-white/5 ml-4 hidden sm:block" />
                         </div>
-                        <div className="space-y-0.5">
+                        <div className="space-y-1">
                             {channels.filter(c => c.type === 'direct').map(ch => {
                                 const other = ch.members?.find(m => m.userId !== user.id)?.user;
                                 const status = onlineUsers[other?.id] || 'offline';
                                 return (
                                     <button key={ch.id} onClick={() => setActiveChannel(ch.id)}
                                         className={cn(
-                                            "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all group",
+                                            "w-full flex items-center justify-center sm:justify-start gap-3 px-3 sm:px-4 py-3.5 rounded-[20px] text-sm font-bold transition-all duration-300 group",
                                             activeChannelId === ch.id 
-                                                ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400" 
-                                                : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900/50 hover:text-slate-700"
+                                                ? "bg-indigo-600 text-white shadow-xl shadow-indigo-200 dark:shadow-indigo-900/20 scale-[1.02]" 
+                                                : "text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-white/5 hover:shadow-md"
                                         )}>
-                                        <div className="relative">
-                                            <Avatar user={other} size="xs" className="rounded-lg shadow-sm" />
-                                            <PresenceDot status={status} className="absolute -bottom-0.5 -right-0.5" />
+                                        <div className="relative shrink-0">
+                                            <Avatar user={other} size="xs" className={cn("rounded-xl shadow-sm transition-all", activeChannelId === ch.id ? "ring-2 ring-white/50" : "ring-1 ring-slate-100 dark:ring-white/5")} />
+                                            <PresenceDot status={status} className="absolute -bottom-0.5 -right-0.5 border-2 border-white dark:border-slate-900" />
                                         </div>
-                                        <span className="flex-1 truncate">{other?.name}</span>
+                                        <span className="hidden sm:block flex-1 truncate">{other?.name}</span>
                                         {unreadCounts[ch.id] > 0 && (
-                                            <span className="bg-indigo-600 text-white text-[10px] font-bold rounded-lg px-2 py-0.5 min-w-[20px] text-center">
+                                            <span className={cn(
+                                                "rounded-full px-2 py-0.5 text-[10px] font-black min-w-[20px] text-center",
+                                                activeChannelId === ch.id ? "bg-white text-indigo-600" : "bg-indigo-600 text-white"
+                                            )}>
                                                 {unreadCounts[ch.id]}
                                             </span>
                                         )}
@@ -591,125 +562,143 @@ const MessagesPage = () => {
                     </div>
                 </div>
 
-                {/* USER PROFILE MINICARD */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center gap-3">
-                        <div className="relative">
-                            <Avatar user={user} size="sm" className="rounded-xl shadow-md" />
-                            <PresenceDot status="online" className="absolute -bottom-0.5 -right-0.5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{user.name}</p>
-                            <p className="text-[10px] text-slate-500 font-medium truncate capitalize">Active now</p>
-                        </div>
-                        <button className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-all">
-                            <Settings size={16} />
-                        </button>
+                {/* USER PROFILE */}
+                <div className="p-4 sm:p-6 bg-slate-50/50 dark:bg-white/5 border-t border-slate-100 dark:border-white/5 sm:flex items-center gap-4 hidden">
+                    <div className="relative">
+                        <Avatar user={user} size="md" className="rounded-2xl shadow-xl border-2 border-white dark:border-slate-800" />
+                        <PresenceDot status="online" className="absolute -bottom-1 -right-1 border-2 border-white dark:border-slate-900 w-3.5 h-3.5" />
                     </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-slate-900 dark:text-white truncate tracking-tight">{user.name}</p>
+                        <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">Active</p>
+                    </div>
+                    <button className="p-2.5 hover:bg-white dark:hover:bg-white/5 rounded-xl text-slate-400 hover:text-indigo-600 transition-all shadow-sm">
+                        <Settings size={18} />
+                    </button>
                 </div>
             </div>
 
-            {/* ── Pane 3: Chat Area ─────────────────── */}
-            <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-slate-950 shadow-2xl relative z-10">
+            {/* ── Pane 2: Chat Area ─────────────────── */}
+            <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-slate-900 rounded-[32px] border border-white/20 dark:border-white/5 shadow-2xl relative overflow-hidden">
                 {activeChannelId ? (
                     <>
                         {/* HEADER */}
-                        <div className="h-16 flex items-center gap-4 px-6 border-b border-slate-100 dark:border-slate-900 shrink-0">
+                        <div className="h-20 flex items-center gap-4 px-8 border-b border-slate-100 dark:border-white/5 shrink-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md z-20">
                             {activeChannel?.type === 'direct' ? (
                                 <>
-                                    <div className="relative">
-                                        <Avatar user={directOther} size="sm" className="rounded-xl shadow-sm" />
-                                        <PresenceDot status={onlineUsers[directOther?.id] || 'offline'} className="absolute -bottom-0.5 -right-0.5" />
+                                    <div className="relative group cursor-pointer">
+                                        <Avatar user={directOther} size="md" className="rounded-2xl shadow-md transition-transform group-hover:scale-105" />
+                                        <PresenceDot status={onlineUsers[directOther?.id] || 'offline'} className="absolute -bottom-1 -right-1 border-4 border-white dark:border-slate-900 w-4 h-4" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-slate-900 dark:text-white truncate">{directOther?.name}</h3>
-                                        <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest">Online</p>
+                                        <h3 className="font-black text-slate-900 dark:text-white text-lg truncate tracking-tight">{directOther?.name}</h3>
+                                        <p className="text-xs text-emerald-500 font-black uppercase tracking-[0.15em] flex items-center gap-1.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                            Online Now
+                                        </p>
                                     </div>
                                 </>
                             ) : (
                                 <>
-                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-inner ring-1 ring-indigo-100 dark:ring-white/5">
                                         <Hash size={24} />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-bold text-slate-900 dark:text-white truncate">{activeChannel?.name}</h3>
+                                        <h3 className="font-black text-slate-900 dark:text-white text-lg truncate tracking-tight">#{activeChannel?.name}</h3>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{activeChannel?.members?.length} members</span>
-                                            {activeChannel?.description && <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-700" />}
-                                            <span className="text-xs text-slate-400 truncate max-w-[300px]">{activeChannel?.description}</span>
+                                            <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{activeChannel?.members?.length} Members</span>
                                         </div>
                                     </div>
                                 </>
                             )}
                             
-                            <div className="flex items-center gap-2">
-                                <button className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl text-slate-400 transition-all"><Phone size={18} /></button>
-                                <button className="p-2.5 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl text-slate-400 transition-all"><Video size={18} /></button>
+                            <div className="flex items-center gap-3">
+                                <button className="p-3 bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 rounded-2xl text-slate-400 transition-all hover:text-indigo-600 shadow-sm"><Phone size={20} /></button>
+                                <button className="p-3 bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 rounded-2xl text-slate-400 transition-all hover:text-indigo-600 shadow-sm"><Video size={20} /></button>
                                 <button 
                                     onClick={() => setShowInfoPanel(!showInfoPanel)}
                                     className={cn(
-                                        "p-2.5 rounded-xl transition-all",
-                                        showInfoPanel ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30" : "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900"
+                                        "p-3 rounded-2xl transition-all shadow-sm",
+                                        showInfoPanel ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "bg-slate-50 dark:bg-white/5 text-slate-400 hover:bg-white dark:hover:bg-white/10"
                                     )}
                                 >
-                                    <Info size={18} />
+                                    <Info size={20} />
                                 </button>
                             </div>
                         </div>
 
                         {/* MESSAGES */}
-                        <div ref={feedRef} className="flex-1 overflow-y-auto pt-8 pb-4 space-y-0.5 no-scrollbar scroll-smooth">
-                            {(messages[activeChannelId] || []).map((msg, i, arr) => {
-                                const prevMsg = arr[i - 1];
-                                const isSameAuthor = prevMsg && prevMsg.authorId === msg.authorId;
-                                const isRecent = prevMsg && (new Date(msg.createdAt) - new Date(prevMsg.createdAt)) < 5 * 60 * 1000;
-                                const showAvatar = !isSameAuthor || !isRecent;
-                                
-                                return (
-                                    <MessageBubble 
-                                        key={msg.id} 
-                                        message={msg} 
-                                        currentUserId={user.id}
-                                        showAvatar={showAvatar}
-                                        onReply={setThreadMessage} 
-                                        onReact={handleReact}
-                                        onEdit={handleEdit} 
-                                        onDelete={handleDelete} 
-                                    />
-                                );
-                            })}
+                        <div className="flex-1 relative overflow-hidden flex flex-col bg-slate-50/30 dark:bg-transparent">
+                            {/* Visual background elements to break white space */}
+                            <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.05] dark:opacity-[0.08]">
+                                <div className="absolute top-[10%] left-[10%] w-96 h-96 bg-indigo-500 rounded-full blur-[120px]" />
+                                <div className="absolute bottom-[10%] right-[10%] w-[500px] h-[500px] bg-violet-500 rounded-full blur-[150px]" />
+                            </div>
+
+                            <div ref={feedRef} className="flex-1 overflow-y-auto px-4 sm:px-10 pt-8 pb-4 space-y-1 no-scrollbar scroll-smooth z-10">
+                                {(messages[activeChannelId] || []).length === 0 ? (
+                                    <div className="h-full flex flex-col items-center justify-center py-20 text-center">
+                                        <div className="w-24 h-24 rounded-[32px] bg-white dark:bg-slate-800 shadow-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-8 border border-slate-100 dark:border-white/5">
+                                            <Sparkles size={40} />
+                                        </div>
+                                        <h4 className="text-2xl font-black text-slate-900 dark:text-white mb-3 tracking-tight">The start of something great</h4>
+                                        <p className="text-slate-500 dark:text-slate-400 text-sm max-w-[280px] font-medium leading-relaxed">
+                                            Send your first message to {activeChannel?.type === 'direct' ? directOther?.name : '#' + activeChannel?.name} and get things moving.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    (messages[activeChannelId] || []).map((msg, i, arr) => {
+                                        const prevMsg = arr[i - 1];
+                                        const isSameAuthor = prevMsg && prevMsg.authorId === msg.authorId;
+                                        const isRecent = prevMsg && (new Date(msg.createdAt) - new Date(prevMsg.createdAt)) < 5 * 60 * 1000;
+                                        const showAvatar = !isSameAuthor || !isRecent;
+                                        
+                                        return (
+                                            <MessageBubble 
+                                                key={msg.id} 
+                                                message={msg} 
+                                                currentUserId={user.id}
+                                                showAvatar={showAvatar}
+                                                onReply={setThreadMessage} 
+                                                onReact={handleReact}
+                                                onEdit={handleEdit} 
+                                                onDelete={handleDelete} 
+                                            />
+                                        );
+                                    })
+                                )}
+                            </div>
                         </div>
 
-                        {/* FOOTER: INPUT */}
-                        <div className="px-6 py-4 bg-white dark:bg-slate-950">
+                        {/* FOOTER */}
+                        <div className="px-8 py-8 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-white/5 z-20 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
                             <TypingIndicator typingUsers={typingUsers[activeChannelId]} />
                             
-                            <form onSubmit={sendMsg} className="mt-1">
-                                <div className="bg-[#f1f5f9] dark:bg-slate-900/80 rounded-2xl border-2 border-transparent focus-within:border-indigo-500/50 focus-within:bg-white dark:focus-within:bg-slate-900 shadow-sm transition-all overflow-hidden">
+                            <form onSubmit={sendMsg} className="relative">
+                                <div className="group bg-slate-50 dark:bg-gray-950 rounded-[28px] border-2 border-transparent focus-within:border-indigo-500/30 focus-within:bg-white dark:focus-within:bg-gray-950 shadow-sm transition-all duration-500">
                                     <textarea 
                                         value={newMessage} 
                                         onChange={handleTyping}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(e); }
                                         }}
-                                        placeholder={`Message #${activeChannel?.name || '...'}`}
-                                        className="w-full bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 outline-none p-4 resize-none max-h-32" 
+                                        placeholder={`Write a message to ${activeChannel?.type === 'direct' ? directOther?.name : '#' + activeChannel?.name}...`}
+                                        className="w-full bg-transparent text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none p-6 resize-none max-h-48 font-bold leading-relaxed" 
                                         rows={1}
                                     />
                                     
-                                    <div className="px-3 py-2 flex items-center justify-between border-t border-slate-200/50 dark:border-slate-800/50">
-                                        <div className="flex items-center gap-1">
-                                            <button type="button" className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-all"><Paperclip size={18} /></button>
-                                            <button type="button" className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-all"><Smile size={18} /></button>
-                                            <button type="button" className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-all"><AtSign size={18} /></button>
-                                            <div className="w-px h-4 bg-slate-300 dark:bg-slate-700 mx-1" />
+                                    <div className="px-5 py-4 flex items-center justify-between border-t border-slate-100 dark:border-white/5">
+                                        <div className="flex items-center gap-1.5">
+                                            <button type="button" className="p-3 hover:bg-white dark:hover:bg-white/5 rounded-[18px] text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><Paperclip size={20} /></button>
+                                            <button type="button" className="p-3 hover:bg-white dark:hover:bg-white/5 rounded-[18px] text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><Smile size={20} /></button>
+                                            <div className="w-px h-5 bg-slate-200 dark:bg-white/10 mx-3" />
                                             <button 
                                                 type="button" 
                                                 onClick={handleSuggestResponse}
                                                 disabled={isSuggestingResponse}
-                                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-wider hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all disabled:opacity-50"
+                                                className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:bg-white dark:hover:bg-white/10 transition-all disabled:opacity-50 shadow-sm"
                                             >
-                                                <Sparkles size={14} className={cn(isSuggestingResponse && "animate-pulse")} />
+                                                <Sparkles size={16} className={cn(isSuggestingResponse && "animate-pulse")} />
                                                 Magic Draft
                                             </button>
                                         </div>
@@ -717,96 +706,114 @@ const MessagesPage = () => {
                                         <button 
                                             type="submit" 
                                             disabled={!newMessage.trim()}
-                                            className="p-2.5 bg-indigo-600 text-white rounded-xl shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-95 disabled:opacity-30 disabled:shadow-none transition-all"
+                                            className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black shadow-xl shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-95 disabled:opacity-30 disabled:shadow-none transition-all flex items-center gap-2.5"
                                         >
-                                            <Send size={18} />
+                                            <span>Send</span>
+                                            <Send size={20} />
                                         </button>
                                     </div>
                                 </div>
                             </form>
-                            <p className="text-[10px] text-center text-slate-400 font-medium mt-3">
-                                Press <strong>Enter</strong> to send • <strong>Shift + Enter</strong> for new line
-                            </p>
                         </div>
                     </>
                 ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center p-12 text-center bg-slate-50/50 dark:bg-slate-900/20">
-                        <div className="w-24 h-24 rounded-[32px] bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-8 animate-bounce-subtle">
-                            <MessageSquare size={48} />
+                    <div className="flex-1 flex flex-col items-center justify-center p-12 text-center bg-slate-50/20 dark:bg-slate-900/20 relative">
+                        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                            <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-indigo-500/10 rounded-full blur-[150px]" />
+                            <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-violet-500/10 rounded-full blur-[150px]" />
                         </div>
-                        <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-3">Welcome back, {user.name.split(' ')[0]}!</h3>
-                        <p className="text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed">
-                            Select a channel or teammate from the left to start collaborating on your next big thing.
-                        </p>
-                        <div className="mt-8 flex gap-3">
-                            <button onClick={() => setShowNewChannel(true)} className="px-6 py-2.5 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-all">Create Channel</button>
-                            <button className="px-6 py-2.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-2xl font-bold border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">Quick Search</button>
+
+                        <div className="z-10 flex flex-col items-center max-w-lg">
+                            <div className="w-40 h-40 rounded-[56px] bg-white dark:bg-slate-800 shadow-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-12 transform -rotate-6 hover:rotate-0 transition-transform duration-700 cursor-pointer group border-4 border-white dark:border-slate-700">
+                                <div className="w-28 h-24 rounded-[40px] bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <MessageSquare size={56} />
+                                </div>
+                            </div>
+                            <h3 className="text-5xl font-black text-slate-900 dark:text-white mb-6 tracking-tighter leading-tight">Focus on<br />communication.</h3>
+                            <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed font-bold mb-12 opacity-80">
+                                Choose a channel or team member from the sidebar to start collaborating in real-time.
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-5 w-full sm:w-auto">
+                                <button onClick={() => setShowNewChannel(true)} className="px-10 py-5 bg-indigo-600 text-white rounded-[24px] font-black shadow-2xl shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-all hover:translate-y-[-4px] active:translate-y-0 text-sm tracking-widest uppercase">Create Channel</button>
+                                <button onClick={() => setShowNewDM(true)} className="px-10 py-5 bg-white dark:bg-slate-800 text-slate-700 dark:text-white rounded-[24px] font-black shadow-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:translate-y-[-4px] border border-slate-100 dark:border-white/5 text-sm tracking-widest uppercase">Direct Message</button>
+                            </div>
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* ── Pane 4: Info Panel ─────────────────── */}
+            {/* ── Pane 3: Info Panel ─────────────────── */}
             <AnimatePresence>
                 {showInfoPanel && activeChannelId && (
                     <motion.div 
-                        initial={{ width: 0, opacity: 0 }} 
-                        animate={{ width: 320, opacity: 1 }} 
-                        exit={{ width: 0, opacity: 0 }}
-                        className="bg-slate-50 dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 shrink-0 overflow-y-auto no-scrollbar hidden xl:flex flex-col"
+                        initial={{ width: 0, opacity: 0, x: 20 }} 
+                        animate={{ width: 380, opacity: 1, x: 0 }} 
+                        exit={{ width: 0, opacity: 0, x: 20 }}
+                        className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-[32px] shrink-0 overflow-hidden hidden 2xl:flex flex-col shadow-2xl"
                     >
-                        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100 dark:border-slate-900 shrink-0">
-                            <h3 className="font-bold text-slate-900 dark:text-white">Details</h3>
-                            <button onClick={() => setShowInfoPanel(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-xl text-slate-400 transition-all"><X size={18} /></button>
+                        <div className="h-20 flex items-center justify-between px-8 border-b border-slate-100 dark:border-white/5 shrink-0">
+                            <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-widest text-[10px]">Information</h3>
+                            <button onClick={() => setShowInfoPanel(false)} className="p-3 bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 rounded-2xl text-slate-400 transition-all shadow-sm"><X size={18} /></button>
                         </div>
                         
-                        <div className="p-8 flex flex-col items-center text-center">
-                            {activeChannel?.type === 'direct' ? (
-                                <>
-                                    <Avatar user={directOther} size="xl" className="rounded-3xl shadow-xl mb-4" />
-                                    <h4 className="font-black text-lg text-slate-900 dark:text-white mb-1">{directOther?.name}</h4>
-                                    <p className="text-sm text-slate-500 mb-6">{directOther?.email}</p>
-                                    
-                                    <div className="w-full grid grid-cols-2 gap-3 mb-8">
-                                        <button className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 transition-all">
-                                            <Bell size={20} className="text-slate-400" />
-                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Mute</span>
-                                        </button>
-                                        <button className="flex flex-col items-center gap-1.5 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-400 transition-all">
-                                            <Globe size={20} className="text-slate-400" />
-                                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Profile</span>
-                                        </button>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="w-20 h-20 rounded-3xl bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4 shadow-inner">
-                                        <Hash size={40} />
-                                    </div>
-                                    <h4 className="font-black text-lg text-slate-900 dark:text-white mb-1">#{activeChannel?.name}</h4>
-                                    <p className="text-sm text-slate-500 mb-8">Created {format(new Date(activeChannel?.createdAt || new Date()), 'MMM d, yyyy')}</p>
-                                </>
-                            )}
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-10">
+                            <div className="flex flex-col items-center text-center mb-12">
+                                {activeChannel?.type === 'direct' ? (
+                                    <>
+                                        <div className="relative mb-8">
+                                            <Avatar user={directOther} size="xl" className="rounded-[48px] shadow-2xl border-4 border-white dark:border-slate-800 scale-110" />
+                                            <PresenceDot status={onlineUsers[directOther?.id] || 'offline'} className="absolute -bottom-2 -right-2 border-[8px] border-white dark:border-slate-900 w-10 h-10 shadow-lg" />
+                                        </div>
+                                        <h4 className="font-black text-3xl text-slate-900 dark:text-white mb-2 tracking-tighter">{directOther?.name}</h4>
+                                        <p className="text-sm font-black text-indigo-600 dark:text-indigo-400 mb-10 uppercase tracking-widest">{directOther?.email}</p>
+                                        
+                                        <div className="w-full grid grid-cols-2 gap-5">
+                                            <button className="flex flex-col items-center gap-3 p-6 rounded-[32px] bg-slate-50 dark:bg-white/5 border-2 border-transparent hover:border-indigo-500/30 transition-all group shadow-sm hover:shadow-indigo-100 dark:hover:shadow-none">
+                                                <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-all group-hover:scale-110">
+                                                    <Bell size={24} />
+                                                </div>
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Mute</span>
+                                            </button>
+                                            <button className="flex flex-col items-center gap-3 p-6 rounded-[32px] bg-slate-50 dark:bg-white/5 border-2 border-transparent hover:border-indigo-500/30 transition-all group shadow-sm hover:shadow-indigo-100 dark:hover:shadow-none">
+                                                <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-all group-hover:scale-110">
+                                                    <Globe size={24} />
+                                                </div>
+                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Profile</span>
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="w-28 h-28 rounded-[48px] bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-500/10 dark:to-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-8 shadow-inner border border-white dark:border-white/5">
+                                            <Hash size={56} />
+                                        </div>
+                                        <h4 className="font-black text-3xl text-slate-900 dark:text-white mb-3 tracking-tighter">#{activeChannel?.name}</h4>
+                                        <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                                            Created {format(new Date(activeChannel?.createdAt || new Date()), 'MMMM yyyy')}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                             
-                            <div className="w-full space-y-6">
-                                <div className="text-left">
-                                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Description</h5>
-                                    <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 leading-relaxed italic">
-                                        {activeChannel?.description || "No description set for this conversation."}
+                            <div className="space-y-12">
+                                <div>
+                                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-5 pl-1">About conversation</h5>
+                                    <div className="p-6 rounded-[28px] bg-slate-50 dark:bg-white/5 text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-bold border border-slate-100 dark:border-white/5 shadow-sm">
+                                        {activeChannel?.description || "Collaborate with your team members in real-time. Share ideas, files, and updates seamlessly."}
                                     </div>
                                 </div>
                                 
-                                <div className="text-left">
-                                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 px-1">Shortcuts</h5>
-                                    <div className="space-y-1">
+                                <div>
+                                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-5 pl-1">Toolbox</h5>
+                                    <div className="space-y-2.5">
                                         {[
-                                            { icon: <Search size={14} />, label: 'Search in chat' },
-                                            { icon: <Lock size={14} />, label: 'Privacy settings' },
-                                            { icon: <Users size={14} />, label: 'View members' },
-                                            { icon: <ImageIcon size={14} />, label: 'Shared media' },
+                                            { icon: <Search size={18} />, label: 'Search history' },
+                                            { icon: <Lock size={18} />, label: 'Privacy & Security' },
+                                            { icon: <Users size={18} />, label: 'Team members' },
+                                            { icon: <ImageIcon size={18} />, label: 'Shared assets' },
                                         ].map((item, i) => (
-                                            <button key={i} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-900 text-slate-600 dark:text-slate-400 text-xs font-bold transition-all group">
-                                                <span className="text-slate-400 group-hover:text-indigo-500 transition-colors">{item.icon}</span>
+                                            <button key={i} className="w-full flex items-center gap-4 p-5 rounded-3xl hover:bg-slate-50 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-sm font-black transition-all group border-2 border-transparent hover:border-slate-100 dark:hover:border-white/5">
+                                                <span className="text-slate-400 group-hover:text-indigo-600 transition-all group-hover:scale-110">{item.icon}</span>
                                                 {item.label}
                                             </button>
                                         ))}
@@ -814,39 +821,6 @@ const MessagesPage = () => {
                                 </div>
                             </div>
                         </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* New channel modal */}
-            <AnimatePresence>
-                {showNewChannel && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-                            className="bg-white dark:bg-slate-900 rounded-[32px] p-8 w-full max-w-md shadow-2xl border border-white/20">
-                            <div className="flex items-center justify-between mb-8">
-                                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
-                                    <Plus size={24} />
-                                </div>
-                                <button onClick={() => setShowNewChannel(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400"><X size={20} /></button>
-                            </div>
-                            <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Create a Channel</h3>
-                            <p className="text-slate-500 dark:text-slate-400 text-sm mb-8">Channels are where your team communicates. They’re best when organized around a topic.</p>
-                            
-                            <form onSubmit={createChannel} className="space-y-6">
-                                <div>
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-1">Channel Name</label>
-                                    <input value={newChannelName} onChange={e => setNewChannelName(e.target.value)}
-                                        placeholder="e.g. project-apollo" autoFocus
-                                        className="w-full px-5 py-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-indigo-500 transition-all font-bold" />
-                                </div>
-                                <div className="flex gap-3">
-                                    <button type="button" onClick={() => setShowNewChannel(false)} className="flex-1 px-6 py-4 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all">Cancel</button>
-                                    <button type="submit" className="flex-1 px-6 py-4 text-sm font-bold bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-all">Create Channel</button>
-                                </div>
-                            </form>
-                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
