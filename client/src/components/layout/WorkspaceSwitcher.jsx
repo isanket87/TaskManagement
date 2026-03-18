@@ -1,9 +1,9 @@
 import { Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, Transition } from '@headlessui/react';
-import { ChevronDown, Plus, Settings, Users, Layers, ShieldCheck, Check } from 'lucide-react';
+import { ChevronDown, Plus, Settings, Users, Layers, ShieldCheck, Check, Briefcase } from 'lucide-react';
 import useWorkspaceStore from '../../store/workspaceStore';
-import { cn } from '../../utils/helpers';
+import { cn, getInitials } from '../../utils/helpers';
 
 const WorkspaceSwitcher = ({ collapsed, onExpand }) => {
     const { workspace, workspaces, isAdmin } = useWorkspaceStore();
@@ -17,24 +17,36 @@ const WorkspaceSwitcher = ({ collapsed, onExpand }) => {
                 <Menu.Button 
                     onClick={() => collapsed && onExpand()}
                     className={cn(
-                        "group flex w-full items-center gap-3 p-2.5 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/5 transition-all duration-300 hover:shadow-lg hover:border-indigo-500/30",
+                        "group flex w-full items-center gap-3 p-2 rounded-2xl bg-white dark:bg-white/5 border border-slate-200 dark:border-white/5 transition-all duration-300 hover:shadow-xl hover:border-indigo-500/30",
                         collapsed ? "justify-center" : "justify-between px-3"
                     )}
                 >
                     <div className="flex items-center gap-2.5 overflow-hidden">
-                        <div className="flex-shrink-0 flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-500/10 dark:to-indigo-500/20 text-indigo-600 dark:text-indigo-400 shadow-sm group-hover:scale-105 transition-transform duration-300 shrink-0">
+                        {/* THE SYMBOL: Refined Design */}
+                        <div className={cn(
+                            "flex-shrink-0 flex items-center justify-center rounded-xl transition-all duration-500 shadow-sm group-hover:scale-105 group-hover:shadow-indigo-200 dark:group-hover:shadow-none",
+                            collapsed ? "h-10 w-10" : "h-9 w-9",
+                            workspace.logo ? "bg-white dark:bg-slate-800" : "bg-gradient-to-br from-indigo-500 to-violet-600 text-white"
+                        )}>
                             {workspace.logo ? (
-                                <img src={workspace.logo} alt="" className="h-9 w-9 rounded-xl object-cover" />
+                                <img src={workspace.logo} alt="" className="h-full w-full rounded-xl object-cover" />
                             ) : (
-                                <Layers size={18} />
+                                <span className={cn(
+                                    "font-black tracking-tighter",
+                                    collapsed ? "text-lg" : "text-sm"
+                                )}>
+                                    {getInitials(workspace.name)}
+                                </span>
                             )}
                         </div>
+
                         {!collapsed && (
                             <div className="flex flex-col text-left overflow-hidden">
-                                <span className="truncate font-black text-slate-900 dark:text-white text-xs tracking-tight uppercase">
+                                <span className="truncate font-black text-slate-900 dark:text-white text-[11px] leading-tight uppercase tracking-tight">
                                     {workspace.name}
                                 </span>
                                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1 opacity-70">
+                                    <div className="w-1 h-1 rounded-full bg-emerald-500" />
                                     {workspace.slug}
                                 </span>
                             </div>
@@ -57,10 +69,13 @@ const WorkspaceSwitcher = ({ collapsed, onExpand }) => {
                     "absolute z-[100] w-64 origin-top-left rounded-[24px] bg-white dark:bg-slate-900 shadow-[0_20px_70px_-10px_rgba(0,0,0,0.15)] dark:shadow-none ring-1 ring-black/5 focus:outline-none border border-slate-100 dark:border-white/5 overflow-hidden p-1.5",
                     collapsed ? "left-[calc(100%+12px)] top-0" : "left-0 top-[calc(100%+8px)]"
                 )}>
-                    <div className="px-3 py-2.5 mb-1">
+                    <div className="px-3 py-2.5 mb-1 flex items-center justify-between">
                         <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
-                            Environments
+                            My Workspaces
                         </span>
+                        <div className="px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 text-[8px] font-black text-slate-500 uppercase tracking-widest">
+                            {workspaces.length} Total
+                        </div>
                     </div>
 
                     <div className="max-h-60 overflow-y-auto no-scrollbar space-y-0.5">
@@ -82,21 +97,24 @@ const WorkspaceSwitcher = ({ collapsed, onExpand }) => {
                                             )}
                                         >
                                             <div className={cn(
-                                                "flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-lg transition-colors shadow-sm",
-                                                isCurrent ? "bg-indigo-600 text-white" : "bg-white dark:bg-slate-800 text-slate-400"
+                                                "flex-shrink-0 flex h-8 w-8 items-center justify-center rounded-lg transition-all shadow-sm",
+                                                isCurrent ? "bg-gradient-to-br from-indigo-500 to-indigo-600 text-white shadow-indigo-200" : "bg-white dark:bg-slate-800 text-slate-400 border border-slate-100 dark:border-white/5"
                                             )}>
                                                 {ws.logo ? (
-                                                    <img src={ws.logo} alt="" className="h-8 h-8 rounded-lg object-cover" />
+                                                    <img src={ws.logo} alt="" className="h-full w-full rounded-lg object-cover" />
                                                 ) : (
-                                                    <Layers size={16} />
+                                                    <span className="text-[10px] font-black tracking-tighter">{getInitials(ws.name)}</span>
                                                 )}
                                             </div>
                                             <div className="flex flex-col min-w-0 flex-1">
                                                 <span className={cn(
-                                                    "truncate text-xs font-bold",
+                                                    "truncate text-[13px] font-bold tracking-tight",
                                                     isCurrent ? "text-indigo-600 dark:text-indigo-400" : "text-slate-700 dark:text-slate-200"
                                                 )}>
                                                     {ws.name}
+                                                </span>
+                                                <span className="text-[9px] font-medium text-slate-400 truncate tracking-widest uppercase opacity-70">
+                                                    {ws.slug}
                                                 </span>
                                             </div>
                                             {isCurrent && <Check size={12} strokeWidth={4} className="text-indigo-600 dark:text-indigo-400 shrink-0" />}
@@ -113,11 +131,13 @@ const WorkspaceSwitcher = ({ collapsed, onExpand }) => {
                                 <button
                                     onClick={() => navigate('/onboarding')}
                                     className={cn(
-                                        "flex w-full items-center gap-3 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all",
+                                        "flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all",
                                         active ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'
                                     )}
                                 >
-                                    <Plus size={14} strokeWidth={3} />
+                                    <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-white/5 flex items-center justify-center border border-slate-100 dark:border-white/5">
+                                        <Plus size={14} strokeWidth={3} />
+                                    </div>
                                     New Workspace
                                 </button>
                             )}
@@ -130,26 +150,14 @@ const WorkspaceSwitcher = ({ collapsed, onExpand }) => {
                                         <button
                                             onClick={() => navigate(`/workspace/${workspace.slug}/members`)}
                                             className={cn(
-                                                "flex w-full items-center gap-3 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all",
+                                                "flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all",
                                                 active ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'
                                             )}
                                         >
-                                            <Users size={14} strokeWidth={3} />
-                                            Team
-                                        </button>
-                                    )}
-                                </Menu.Item>
-                                <Menu.Item>
-                                    {({ active }) => (
-                                        <button
-                                            onClick={() => navigate(`/workspace/${workspace.slug}/settings`)}
-                                            className={cn(
-                                                "flex w-full items-center gap-3 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all",
-                                                active ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' : 'text-slate-500 dark:text-slate-400'
-                                            )}
-                                        >
-                                            <Settings size={14} strokeWidth={3} />
-                                            Settings
+                                            <div className="w-7 h-7 rounded-lg bg-slate-50 dark:bg-white/5 flex items-center justify-center border border-slate-100 dark:border-white/5">
+                                                <Users size={14} strokeWidth={3} />
+                                            </div>
+                                            Team Settings
                                         </button>
                                     )}
                                 </Menu.Item>
