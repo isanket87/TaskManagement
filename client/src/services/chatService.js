@@ -8,8 +8,9 @@ export const deleteChannel = (id) => api.delete(`/channels/${id}`);
 export const addMember = (id, data) => api.post(`/channels/${id}/members`, data);
 export const removeMember = (id, userId) => api.delete(`/channels/${id}/members/${userId}`);
 export const markRead = (id) => api.patch(`/channels/${id}/read`);
-export const getOrCreateDM = (userId) => api.get(`/direct-messages/${userId}`);
+export const getOrCreateDM = (userId) => api.get(`/channels/direct/${userId}`);
 export const getUnreadCounts = () => api.get('/channels/unread-counts');
+export const getWorkspaceMembers = () => api.get('/members');
 
 export const getMessages = (channelId, cursor) =>
     api.get(`/channels/${channelId}/messages`, { params: { cursor, limit: 50 } });

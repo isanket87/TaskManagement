@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import {
     getChannels, createChannel, getChannel, updateChannel, deleteChannel,
-    addMember, removeMember, markRead, getUnreadCounts
+    addMember, removeMember, markRead, getUnreadCounts, getOrCreateDM
 } from '../controllers/channelController.js'
 import { getMessages, sendMessage, editMessage, deleteMessage, addReaction, getThread, replyToThread } from '../controllers/messageController.js'
 import auth from '../middleware/auth.js'
@@ -12,6 +12,7 @@ router.use(auth)
 router.get('/unread-counts', getUnreadCounts)
 router.get('/', getChannels)
 router.post('/', createChannel)
+router.get('/direct/:userId', getOrCreateDM)
 router.get('/:id', getChannel)
 router.put('/:id', updateChannel)
 router.delete('/:id', deleteChannel)

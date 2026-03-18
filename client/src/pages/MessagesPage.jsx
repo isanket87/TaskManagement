@@ -158,6 +158,78 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
     );
 };
 
+// ── New DM Modal ─────────────────────────────────────────────────────────────
+const NewDirectMessageModal = ({ isOpen, onClose, onSelect, currentUserId }) => {
+    const { workspace } = useWorkspaceStore();
+    const [search, setSearch] = useState('');
+    
+    const { data: membersData, isLoading } = useQuery({
+        queryKey: ['workspace-members', workspace?.slug],
+        queryFn: () => chatService.getWorkspaceMembers(),
+        enabled: isOpen && !!workspace?.slug
+    });
+
+    const members = (membersData?.data?.data?.members || [])
+        .filter(m => m.user.id !== currentUserId)
+        .filter(m => m.user.name.toLowerCase().includes(search.toLowerCase()) || 
+                    m.user.email.toLowerCase().includes(search.toLowerCase()));
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                    <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+                        className="bg-white dark:bg-slate-900 rounded-[32px] p-8 w-full max-w-md shadow-2xl border border-white/20 flex flex-col max-h-[80vh]">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white">New Message</h3>
+                            <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400"><X size={20} /></button>
+                        </div>
+                        
+                        <div className="relative mb-6">
+                            <Search className="absolute left-4 top-3.5 text-slate-400" size={18} />
+                            <input 
+                                value={search}
+                                onChange={e => setSearch(e.target.value)}
+                                placeholder="Search by name or email..." 
+                                className="w-full bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-2xl pl-12 pr-4 py-3.5 text-sm text-slate-900 dark:text-white outline-none focus:border-indigo-500 transition-all font-medium"
+                                autoFocus
+                            />
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto no-scrollbar space-y-1">
+                            {isLoading ? (
+                                [1,2,3].map(i => <div key={i} className="h-16 bg-slate-50 dark:bg-slate-800/50 animate-pulse rounded-2xl" />)
+                            ) : members.length > 0 ? (
+                                members.map(m => (
+                                    <button 
+                                        key={m.user.id}
+                                        onClick={() => onSelect(m.user.id)}
+                                        className="w-full flex items-center gap-4 p-3 rounded-2xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all group text-left"
+                                    >
+                                        <Avatar user={m.user} size="md" className="rounded-xl shadow-sm" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-bold text-slate-900 dark:text-white truncate">{m.user.name}</p>
+                                            <p className="text-xs text-slate-500 truncate">{m.user.email}</p>
+                                        </div>
+                                        <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <ChevronRight size={18} />
+                                        </div>
+                                    </button>
+                                ))
+                            ) : (
+                                <div className="py-12 text-center">
+                                    <p className="text-slate-400 font-medium">No team members found.</p>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+};
+
 // ── Main MessagesPage ─────────────────────────────────────────────────────────
 const MessagesPage = () => {
     const { user } = useAuthStore();
@@ -169,6 +241,7 @@ const MessagesPage = () => {
 
     const [newMessage, setNewMessage] = useState('');
     const [showNewChannel, setShowNewChannel] = useState(false);
+    const [showNewDM, setShowNewDM] = useState(false);
     const [newChannelName, setNewChannelName] = useState('');
     const [showInfoPanel, setShowInfoPanel] = useState(true);
     const [isSuggestingResponse, setIsSuggestingResponse] = useState(false);
@@ -201,7 +274,9 @@ const MessagesPage = () => {
         if (!activeChannelId) return;
         chatService.getMessages(activeChannelId).then(res => {
             setMessages(activeChannelId, res.data.data.messages);
-            setTimeout(() => feedRef.current?.scrollTo({ top: feedRef.current.scrollHeight }), 50);
+            setTimeout(() => {
+                if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
+            }, 50);
         });
         chatService.markRead(activeChannelId).catch(() => { });
         clearUnread(activeChannelId);
@@ -222,9 +297,22 @@ const MessagesPage = () => {
         socket.emit('join:channel', activeChannelId);
         socket.emit('join:user', user.id);
 
-        const onNew = ({ message }) => appendMessage(activeChannelId, message);
-        const onUpdated = ({ message }) => updateMessage(activeChannelId, message);
-        const onDeleted = ({ messageId }) => removeMessage(activeChannelId, messageId);
+        const onNew = ({ message }) => {
+            // Only append if it's for the current active channel
+            if (message.channelId === activeChannelId) {
+                appendMessage(activeChannelId, message);
+            }
+        };
+        const onUpdated = ({ message }) => {
+            if (message.channelId === activeChannelId) {
+                updateMessage(activeChannelId, message);
+            }
+        };
+        const onDeleted = ({ messageId, channelId }) => {
+            if (channelId === activeChannelId) {
+                removeMessage(activeChannelId, messageId);
+            }
+        };
         const onTypingStart = ({ userId, userName, channelId }) => {
             if (channelId === activeChannelId) setTyping(channelId, userId, userName, true);
         };
@@ -249,7 +337,7 @@ const MessagesPage = () => {
             socket.off('presence:update', onPresence);
             socket.emit('leave:channel', activeChannelId);
         };
-    }, [socket, activeChannelId]);
+    }, [socket, activeChannelId, user.id]);
 
     const sendMsg = async (e) => {
         e.preventDefault();
@@ -336,11 +424,34 @@ const MessagesPage = () => {
         } catch { toast.error('Failed to create channel'); }
     };
 
+    const startDirectMessage = async (targetUserId) => {
+        try {
+            const res = await chatService.getOrCreateDM(targetUserId);
+            const dmChannel = res.data.data.channel;
+            
+            // Add to channels list if not already there
+            if (!channels.find(c => c.id === dmChannel.id)) {
+                setChannels([dmChannel, ...channels]);
+            }
+            
+            setActiveChannel(dmChannel.id);
+            setShowNewDM(false);
+        } catch (error) {
+            toast.error('Failed to start conversation');
+        }
+    };
+
     const activeChannel = channels.find(c => c.id === activeChannelId);
     const directOther = activeChannel?.type === 'direct' ? activeChannel.members?.find(m => m.userId !== user.id)?.user : null;
 
     return (
         <div className="flex h-full bg-[#f8fafc] dark:bg-slate-950 overflow-hidden font-sans">
+            <NewDirectMessageModal 
+                isOpen={showNewDM} 
+                onClose={() => setShowNewDM(false)} 
+                onSelect={startDirectMessage}
+                currentUserId={user.id}
+            />
             
             {/* ── Leftmost: Workspace Switcher ─────────────────── */}
             <div className="w-[68px] bg-slate-100 dark:bg-slate-900 flex flex-col items-center py-4 gap-4 border-r border-slate-200 dark:border-slate-800 shrink-0 overflow-y-auto no-scrollbar">
@@ -430,7 +541,7 @@ const MessagesPage = () => {
                     <div className="px-3">
                         <div className="flex items-center justify-between px-3 mb-3">
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em]">Direct Messages</span>
-                            <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg text-slate-400 hover:text-indigo-600 transition-all">
+                            <button onClick={() => setShowNewDM(true)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg text-slate-400 hover:text-indigo-600 transition-all">
                                 <Plus size={16} />
                             </button>
                         </div>
