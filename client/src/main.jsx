@@ -20,15 +20,20 @@ window.addEventListener('error', (event) => {
 
 // PWA Service Worker Registration & Auto-Update
 if ('serviceWorker' in navigator) {
-    // 1. Nuclear option: If the user is on a regular window and stuck, 
-    // we forcibly unregister everything once to clear the "broken" cache.
-    if (!localStorage.getItem('sw_fix_applied_v1')) {
+    // 1. Nuclear option v2: Force a clean slate for everyone one time.
+    if (localStorage.getItem('sw_fix_version') !== '2') {
         navigator.serviceWorker.getRegistrations().then(registrations => {
             for (let registration of registrations) {
                 registration.unregister();
             }
-            localStorage.setItem('sw_fix_applied_v1', 'true');
-            console.log('Nuclear SW fix applied. Reloading...');
+            // Also clear the cache storage to be extra safe
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    for (let name of names) caches.delete(name);
+                });
+            }
+            localStorage.setItem('sw_fix_version', '2');
+            console.log('Force Reset v2 applied. Reloading for clean slate...');
             window.location.reload();
         });
     }
