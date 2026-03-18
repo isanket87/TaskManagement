@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Exit on any error
+set -e
+
 # Configuration
 APP_DIR="/var/www/brioright"
 BRANCH="main"
@@ -7,53 +10,56 @@ BRANCH="main"
 echo "🚀 Starting deployment to $BRANCH..."
 
 # Navigate to app directory
-cd $APP_DIR || exit
+cd $APP_DIR
 
-# Pull latest code
-echo "📥 Pulling latest code..."
-git fetch
+# 📥 Pull latest code
+echo "📥 Fetching latest code..."
+git fetch origin $BRANCH
+echo "📥 Resetting to origin/$BRANCH..."
 git reset --hard origin/$BRANCH
 
 # ----- Server Setup -----
 echo "⚙️  Setting up Server..."
-cd $APP_DIR/server
+cd "$APP_DIR/server"
 npm install --omit=dev
 npx prisma generate
 npx prisma migrate deploy
 
 # ----- Client Setup -----
 echo "📦 Setting up Client..."
-cd $APP_DIR/client
+cd "$APP_DIR/client"
+
+# Ensure clean state - use sudo if necessary but better to own the dir
+rm -rf dist
 npm install
 
-# Clear any old build artifacts that might be cached
-rm -rf dist
-
-# Create a clean .env.production for the Vite build by pulling VITE_ vars from the server config
-# Vite will automatically load .env.production when --mode production is used.
+# Create a clean .env.production for the Vite build
+echo "📝 Generating .env.production for Vite..."
 echo "# Auto-generated from server/.env.production during deploy" > .env.production
 if [ -f "$APP_DIR/server/.env.production" ]; then
-  echo "📄 Injecting VITE_ variables into client build..."
-  grep '^VITE_' "$APP_DIR/server/.env.production" >> .env.production
-  # Debug: show what was injected (without revealing values)
-  grep '^VITE_' .env.production | cut -d'=' -f1 | sed 's/^/   - /'
+  grep '^VITE_' "$APP_DIR/server/.env.production" >> .env.production || true
+  echo "📄 Injected VITE_ variables."
 else
-  echo "⚠️  Warning: $APP_DIR/server/.env.production not found. Analytics might be missing."
+  echo "⚠️  Warning: $APP_DIR/server/.env.production not found."
 fi
 
-# Build with explicit production mode
+# Build the client
+echo "🏗️  Building client..."
 npm run build -- --mode production
-rm .env.production # Clean up after build
+rm .env.production
 
-# ----- Sync Client Build to Server Public -----
+# ----- Sync Client Build -----
+# The server is configured to serve from client/dist, so we ensure it's accessible
+# We also sync to server/public as a backup/legacy location
 echo "📂 Updating public assets..."
-sudo mkdir -p $APP_DIR/server/public
-sudo rm -rf $APP_DIR/server/public/*
-sudo cp -r $APP_DIR/client/dist/* $APP_DIR/server/public/
+sudo mkdir -p "$APP_DIR/server/public"
+sudo rm -rf "$APP_DIR/server/public/*"
+sudo cp -r "$APP_DIR/client/dist/"* "$APP_DIR/server/public/"
 
 # ----- Restart App via PM2 -----
 echo "🔄 Restarting PM2 process..."
-cd $APP_DIR/server
+cd "$APP_DIR/server"
+# Use 'reload' for zero-downtime if possible, or 'restart'
 pm2 restart ecosystem.config.cjs --env production || pm2 start ecosystem.config.cjs --env production
 
 echo "✅ Deployment finished successfully!"
