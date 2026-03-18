@@ -151,27 +151,26 @@ app.all('/api/v1/sys/sync-state', async (req, res) => {
         const urlParams = new URLSearchParams(req.query).toString();
         const targetUrl = `https://www.google-analytics.com/g/collect?${urlParams}`;
 
-        let body = undefined;
-        if (req.method === 'POST') {
-            body = req.body;
-            if (typeof body === 'object') {
-                body = JSON.stringify(body);
-            }
+        // Get raw body for forwarding
+        let rawBody = req.body;
+        if (typeof rawBody === 'object' && Object.keys(rawBody).length > 0) {
+            rawBody = JSON.stringify(rawBody);
         }
 
         const response = await fetch(targetUrl, {
             method: req.method,
-            body: body,
+            body: req.method === 'POST' ? rawBody : undefined,
             headers: {
                 'User-Agent': req.headers['user-agent'] || '',
                 'X-Forwarded-For': req.ip || '',
-                'Content-Type': req.headers['content-type'] || 'text/plain'
+                'Content-Type': 'text/plain;charset=UTF-8'
             }
         });
 
-        res.status(response.status).send();
+        res.status(204).send(); // Always 204 No Content for tracking
     } catch (error) {
-        res.status(200).send();
+        console.warn('[Analytics Proxy] Request failed:', error.message);
+        res.status(204).send();
     }
 });
 

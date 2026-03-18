@@ -24,15 +24,11 @@ const AnalyticsTracker = () => {
                 gtagUrl: `/assets/main-runtime-config`,
                 // Tell GA to use our custom dataLayer name to avoid ad-blocker detection
                 gtagOptions: {
-                    'layer': 'brioright_data_layer'
+                    'layer': 'brioright_data_layer',
+                    'transport_url': window.location.origin + '/api/v1/sys/sync-state'
                 }
             });
             isInitialized.current = true;
-
-            // Use generic sync path for collection
-            ReactGA.set({
-                transport_url: window.location.origin + '/api/v1/sys/sync-state'
-            });
 
             // Send initial pageview
             ReactGA.send({
