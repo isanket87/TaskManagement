@@ -88,7 +88,7 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
             )}
 
             <div className={cn(
-                "flex flex-col max-w-[80%] sm:max-w-[70%]",
+                "flex flex-col max-w-[85%] sm:max-w-[75%]",
                 isOwn ? "items-end" : "items-start"
             )}>
                 {showAvatar && !isOwn && (
@@ -263,7 +263,7 @@ const MessagesPage = () => {
     const [showNewChannel, setShowNewChannel] = useState(false);
     const [showNewDM, setShowNewDM] = useState(false);
     const [newChannelName, setNewChannelName] = useState('');
-    const [showInfoPanel, setShowInfoPanel] = useState(true);
+    const [showInfoPanel, setShowInfoPanel] = useState(false);
     const [isSuggestingResponse, setIsSuggestingResponse] = useState(false);
     
     const feedRef = useRef(null);
@@ -306,8 +306,7 @@ const MessagesPage = () => {
     useEffect(() => {
         if (feedRef.current) {
             const el = feedRef.current;
-            const isAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 150;
-            if (isAtBottom) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+            el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
         }
     }, [messages[activeChannelId]?.length]);
 
@@ -460,7 +459,7 @@ const MessagesPage = () => {
     const directOther = activeChannel?.type === 'direct' ? activeChannel.members?.find(m => m.userId !== user.id)?.user : null;
 
     return (
-        <div className="flex h-full bg-[#f1f5f9] dark:bg-gray-950 overflow-hidden font-sans p-2 sm:p-4 gap-2 sm:gap-4">
+        <div className="h-[calc(100vh-64px)] w-full flex bg-[#f1f5f9] dark:bg-gray-950 overflow-hidden font-sans p-0 sm:p-2 gap-0 sm:gap-2">
             <NewDirectMessageModal 
                 isOpen={showNewDM} 
                 onClose={() => setShowNewDM(false)} 
@@ -469,52 +468,51 @@ const MessagesPage = () => {
             />
             
             {/* ── Pane 1: Navigator ─────────────────── */}
-            <div className="w-20 sm:w-80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex flex-col shrink-0 rounded-[32px] border border-white/20 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden transition-all duration-500">
-                <div className="h-20 flex items-center justify-between px-6 border-b border-slate-100 dark:border-white/5 shrink-0">
+            <div className="w-20 sm:w-80 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex flex-col shrink-0 sm:rounded-[24px] border-r sm:border border-white/20 dark:border-white/5 shadow-2xl shadow-slate-200/50 dark:shadow-none overflow-hidden transition-all duration-500">
+                <div className="h-16 flex items-center justify-between px-6 border-b border-slate-100 dark:border-white/5 shrink-0">
                     <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none shrink-0">
-                            <MessageSquare size={20} />
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none shrink-0">
+                            <MessageSquare size={18} />
                         </div>
-                        <h2 className="hidden sm:block font-black text-slate-900 dark:text-white tracking-tight truncate uppercase tracking-widest text-sm">Chats</h2>
+                        <h2 className="hidden sm:block font-black text-slate-900 dark:text-white tracking-tight truncate uppercase tracking-widest text-[11px]">Conversations</h2>
                     </div>
-                    <button onClick={() => setShowNewDM(true)} className="p-2 bg-slate-50 dark:bg-white/5 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 rounded-xl text-slate-400 hover:text-indigo-600 transition-all">
-                        <Plus size={20} />
+                    <button onClick={() => setShowNewDM(true)} className="p-1.5 bg-slate-50 dark:bg-white/5 hover:bg-indigo-50 dark:hover:bg-indigo-500/20 rounded-lg text-slate-400 hover:text-indigo-600 transition-all">
+                        <Plus size={18} />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto py-6 space-y-8 no-scrollbar scroll-smooth">
+                <div className="flex-1 overflow-y-auto py-4 space-y-6 no-scrollbar scroll-smooth">
                     {/* SEARCH - SM only */}
                     <div className="px-4 hidden sm:block">
                         <div className="relative group">
-                            <Search className="absolute left-4 top-3 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={16} />
+                            <Search className="absolute left-4 top-2.5 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={14} />
                             <input 
-                                placeholder="Search conversations..." 
-                                className="w-full bg-slate-100/50 dark:bg-white/5 border-none rounded-2xl pl-11 pr-4 py-2.5 text-sm text-slate-600 dark:text-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 transition-all font-bold"
+                                placeholder="Search..." 
+                                className="w-full bg-slate-100/50 dark:bg-white/5 border-none rounded-xl pl-10 pr-4 py-2 text-sm text-slate-600 dark:text-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-indigo-500/20 transition-all font-bold"
                             />
                         </div>
                     </div>
 
                     {/* CHANNELS */}
                     <div className="px-3">
-                        <div className="flex items-center justify-between px-4 mb-4">
+                        <div className="flex items-center justify-between px-4 mb-3">
                             <span className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Channels</span>
-                            <div className="h-px flex-1 bg-slate-100 dark:bg-white/5 ml-4 hidden sm:block" />
                         </div>
-                        <div className="space-y-1">
+                        <div className="space-y-0.5">
                             {channels.filter(c => c.type !== 'direct').map(ch => (
                                 <button key={ch.id} onClick={() => setActiveChannel(ch.id)}
                                     className={cn(
-                                        "w-full flex items-center justify-center sm:justify-start gap-3 px-3 sm:px-4 py-3.5 rounded-[20px] text-sm font-bold transition-all duration-300 group",
+                                        "w-full flex items-center justify-center sm:justify-start gap-3 px-3 sm:px-4 py-2.5 rounded-[16px] text-sm font-bold transition-all duration-200 group",
                                         activeChannelId === ch.id 
-                                            ? "bg-indigo-600 text-white shadow-xl shadow-indigo-200 dark:shadow-indigo-900/20 scale-[1.02]" 
-                                            : "text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-white/5 hover:shadow-md"
+                                            ? "bg-indigo-600 text-white shadow-xl shadow-indigo-200 dark:shadow-indigo-900/20" 
+                                            : "text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-white/5"
                                     )}>
-                                    <Hash size={20} className={cn("transition-colors shrink-0", activeChannelId === ch.id ? "text-indigo-200" : "text-slate-300 dark:text-slate-600 group-hover:text-indigo-400")} />
+                                    <Hash size={18} className={cn("transition-colors shrink-0", activeChannelId === ch.id ? "text-indigo-200" : "text-slate-300 dark:text-slate-600 group-hover:text-indigo-400")} />
                                     <span className="hidden sm:block flex-1 truncate">{ch.name}</span>
                                     {unreadCounts[ch.id] > 0 && (
                                         <span className={cn(
                                             "rounded-full px-2 py-0.5 text-[10px] font-black min-w-[20px] text-center",
-                                            activeChannelId === ch.id ? "bg-white text-indigo-600" : "bg-indigo-600 text-white shadow-lg shadow-indigo-200"
+                                            activeChannelId === ch.id ? "bg-white text-indigo-600" : "bg-indigo-600 text-white shadow-lg"
                                         )}>
                                             {unreadCounts[ch.id]}
                                         </span>
@@ -526,21 +524,20 @@ const MessagesPage = () => {
 
                     {/* DIRECT MESSAGES */}
                     <div className="px-3">
-                        <div className="flex items-center justify-between px-4 mb-4">
+                        <div className="flex items-center justify-between px-4 mb-3">
                             <span className="hidden sm:block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Direct</span>
-                            <div className="h-px flex-1 bg-slate-100 dark:bg-white/5 ml-4 hidden sm:block" />
                         </div>
-                        <div className="space-y-1">
+                        <div className="space-y-0.5">
                             {channels.filter(c => c.type === 'direct').map(ch => {
                                 const other = ch.members?.find(m => m.userId !== user.id)?.user;
                                 const status = onlineUsers[other?.id] || 'offline';
                                 return (
                                     <button key={ch.id} onClick={() => setActiveChannel(ch.id)}
                                         className={cn(
-                                            "w-full flex items-center justify-center sm:justify-start gap-3 px-3 sm:px-4 py-3.5 rounded-[20px] text-sm font-bold transition-all duration-300 group",
+                                            "w-full flex items-center justify-center sm:justify-start gap-3 px-3 sm:px-4 py-2.5 rounded-[16px] text-sm font-bold transition-all duration-200 group",
                                             activeChannelId === ch.id 
-                                                ? "bg-indigo-600 text-white shadow-xl shadow-indigo-200 dark:shadow-indigo-900/20 scale-[1.02]" 
-                                                : "text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-white/5 hover:shadow-md"
+                                                ? "bg-indigo-600 text-white shadow-xl shadow-indigo-200 dark:shadow-indigo-900/20" 
+                                                : "text-slate-500 dark:text-slate-400 hover:bg-white dark:hover:bg-white/5"
                                         )}>
                                         <div className="relative shrink-0">
                                             <Avatar user={other} size="xs" className={cn("rounded-xl shadow-sm transition-all", activeChannelId === ch.id ? "ring-2 ring-white/50" : "ring-1 ring-slate-100 dark:ring-white/5")} />
@@ -563,87 +560,87 @@ const MessagesPage = () => {
                 </div>
 
                 {/* USER PROFILE */}
-                <div className="p-4 sm:p-6 bg-slate-50/50 dark:bg-white/5 border-t border-slate-100 dark:border-white/5 sm:flex items-center gap-4 hidden">
+                <div className="p-4 bg-slate-50/50 dark:bg-white/5 border-t border-slate-100 dark:border-white/5 sm:flex items-center gap-3 hidden">
                     <div className="relative">
-                        <Avatar user={user} size="md" className="rounded-2xl shadow-xl border-2 border-white dark:border-slate-800" />
-                        <PresenceDot status="online" className="absolute -bottom-1 -right-1 border-2 border-white dark:border-slate-900 w-3.5 h-3.5" />
+                        <Avatar user={user} size="sm" className="rounded-xl shadow-lg border-2 border-white dark:border-slate-800" />
+                        <PresenceDot status="online" className="absolute -bottom-1 -right-1 border-2 border-white dark:border-slate-900 w-3 h-3" />
                     </div>
                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-black text-slate-900 dark:text-white truncate tracking-tight">{user.name}</p>
-                        <p className="text-[10px] text-emerald-500 font-black uppercase tracking-widest">Active</p>
+                        <p className="text-[13px] font-black text-slate-900 dark:text-white truncate tracking-tight">{user.name}</p>
+                        <p className="text-[9px] text-emerald-500 font-black uppercase tracking-widest">Online</p>
                     </div>
-                    <button className="p-2.5 hover:bg-white dark:hover:bg-white/5 rounded-xl text-slate-400 hover:text-indigo-600 transition-all shadow-sm">
-                        <Settings size={18} />
+                    <button className="p-2 hover:bg-white dark:hover:bg-white/5 rounded-lg text-slate-400 hover:text-indigo-600 transition-all shadow-sm">
+                        <Settings size={16} />
                     </button>
                 </div>
             </div>
 
             {/* ── Pane 2: Chat Area ─────────────────── */}
-            <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-slate-900 rounded-[32px] border border-white/20 dark:border-white/5 shadow-2xl relative overflow-hidden">
+            <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-slate-900 sm:rounded-[24px] border border-white/20 dark:border-white/5 shadow-2xl relative overflow-hidden">
                 {activeChannelId ? (
                     <>
                         {/* HEADER */}
-                        <div className="h-20 flex items-center gap-4 px-8 border-b border-slate-100 dark:border-white/5 shrink-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md z-20">
+                        <div className="h-16 flex items-center gap-4 px-6 border-b border-slate-100 dark:border-white/5 shrink-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md z-20">
                             {activeChannel?.type === 'direct' ? (
                                 <>
                                     <div className="relative group cursor-pointer">
-                                        <Avatar user={directOther} size="md" className="rounded-2xl shadow-md transition-transform group-hover:scale-105" />
-                                        <PresenceDot status={onlineUsers[directOther?.id] || 'offline'} className="absolute -bottom-1 -right-1 border-4 border-white dark:border-slate-900 w-4 h-4" />
+                                        <Avatar user={directOther} size="sm" className="rounded-xl shadow-md transition-transform group-hover:scale-105" />
+                                        <PresenceDot status={onlineUsers[directOther?.id] || 'offline'} className="absolute -bottom-0.5 -right-0.5 border-2 border-white dark:border-slate-900 w-3.5 h-3.5" />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-black text-slate-900 dark:text-white text-lg truncate tracking-tight">{directOther?.name}</h3>
-                                        <p className="text-xs text-emerald-500 font-black uppercase tracking-[0.15em] flex items-center gap-1.5">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                        <h3 className="font-black text-slate-900 dark:text-white text-[15px] truncate tracking-tight">{directOther?.name}</h3>
+                                        <p className="text-[10px] text-emerald-500 font-black uppercase tracking-[0.15em] flex items-center gap-1">
                                             Online Now
                                         </p>
                                     </div>
                                 </>
                             ) : (
                                 <>
-                                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-inner ring-1 ring-indigo-100 dark:ring-white/5">
-                                        <Hash size={24} />
+                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-inner ring-1 ring-indigo-100 dark:ring-white/5">
+                                        <Hash size={20} />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <h3 className="font-black text-slate-900 dark:text-white text-lg truncate tracking-tight">#{activeChannel?.name}</h3>
+                                        <h3 className="font-black text-slate-900 dark:text-white text-[15px] truncate tracking-tight">#{activeChannel?.name}</h3>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{activeChannel?.members?.length} Members</span>
+                                            <span className="text-[9px] text-slate-400 font-black uppercase tracking-widest">{activeChannel?.members?.length} Members</span>
                                         </div>
                                     </div>
                                 </>
                             )}
                             
-                            <div className="flex items-center gap-3">
-                                <button className="p-3 bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 rounded-2xl text-slate-400 transition-all hover:text-indigo-600 shadow-sm"><Phone size={20} /></button>
-                                <button className="p-3 bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 rounded-2xl text-slate-400 transition-all hover:text-indigo-600 shadow-sm"><Video size={20} /></button>
+                            <div className="flex items-center gap-2">
+                                <button className="p-2.5 bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 rounded-xl text-slate-400 transition-all hover:text-indigo-600 shadow-sm"><Phone size={18} /></button>
+                                <button className="p-2.5 bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 rounded-xl text-slate-400 transition-all hover:text-indigo-600 shadow-sm"><Video size={18} /></button>
                                 <button 
                                     onClick={() => setShowInfoPanel(!showInfoPanel)}
                                     className={cn(
-                                        "p-3 rounded-2xl transition-all shadow-sm",
+                                        "p-2.5 rounded-xl transition-all shadow-sm",
                                         showInfoPanel ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200" : "bg-slate-50 dark:bg-white/5 text-slate-400 hover:bg-white dark:hover:bg-white/10"
                                     )}
                                 >
-                                    <Info size={20} />
+                                    <Info size={18} />
                                 </button>
                             </div>
                         </div>
 
                         {/* MESSAGES */}
                         <div className="flex-1 relative overflow-hidden flex flex-col bg-slate-50/30 dark:bg-transparent">
-                            {/* Visual background elements to break white space */}
+                            {/* Visual background elements */}
                             <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.05] dark:opacity-[0.08]">
                                 <div className="absolute top-[10%] left-[10%] w-96 h-96 bg-indigo-500 rounded-full blur-[120px]" />
                                 <div className="absolute bottom-[10%] right-[10%] w-[500px] h-[500px] bg-violet-500 rounded-full blur-[150px]" />
                             </div>
 
-                            <div ref={feedRef} className="flex-1 overflow-y-auto px-4 sm:px-10 pt-8 pb-4 space-y-1 no-scrollbar scroll-smooth z-10">
+                            <div ref={feedRef} className="flex-1 overflow-y-auto px-4 sm:px-10 pt-8 pb-4 flex flex-col gap-1 no-scrollbar scroll-smooth z-10">
+                                <div className="flex-1" /> {/* Spacer to push messages to bottom */}
                                 {(messages[activeChannelId] || []).length === 0 ? (
-                                    <div className="h-full flex flex-col items-center justify-center py-20 text-center">
-                                        <div className="w-24 h-24 rounded-[32px] bg-white dark:bg-slate-800 shadow-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-8 border border-slate-100 dark:border-white/5">
-                                            <Sparkles size={40} />
+                                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                                        <div className="w-20 h-20 rounded-[28px] bg-white dark:bg-slate-800 shadow-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-6 border border-slate-100 dark:border-white/5">
+                                            <Sparkles size={32} />
                                         </div>
-                                        <h4 className="text-2xl font-black text-slate-900 dark:text-white mb-3 tracking-tight">The start of something great</h4>
-                                        <p className="text-slate-500 dark:text-slate-400 text-sm max-w-[280px] font-medium leading-relaxed">
-                                            Send your first message to {activeChannel?.type === 'direct' ? directOther?.name : '#' + activeChannel?.name} and get things moving.
+                                        <h4 className="text-xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">The start of something great</h4>
+                                        <p className="text-slate-500 dark:text-slate-400 text-sm max-w-[240px] font-medium leading-relaxed">
+                                            Send your first message to {activeChannel?.type === 'direct' ? directOther?.name : '#' + activeChannel?.name}.
                                         </p>
                                     </div>
                                 ) : (
@@ -671,45 +668,45 @@ const MessagesPage = () => {
                         </div>
 
                         {/* FOOTER */}
-                        <div className="px-8 py-8 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-white/5 z-20 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
+                        <div className="px-6 py-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-white/5 z-20 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
                             <TypingIndicator typingUsers={typingUsers[activeChannelId]} />
                             
                             <form onSubmit={sendMsg} className="relative">
-                                <div className="group bg-slate-50 dark:bg-gray-950 rounded-[28px] border-2 border-transparent focus-within:border-indigo-500/30 focus-within:bg-white dark:focus-within:bg-gray-950 shadow-sm transition-all duration-500">
+                                <div className="group bg-slate-50 dark:bg-gray-950 rounded-[24px] border-2 border-transparent focus-within:border-indigo-500/30 focus-within:bg-white dark:focus-within:bg-gray-950 shadow-sm transition-all duration-500">
                                     <textarea 
                                         value={newMessage} 
                                         onChange={handleTyping}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(e); }
                                         }}
-                                        placeholder={`Write a message to ${activeChannel?.type === 'direct' ? directOther?.name : '#' + activeChannel?.name}...`}
-                                        className="w-full bg-transparent text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none p-6 resize-none max-h-48 font-bold leading-relaxed" 
+                                        placeholder={`Message ${activeChannel?.type === 'direct' ? directOther?.name : '#' + activeChannel?.name}...`}
+                                        className="w-full bg-transparent text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none p-5 resize-none max-h-40 font-bold leading-relaxed" 
                                         rows={1}
                                     />
                                     
-                                    <div className="px-5 py-4 flex items-center justify-between border-t border-slate-100 dark:border-white/5">
-                                        <div className="flex items-center gap-1.5">
-                                            <button type="button" className="p-3 hover:bg-white dark:hover:bg-white/5 rounded-[18px] text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><Paperclip size={20} /></button>
-                                            <button type="button" className="p-3 hover:bg-white dark:hover:bg-white/5 rounded-[18px] text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><Smile size={20} /></button>
-                                            <div className="w-px h-5 bg-slate-200 dark:bg-white/10 mx-3" />
+                                    <div className="px-4 py-3 flex items-center justify-between border-t border-slate-100 dark:border-white/5">
+                                        <div className="flex items-center gap-1">
+                                            <button type="button" className="p-2.5 hover:bg-white dark:hover:bg-white/5 rounded-[14px] text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><Paperclip size={18} /></button>
+                                            <button type="button" className="p-2.5 hover:bg-white dark:hover:bg-white/5 rounded-[14px] text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><Smile size={18} /></button>
+                                            <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-2" />
                                             <button 
                                                 type="button" 
                                                 onClick={handleSuggestResponse}
                                                 disabled={isSuggestingResponse}
-                                                className="flex items-center gap-2.5 px-5 py-2.5 rounded-2xl text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:bg-white dark:hover:bg-white/10 transition-all disabled:opacity-50 shadow-sm"
+                                                className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:bg-white dark:hover:bg-white/10 transition-all disabled:opacity-50 shadow-sm"
                                             >
-                                                <Sparkles size={16} className={cn(isSuggestingResponse && "animate-pulse")} />
-                                                Magic Draft
+                                                <Sparkles size={14} className={cn(isSuggestingResponse && "animate-pulse")} />
+                                                AI Draft
                                             </button>
                                         </div>
                                         
                                         <button 
                                             type="submit" 
                                             disabled={!newMessage.trim()}
-                                            className="px-8 py-3 bg-indigo-600 text-white rounded-2xl font-black shadow-xl shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-95 disabled:opacity-30 disabled:shadow-none transition-all flex items-center gap-2.5"
+                                            className="px-6 py-2 bg-indigo-600 text-white rounded-[14px] font-black shadow-xl shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-95 disabled:opacity-30 disabled:shadow-none transition-all flex items-center gap-2"
                                         >
-                                            <span>Send</span>
-                                            <Send size={20} />
+                                            <span className="hidden sm:inline text-xs">Send</span>
+                                            <Send size={16} />
                                         </button>
                                     </div>
                                 </div>
@@ -724,18 +721,18 @@ const MessagesPage = () => {
                         </div>
 
                         <div className="z-10 flex flex-col items-center max-w-lg">
-                            <div className="w-40 h-40 rounded-[56px] bg-white dark:bg-slate-800 shadow-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-12 transform -rotate-6 hover:rotate-0 transition-transform duration-700 cursor-pointer group border-4 border-white dark:border-slate-700">
-                                <div className="w-28 h-24 rounded-[40px] bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <MessageSquare size={56} />
+                            <div className="w-32 h-32 rounded-[48px] bg-white dark:bg-slate-800 shadow-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-10 transform -rotate-6 hover:rotate-0 transition-transform duration-700 cursor-pointer group border-4 border-white dark:border-slate-700">
+                                <div className="w-20 h-20 rounded-[32px] bg-indigo-50 dark:bg-indigo-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                                    <MessageSquare size={48} />
                                 </div>
                             </div>
-                            <h3 className="text-5xl font-black text-slate-900 dark:text-white mb-6 tracking-tighter leading-tight">Focus on<br />communication.</h3>
-                            <p className="text-slate-500 dark:text-slate-400 text-lg leading-relaxed font-bold mb-12 opacity-80">
-                                Choose a channel or team member from the sidebar to start collaborating in real-time.
+                            <h3 className="text-4xl font-black text-slate-900 dark:text-white mb-4 tracking-tighter leading-tight">Focus on<br />communication.</h3>
+                            <p className="text-slate-500 dark:text-slate-400 text-base leading-relaxed font-bold mb-10 opacity-80">
+                                Choose a channel or team member from the sidebar to start collaborating.
                             </p>
-                            <div className="flex flex-col sm:flex-row gap-5 w-full sm:w-auto">
-                                <button onClick={() => setShowNewChannel(true)} className="px-10 py-5 bg-indigo-600 text-white rounded-[24px] font-black shadow-2xl shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-all hover:translate-y-[-4px] active:translate-y-0 text-sm tracking-widest uppercase">Create Channel</button>
-                                <button onClick={() => setShowNewDM(true)} className="px-10 py-5 bg-white dark:bg-slate-800 text-slate-700 dark:text-white rounded-[24px] font-black shadow-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:translate-y-[-4px] border border-slate-100 dark:border-white/5 text-sm tracking-widest uppercase">Direct Message</button>
+                            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                                <button onClick={() => setShowNewChannel(true)} className="px-8 py-4 bg-indigo-600 text-white rounded-[20px] font-black shadow-2xl shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 transition-all hover:translate-y-[-4px] active:translate-y-0 text-[11px] tracking-widest uppercase">Create Channel</button>
+                                <button onClick={() => setShowNewDM(true)} className="px-8 py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-white rounded-[20px] font-black shadow-2xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:translate-y-[-4px] border border-slate-100 dark:border-white/5 text-[11px] tracking-widest uppercase">Direct Message</button>
                             </div>
                         </div>
                     </div>
@@ -747,73 +744,73 @@ const MessagesPage = () => {
                 {showInfoPanel && activeChannelId && (
                     <motion.div 
                         initial={{ width: 0, opacity: 0, x: 20 }} 
-                        animate={{ width: 380, opacity: 1, x: 0 }} 
+                        animate={{ width: 360, opacity: 1, x: 0 }} 
                         exit={{ width: 0, opacity: 0, x: 20 }}
-                        className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-[32px] shrink-0 overflow-hidden hidden 2xl:flex flex-col shadow-2xl"
+                        className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-[24px] shrink-0 overflow-hidden hidden 2xl:flex flex-col shadow-2xl"
                     >
-                        <div className="h-20 flex items-center justify-between px-8 border-b border-slate-100 dark:border-white/5 shrink-0">
-                            <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-widest text-[10px]">Information</h3>
-                            <button onClick={() => setShowInfoPanel(false)} className="p-3 bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 rounded-2xl text-slate-400 transition-all shadow-sm"><X size={18} /></button>
+                        <div className="h-16 flex items-center justify-between px-8 border-b border-slate-100 dark:border-white/5 shrink-0">
+                            <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-widest text-[9px]">Information</h3>
+                            <button onClick={() => setShowInfoPanel(false)} className="p-2.5 bg-slate-50 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 rounded-xl text-slate-400 transition-all shadow-sm"><X size={16} /></button>
                         </div>
                         
-                        <div className="flex-1 overflow-y-auto no-scrollbar p-10">
-                            <div className="flex flex-col items-center text-center mb-12">
+                        <div className="flex-1 overflow-y-auto no-scrollbar p-8">
+                            <div className="flex flex-col items-center text-center mb-10">
                                 {activeChannel?.type === 'direct' ? (
                                     <>
-                                        <div className="relative mb-8">
-                                            <Avatar user={directOther} size="xl" className="rounded-[48px] shadow-2xl border-4 border-white dark:border-slate-800 scale-110" />
-                                            <PresenceDot status={onlineUsers[directOther?.id] || 'offline'} className="absolute -bottom-2 -right-2 border-[8px] border-white dark:border-slate-900 w-10 h-10 shadow-lg" />
+                                        <div className="relative mb-6">
+                                            <Avatar user={directOther} size="xl" className="rounded-[40px] shadow-2xl border-4 border-white dark:border-slate-800" />
+                                            <PresenceDot status={onlineUsers[directOther?.id] || 'offline'} className="absolute -bottom-1 -right-1 border-[6px] border-white dark:border-slate-900 w-8 h-8 shadow-lg" />
                                         </div>
-                                        <h4 className="font-black text-3xl text-slate-900 dark:text-white mb-2 tracking-tighter">{directOther?.name}</h4>
-                                        <p className="text-sm font-black text-indigo-600 dark:text-indigo-400 mb-10 uppercase tracking-widest">{directOther?.email}</p>
+                                        <h4 className="font-black text-2xl text-slate-900 dark:text-white mb-1 tracking-tighter">{directOther?.name}</h4>
+                                        <p className="text-xs font-black text-indigo-600 dark:text-indigo-400 mb-8 uppercase tracking-widest">{directOther?.email}</p>
                                         
-                                        <div className="w-full grid grid-cols-2 gap-5">
-                                            <button className="flex flex-col items-center gap-3 p-6 rounded-[32px] bg-slate-50 dark:bg-white/5 border-2 border-transparent hover:border-indigo-500/30 transition-all group shadow-sm hover:shadow-indigo-100 dark:hover:shadow-none">
-                                                <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-all group-hover:scale-110">
-                                                    <Bell size={24} />
+                                        <div className="w-full grid grid-cols-2 gap-4">
+                                            <button className="flex flex-col items-center gap-2 p-5 rounded-[24px] bg-slate-50 dark:bg-white/5 border-2 border-transparent hover:border-indigo-500/30 transition-all group shadow-sm hover:shadow-indigo-100 dark:hover:shadow-none">
+                                                <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-all">
+                                                    <Bell size={20} />
                                                 </div>
-                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Mute</span>
+                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Mute</span>
                                             </button>
-                                            <button className="flex flex-col items-center gap-3 p-6 rounded-[32px] bg-slate-50 dark:bg-white/5 border-2 border-transparent hover:border-indigo-500/30 transition-all group shadow-sm hover:shadow-indigo-100 dark:hover:shadow-none">
-                                                <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-all group-hover:scale-110">
-                                                    <Globe size={24} />
+                                            <button className="flex flex-col items-center gap-2 p-5 rounded-[24px] bg-slate-50 dark:bg-white/5 border-2 border-transparent hover:border-indigo-500/30 transition-all group shadow-sm hover:shadow-indigo-100 dark:hover:shadow-none">
+                                                <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center text-slate-400 group-hover:text-indigo-600 transition-all">
+                                                    <Globe size={20} />
                                                 </div>
-                                                <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Profile</span>
+                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">Profile</span>
                                             </button>
                                         </div>
                                     </>
                                 ) : (
                                     <>
-                                        <div className="w-28 h-28 rounded-[48px] bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-500/10 dark:to-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-8 shadow-inner border border-white dark:border-white/5">
-                                            <Hash size={56} />
+                                        <div className="w-24 h-24 rounded-[36px] bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-500/10 dark:to-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-6 shadow-inner border border-white dark:border-white/5">
+                                            <Hash size={48} />
                                         </div>
-                                        <h4 className="font-black text-3xl text-slate-900 dark:text-white mb-3 tracking-tighter">#{activeChannel?.name}</h4>
-                                        <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-                                            Created {format(new Date(activeChannel?.createdAt || new Date()), 'MMMM yyyy')}
+                                        <h4 className="font-black text-2xl text-slate-900 dark:text-white mb-2 tracking-tighter">#{activeChannel?.name}</h4>
+                                        <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
+                                            Created {format(new Date(activeChannel?.createdAt || new Date()), 'MMM yyyy')}
                                         </div>
                                     </>
                                 )}
                             </div>
                             
-                            <div className="space-y-12">
+                            <div className="space-y-10">
                                 <div>
-                                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-5 pl-1">About conversation</h5>
-                                    <div className="p-6 rounded-[28px] bg-slate-50 dark:bg-white/5 text-sm text-slate-600 dark:text-slate-400 leading-relaxed font-bold border border-slate-100 dark:border-white/5 shadow-sm">
-                                        {activeChannel?.description || "Collaborate with your team members in real-time. Share ideas, files, and updates seamlessly."}
+                                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 pl-1">Description</h5>
+                                    <div className="p-5 rounded-[20px] bg-slate-50 dark:bg-white/5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-bold border border-slate-100 dark:border-white/5 shadow-sm">
+                                        {activeChannel?.description || "Collaborate with your team members in real-time."}
                                     </div>
                                 </div>
                                 
                                 <div>
-                                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-5 pl-1">Toolbox</h5>
-                                    <div className="space-y-2.5">
+                                    <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 pl-1">Toolbox</h5>
+                                    <div className="space-y-2">
                                         {[
-                                            { icon: <Search size={18} />, label: 'Search history' },
-                                            { icon: <Lock size={18} />, label: 'Privacy & Security' },
-                                            { icon: <Users size={18} />, label: 'Team members' },
-                                            { icon: <ImageIcon size={18} />, label: 'Shared assets' },
+                                            { icon: <Search size={16} />, label: 'Search history' },
+                                            { icon: <Lock size={16} />, label: 'Privacy & Security' },
+                                            { icon: <Users size={16} />, label: 'Team members' },
+                                            { icon: <ImageIcon size={16} />, label: 'Shared assets' },
                                         ].map((item, i) => (
-                                            <button key={i} className="w-full flex items-center gap-4 p-5 rounded-3xl hover:bg-slate-50 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-sm font-black transition-all group border-2 border-transparent hover:border-slate-100 dark:hover:border-white/5">
-                                                <span className="text-slate-400 group-hover:text-indigo-600 transition-all group-hover:scale-110">{item.icon}</span>
+                                            <button key={i} className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-xs font-black transition-all group border-2 border-transparent hover:border-slate-100 dark:hover:border-white/5">
+                                                <span className="text-slate-400 group-hover:text-indigo-600 transition-all">{item.icon}</span>
                                                 {item.label}
                                             </button>
                                         ))}
@@ -821,6 +818,39 @@ const MessagesPage = () => {
                                 </div>
                             </div>
                         </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* New channel modal */}
+            <AnimatePresence>
+                {showNewChannel && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+                            className="bg-white dark:bg-slate-900 rounded-[32px] p-8 w-full max-w-md shadow-2xl border border-white/20">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                    <Plus size={24} />
+                                </div>
+                                <button onClick={() => setShowNewChannel(false)} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400"><X size={20} /></button>
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">Create Channel</h3>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm mb-8 font-medium">Group conversations for your team.</p>
+                            
+                            <form onSubmit={createChannel} className="space-y-6">
+                                <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block px-1">Channel Name</label>
+                                    <input value={newChannelName} onChange={e => setNewChannelName(e.target.value)}
+                                        placeholder="e.g. project-apollo" autoFocus
+                                        className="w-full px-5 py-4 rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-white outline-none focus:border-indigo-500 transition-all font-bold shadow-sm" />
+                                </div>
+                                <div className="flex gap-3">
+                                    <button type="button" onClick={() => setShowNewChannel(false)} className="flex-1 px-6 py-4 text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-2xl transition-all">Cancel</button>
+                                    <button type="submit" className="flex-1 px-6 py-4 text-sm font-bold bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 dark:shadow-none transition-all">Create</button>
+                                </div>
+                            </form>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
