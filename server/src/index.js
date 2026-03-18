@@ -113,65 +113,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.use(cookieParser())
 app.use(morgan('dev'))
 
-// ── ANALYTICS PROXY ──
-// Extension-less generic names and content obfuscation to bypass uBlock Origin/Ad-blockers
-app.get('/assets/main-runtime-config', async (req, res) => {
-    try {
-        const gaId = req.query.id;
-        if (!gaId) return res.status(400).send('/* missing id */');
-
-        // Note: gaId already contains the tracking ID from the client request
-        const response = await fetch(`https://www.googletagmanager.com/gtag/js?id=${gaId}`, {
-            headers: {
-                'User-Agent': req.headers['user-agent'] || '',
-                'X-Forwarded-For': req.ip || ''
-            }
-        });
-
-        let script = await response.text();
-        
-        // 1. Rename dataLayer to bypass pattern matching
-        script = script.replace(/dataLayer/g, 'brioright_data_layer');
-        
-        // 2. Replace all Google domains with our own proxy path
-        // This forces any sub-scripts loaded by the main script to also go through our proxy
-        script = script.replace(/https:\/\/www\.googletagmanager\.com\/gtag\/js/g, `/assets/main-runtime-config`);
-        script = script.replace(/https:\/\/www\.google-analytics\.com\/g\/collect/g, `/api/v1/sys/sync-state`);
-        
-        res.setHeader('Content-Type', 'application/javascript');
-        res.setHeader('Cache-Control', 'public, max-age=3600');
-        res.send(script);
-    } catch (error) {
-        res.status(200).send('/* system config load failed */');
-    }
-});
-
-// Analytics Proxy Collection Handler
-const handleAnalyticsHit = async (req, res) => {
-    try {
-        const urlParams = new URLSearchParams(req.query).toString();
-        const targetUrl = `https://www.google-analytics.com/g/collect?${urlParams}`;
-
-        // Forward the raw body if it exists
-        const response = await fetch(targetUrl, {
-            method: req.method,
-            body: req.method === 'POST' ? JSON.stringify(req.body) : undefined,
-            headers: {
-                'User-Agent': req.headers['user-agent'] || '',
-                'X-Forwarded-For': req.ip || '',
-                'Content-Type': 'text/plain;charset=UTF-8'
-            }
-        });
-
-        res.status(204).send();
-    } catch (error) {
-        res.status(204).send();
-    }
-};
-
-app.all('/api/v1/sys/g/collect', handleAnalyticsHit);
-app.all('/api/v1/sys/sync-state', handleAnalyticsHit); // Legacy fallback
-
 // ── RESPONSE TIMER & DEBUG ──
 app.use((req, res, next) => {
     const start = process.hrtime.bigint()

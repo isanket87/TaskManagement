@@ -19,16 +19,8 @@ const AnalyticsTracker = () => {
         if (isInitialized.current) return;
 
         try {
-            // Use extension-less, generic path
-            ReactGA.initialize(trackingId, {
-                gtagUrl: `/assets/main-runtime-config`,
-                // Tell GA to use our custom dataLayer name to avoid ad-blocker detection
-                gtagOptions: {
-                    'layer': 'brioright_data_layer',
-                    'transport_url': window.location.origin + '/api/v1/sys'
-                }
-            });
-
+            // Standard GA4 initialization
+            ReactGA.initialize(trackingId);
             isInitialized.current = true;
 
             // Send initial pageview
@@ -37,8 +29,6 @@ const AnalyticsTracker = () => {
                 page: window.location.pathname + window.location.search
             });
         } catch (err) {
-            // This won't catch ERR_BLOCKED_BY_CLIENT (which is a browser-level network error),
-            // but it will catch internal initialization errors.
             console.warn('[Analytics] Failed to initialize Google Analytics:', err);
         }
     }, []);
