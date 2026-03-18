@@ -202,12 +202,23 @@ const checkSlugAvailability = async (req, res) => {
 
 const getMembers = async (req, res) => {
     try {
-        const cacheKey = `ws:${req.workspace.id}:members`
+        const { search } = req.query
+        const cacheKey = `ws:${req.workspace.id}:members${search ? `:q:${search}` : ''}`
         const cached = await cache.get(cacheKey)
         if (cached) return res.json({ status: 'success', data: cached })
 
+        const where = { workspaceId: req.workspace.id }
+        if (search) {
+            where.user = {
+                OR: [
+                    { name: { contains: search, mode: 'insensitive' } },
+                    { email: { contains: search, mode: 'insensitive' } }
+                ]
+            }
+        }
+
         const members = await prisma.workspaceMember.findMany({
-            where: { workspaceId: req.workspace.id },
+            where,
             include: {
                 user: { select: { id: true, name: true, email: true, avatar: true } },
                 invitedBy: { select: { name: true } }
@@ -216,7 +227,7 @@ const getMembers = async (req, res) => {
         })
 
         await cache.set(cacheKey, members, TTL.MEMBERS)
-        res.json({ status: 'success', data: members })
+        res.json({ status: 'success', data: { members } })
     } catch (error) {
         res.status(500).json({ status: 'error', message: 'Failed to fetch members' })
     }

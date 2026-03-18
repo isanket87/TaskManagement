@@ -164,15 +164,13 @@ const NewDirectMessageModal = ({ isOpen, onClose, onSelect, currentUserId }) => 
     const [search, setSearch] = useState('');
     
     const { data: membersData, isLoading } = useQuery({
-        queryKey: ['workspace-members', workspace?.slug],
-        queryFn: () => chatService.getWorkspaceMembers(),
+        queryKey: ['workspace-members', workspace?.slug, search],
+        queryFn: () => chatService.getWorkspaceMembers(search),
         enabled: isOpen && !!workspace?.slug
     });
 
     const members = (membersData?.data?.data?.members || [])
-        .filter(m => m.user.id !== currentUserId)
-        .filter(m => m.user.name.toLowerCase().includes(search.toLowerCase()) || 
-                    m.user.email.toLowerCase().includes(search.toLowerCase()));
+        .filter(m => m.user.id !== currentUserId);
 
     return (
         <AnimatePresence>
