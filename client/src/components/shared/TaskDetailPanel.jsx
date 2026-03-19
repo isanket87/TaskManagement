@@ -590,7 +590,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                                     icon: <User className="w-4 h-4" />,
                                                     onClick: () => propertyMutation.mutate({ assigneeId: null })
                                                 },
-                                                ...safeArray(workspaceMembersQuery.data?.data?.data?.members).map(member => {
+                                                ...membersList.map(member => {
                                                     const memberUser = member.user;
                                                     return {
                                                         label: memberUser?.name || 'Unknown',
