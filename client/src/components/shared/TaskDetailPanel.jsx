@@ -616,19 +616,18 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                                     onClick: () => propertyMutation.mutate({ assigneeId: null })
                                                 },
                                                 { separator: true },
-                                                ...(workspaceMembersQuery.isLoading ? [
+                                                ...(membersList.length > 0 ? membersList.map(member => ({
+                                                    label: member.user?.name || member.user?.email || `User (${member.userId?.slice(0, 4)})`,
+                                                    active: detailedTask.assigneeId === (member.user?.id || member.userId),
+                                                    icon: <Avatar user={member.user} size="xs" />,
+                                                    onClick: () => propertyMutation.mutate({ assigneeId: member.user?.id || member.userId })
+                                                })) : workspaceMembersQuery.isLoading ? [
                                                     { label: 'Loading team...', disabled: true, icon: <RefreshCw className="w-4 h-4 animate-spin" /> }
                                                 ] : workspaceMembersQuery.isError ? [
                                                     { label: 'Error loading members', disabled: true, icon: <AlertCircle className="w-4 h-4 text-red-500" /> }
-                                                ] : (() => {
-                                                    const items = membersList.map(member => ({
-                                                        label: member.user?.name || member.user?.email || `User (${member.userId?.slice(0, 4)})`,
-                                                        active: detailedTask.assigneeId === (member.user?.id || member.userId),
-                                                        icon: <Avatar user={member.user} size="xs" />,
-                                                        onClick: () => propertyMutation.mutate({ assigneeId: member.user?.id || member.userId })
-                                                    }));
-                                                    return items;
-                                                })())
+                                                ] : [
+                                                    { label: 'No members found', disabled: true }
+                                                ])
                                             ]}
                                         />
                                     </PropertyRow>
