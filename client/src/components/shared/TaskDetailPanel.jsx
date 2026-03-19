@@ -78,7 +78,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
         placeholderData: (previousData) => previousData,
     });
 
-    const membersList = safeArray(workspaceMembersQuery.data?.data?.data);
+    const membersList = safeArray(workspaceMembersQuery.data?.data?.data?.members);
     const hasMembers = membersList.length > 0;
 
     const projectDataQuery = useQuery({
