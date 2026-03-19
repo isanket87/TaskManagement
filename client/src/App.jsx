@@ -133,7 +133,7 @@ const AuthRoute = ({ children }) => {
 
 function App() {
     const { fetchMe, isAuthenticated } = useAuthStore();
-    const { fetchWorkspaces } = useWorkspaceStore();
+    const { workspace, fetchWorkspaces } = useWorkspaceStore();
 
     // Run once on app start — check if user is already logged in
     useEffect(() => {
