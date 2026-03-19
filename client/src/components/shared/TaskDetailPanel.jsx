@@ -73,13 +73,35 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
         queryKey: ['workspace', workspace?.slug, 'members'],
         queryFn: () => api.get(`/workspaces/${workspace?.slug}/members`),
         enabled: !!workspace?.slug,
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        staleTime: 10 * 60 * 1000, // 10 minutes
         gcTime: Infinity,
-        placeholderData: (previousData) => previousData,
+        placeholderData: (prev) => prev,
     });
 
-    const membersList = safeArray(workspaceMembersQuery.data?.data?.data?.members);
+    // FAIL-SAFE EXTRACTION: Try every possible depth to find the members array
+    const membersList = useMemo(() => {
+        const raw = workspaceMembersQuery.data;
+        if (!raw) return [];
+        
+        // Path A: Axios -> Server Envelope -> Data Object -> members (Standard)
+        if (Array.isArray(raw.data?.data?.members)) return raw.data.data.members;
+        
+        // Path B: Axios -> Server Envelope -> members (Direct)
+        if (Array.isArray(raw.data?.members)) return raw.data.members;
+        
+        // Path C: Server Data -> members (Pre-processed)
+        if (Array.isArray(raw.members)) return raw.members;
+
+        return [];
+    }, [workspaceMembersQuery.data]);
+
     const hasMembers = membersList.length > 0;
+
+    useEffect(() => {
+        if (workspaceMembersQuery.data) {
+            console.log(`[TaskDetailPanel] Members Found: ${membersList.length}`, membersList);
+        }
+    }, [workspaceMembersQuery.data, membersList]);
 
     const projectDataQuery = useQuery({
         queryKey: ['project', projectId],
