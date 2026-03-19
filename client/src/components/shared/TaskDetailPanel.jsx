@@ -68,7 +68,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
 
     const workspaceMembersQuery = useQuery({
         queryKey: ['workspace', workspace?.slug, 'members'],
-        queryFn: () => api.get(`/workspaces/${workspace?.slug}/members`),
+        queryFn: () => api.get('/members'),
         enabled: !!workspace?.slug
     });
 
