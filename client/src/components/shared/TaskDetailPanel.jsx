@@ -83,21 +83,28 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
         const queryData = workspaceMembersQuery.data;
         if (!queryData) return [];
         
-        // 1. Try most common Axios + Standardized Server path
-        if (Array.isArray(queryData.data?.data?.members)) return queryData.data.data.members;
-        
-        // 2. Try Axios + Direct Data path
-        if (Array.isArray(queryData.data?.data)) return queryData.data.data;
-        
-        // 3. Fallback to generic array search
-        return Array.isArray(queryData.data) ? queryData.data : [];
+        // Try all possible nested paths based on axios vs body
+        // 1. axios response: queryData.data.data.members
+        // 2. body: queryData.data.members
+        // 3. direct array: queryData.members or queryData.data
+        const list = queryData.data?.data?.members || 
+                     queryData.data?.members || 
+                     queryData.data || 
+                     queryData.members || 
+                     [];
+                     
+        return Array.isArray(list) ? list : [];
     }, [workspaceMembersQuery.data]);
 
     const hasMembers = membersList.length > 0;
 
     useEffect(() => {
         if (workspaceMembersQuery.data) {
-            console.log(`[TaskDetailPanel] Members Found: ${membersList.length}`, membersList);
+            console.log(`[TaskDetailPanel] Members Found: ${membersList.length}`, {
+                count: membersList.length,
+                list: membersList,
+                raw: workspaceMembersQuery.data
+            });
         }
     }, [workspaceMembersQuery.data, membersList]);
 
@@ -613,12 +620,15 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                                     { label: 'Loading team...', disabled: true, icon: <RefreshCw className="w-4 h-4 animate-spin" /> }
                                                 ] : workspaceMembersQuery.isError ? [
                                                     { label: 'Error loading members', disabled: true, icon: <AlertCircle className="w-4 h-4 text-red-500" /> }
-                                                ] : safeArray(workspaceMembersQuery.data?.data?.data).map(member => ({
-                                                    label: member.user?.name || 'Unknown',
-                                                    active: detailedTask.assigneeId === member.user?.id,
-                                                    icon: <Avatar user={member.user} size="xs" />,
-                                                    onClick: () => propertyMutation.mutate({ assigneeId: member.user?.id })
-                                                })))
+                                                ] : (() => {
+                                                    const items = membersList.map(member => ({
+                                                        label: member.user?.name || member.user?.email || `User (${member.userId?.slice(0, 4)})`,
+                                                        active: detailedTask.assigneeId === (member.user?.id || member.userId),
+                                                        icon: <Avatar user={member.user} size="xs" />,
+                                                        onClick: () => propertyMutation.mutate({ assigneeId: member.user?.id || member.userId })
+                                                    }));
+                                                    return items;
+                                                })())
                                             ]}
                                         />
                                     </PropertyRow>
