@@ -203,11 +203,15 @@ const checkSlugAvailability = async (req, res) => {
 const getMembers = async (req, res) => {
     try {
         const { search } = req.query
-        const cacheKey = `ws:${req.workspace.id}:members${search ? `:q:${search}` : ''}`
-        const cached = await cache.get(cacheKey)
-        if (cached) return res.json({ status: 'success', data: cached })
+        const workspaceId = req.workspace.id
+        const cacheKey = `ws:${workspaceId}:members${search ? `:q:${search}` : ''}`
 
-        const where = { workspaceId: req.workspace.id }
+        const cached = await cache.get(cacheKey);
+        if (cached && Array.isArray(cached.members)) {
+            return res.json({ status: 'success', data: cached });
+        }
+
+        const where = { workspaceId }
         if (search) {
             where.user = {
                 OR: [
@@ -226,8 +230,10 @@ const getMembers = async (req, res) => {
             orderBy: { joinedAt: 'asc' }
         })
 
-        await cache.set(cacheKey, members, TTL.MEMBERS)
-        res.json({ status: 'success', data: { members } })
+        const data = { members };
+        await cache.set(cacheKey, data, TTL.MEMBERS);
+
+        return res.json({ status: 'success', data })
     } catch (error) {
         res.status(500).json({ status: 'error', message: 'Failed to fetch members' })
     }
