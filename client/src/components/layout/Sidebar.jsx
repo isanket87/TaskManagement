@@ -89,19 +89,23 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
             }}
             transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
             className={cn(
-                "flex flex-col h-full bg-slate-50 dark:bg-gray-950 border-r border-slate-200 dark:border-white/5 shrink-0 z-50",
+                "flex flex-col h-full bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl border-r border-slate-200 dark:border-white/5 shrink-0 z-50",
                 "fixed inset-y-0 left-0 md:relative",
-                "shadow-[20px_0_40px_-15px_rgba(0,0,0,0.03)] dark:shadow-none"
+                "shadow-[20px_0_40px_-15px_rgba(0,0,0,0.03)] dark:shadow-none transition-colors duration-300"
             )}
         >
             {/* 1. TOP LOGO AREA */}
             <div className="h-20 flex items-center px-6 shrink-0">
                 <div className="flex items-center gap-3.5 cursor-pointer group/logo" onClick={() => navigate('/')}>
-                    <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none transition-transform group-hover/logo:scale-105 duration-300">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 flex items-center justify-center text-white shadow-lg shadow-indigo-200 dark:shadow-none transition-transform group-hover/logo:scale-105 duration-300">
                         <CheckSquare size={22} strokeWidth={2.5} />
                     </div>
                     {!collapsed && (
-                        <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-black text-slate-900 dark:text-white text-lg tracking-tight">
+                        <motion.span 
+                            initial={{ opacity: 0, x: -10 }} 
+                            animate={{ opacity: 1, x: 0 }} 
+                            className="font-black text-slate-900 dark:text-white text-lg tracking-tight"
+                        >
                             Brioright
                         </motion.span>
                     )}
@@ -119,7 +123,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                 {/* SEARCH TRIGGER */}
                 {!collapsed && (
                     <div className="px-2">
-                        <button className="w-full flex items-center gap-3 px-4 py-2.5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-slate-400 hover:border-indigo-500/50 hover:shadow-md transition-all group/search">
+                        <button className="w-full flex items-center gap-3 px-4 py-2.5 bg-slate-100/50 dark:bg-white/5 border border-transparent dark:border-white/10 rounded-2xl text-slate-400 hover:bg-white dark:hover:bg-white/10 hover:shadow-sm transition-all group/search">
                             <Search size={14} className="group-hover/search:text-indigo-500 transition-colors" />
                             <span className="text-xs font-bold text-slate-500 flex-1 text-left">Search...</span>
                             <div className="flex items-center gap-0.5 opacity-40">
@@ -135,8 +139,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                     {NAV_GROUPS.map((group, groupIdx) => (
                         <div key={groupIdx} className="space-y-1">
                             {!collapsed && (
-                                <div className="px-4 mb-2">
+                                <div className="px-4 mb-2 flex items-center justify-between">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{group.label}</span>
+                                    <div className="h-px flex-1 bg-slate-200/50 dark:bg-white/5 ml-4" />
                                 </div>
                             )}
 
@@ -166,22 +171,28 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                                     isActive ? "text-indigo-600 dark:text-indigo-400 scale-110" : "text-slate-400 group-hover:text-indigo-500"
                                                 )} />
                                                 
-                                                {/* COLLAPSED BADGE DOT */}
+                                                {/* COLLAPSED NUMERIC BADGE */}
                                                 {collapsed && count > 0 && (
                                                     <span className={cn(
-                                                        "absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ring-2 ring-slate-50 dark:ring-gray-950 shadow-sm animate-in zoom-in duration-300",
+                                                        "absolute -top-2 -right-2 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full text-[8px] font-black text-white ring-2 ring-slate-50 dark:ring-gray-950 shadow-sm animate-in zoom-in duration-300",
                                                         dangerBadge ? "bg-red-500" : "bg-indigo-600"
-                                                    )} />
+                                                    )}>
+                                                        {count > 9 ? '9+' : count}
+                                                    </span>
                                                 )}
                                             </div>
 
+                                            {isActive && (
+                                                <motion.div layoutId="active-pill" className="absolute left-0 w-1 h-5 bg-indigo-600 dark:bg-indigo-500 rounded-r-full" />
+                                            )}
+
                                             {!collapsed && <span className="flex-1 truncate tracking-tight">{label}</span>}
                                             
-                                            {/* EXPANDED BADGE PILL */}
+                                            {/* EXPANDED NUMERIC BADGE */}
                                             {!collapsed && count > 0 && (
                                                 <span className={cn(
                                                     "shrink-0 flex items-center justify-center rounded-full text-[9px] font-black min-w-[18px] h-4.5 px-1",
-                                                    dangerBadge ? "bg-red-500 text-white" : "bg-indigo-600 text-white shadow-lg shadow-indigo-200"
+                                                    dangerBadge ? "bg-red-500 text-white shadow-lg shadow-red-200" : "bg-indigo-600 text-white shadow-lg shadow-indigo-200"
                                                 )}>
                                                     {count > 99 ? '99+' : count}
                                                 </span>
@@ -196,7 +207,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
             </div>
 
             {/* 3. FOOTER AREA */}
-            <div className="p-4 shrink-0 flex flex-col gap-2 bg-slate-50 dark:bg-gray-950 z-10">
+            <div className="p-4 shrink-0 flex flex-col gap-2 bg-white/50 dark:bg-gray-950/50 backdrop-blur-md z-10">
                 
                 {/* COLLAPSE TOGGLE */}
                 <button
@@ -226,7 +237,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {!collapsed && (
                                 <>
                                     <div className="min-w-0 flex-1 text-left">
-                                        <p className="text-[13px] font-black text-slate-900 dark:text-white truncate tracking-tight">{user?.name || 'Explorer'}</p>
+                                        <p className="text-[13px] font-black text-slate-900 dark:text-white truncate tracking-tight leading-none mb-1">{user?.name || 'Explorer'}</p>
                                         <p className="text-[9px] font-bold text-slate-400 truncate uppercase tracking-widest opacity-70">
                                             {workspace?.role || 'Member'}
                                         </p>
