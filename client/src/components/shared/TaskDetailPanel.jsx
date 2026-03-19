@@ -78,21 +78,19 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
         placeholderData: (prev) => prev,
     });
 
-    // FAIL-SAFE EXTRACTION: Try every possible depth to find the members array
+    // Simplified, reliable member extraction
     const membersList = useMemo(() => {
-        const raw = workspaceMembersQuery.data;
-        if (!raw) return [];
+        const queryData = workspaceMembersQuery.data;
+        if (!queryData) return [];
         
-        // Path A: Axios -> Server Envelope -> Data Object -> members (Standard)
-        if (Array.isArray(raw.data?.data?.members)) return raw.data.data.members;
+        // 1. Try most common Axios + Standardized Server path
+        if (Array.isArray(queryData.data?.data?.members)) return queryData.data.data.members;
         
-        // Path B: Axios -> Server Envelope -> members (Direct)
-        if (Array.isArray(raw.data?.members)) return raw.data.members;
+        // 2. Try Axios + Direct Data path
+        if (Array.isArray(queryData.data?.data)) return queryData.data.data;
         
-        // Path C: Server Data -> members (Pre-processed)
-        if (Array.isArray(raw.members)) return raw.members;
-
-        return [];
+        // 3. Fallback to generic array search
+        return Array.isArray(queryData.data) ? queryData.data : [];
     }, [workspaceMembersQuery.data]);
 
     const hasMembers = membersList.length > 0;
