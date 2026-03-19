@@ -73,8 +73,8 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
         queryKey: ['workspace', workspace?.slug, 'members'],
         queryFn: () => api.get(`/workspaces/${workspace?.slug}/members`),
         enabled: !!workspace?.slug,
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        gcTime: 10 * 60 * 1000,    // Keep in cache for 10 minutes
+        staleTime: 60 * 1000, // Consider stale after 1 minute
+        gcTime: Infinity,     // NEVER remove from memory once loaded
     });
 
     const projectDataQuery = useQuery({
@@ -584,12 +584,17 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                                     icon: <User className="w-4 h-4" />,
                                                     onClick: () => propertyMutation.mutate({ assigneeId: null })
                                                 },
-                                                ...safeArray(workspaceMembersQuery.data?.data?.data).map(member => ({
+                                                { separator: true },
+                                                ...(workspaceMembersQuery.isLoading ? [
+                                                    { label: 'Loading team...', disabled: true, icon: <RefreshCw className="w-4 h-4 animate-spin" /> }
+                                                ] : workspaceMembersQuery.isError ? [
+                                                    { label: 'Error loading members', disabled: true, icon: <AlertCircle className="w-4 h-4 text-red-500" /> }
+                                                ] : safeArray(workspaceMembersQuery.data?.data?.data).map(member => ({
                                                     label: member.user?.name || 'Unknown',
                                                     active: detailedTask.assigneeId === member.user?.id,
                                                     icon: <Avatar user={member.user} size="xs" />,
                                                     onClick: () => propertyMutation.mutate({ assigneeId: member.user?.id })
-                                                }))
+                                                })))
                                             ]}
                                         />
                                     </PropertyRow>
