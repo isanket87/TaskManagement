@@ -25,6 +25,17 @@ import TaskDependencies from './TaskDependencies';
 import TaskSubtasks from './TaskSubtasks';
 import RichTextEditor from '../ui/RichTextEditor';
 
+// Helper for status colors
+const getStatusLabel = (status) => {
+    switch (status) {
+        case 'todo': return 'To Do';
+        case 'in-progress': return 'In Progress';
+        case 'in-review': return 'In Review';
+        case 'done': return 'Done';
+        default: return status || 'To Do';
+    }
+};
+
 const PropertyRow = ({ icon: Icon, label, children }) => (
     <div className="flex items-center gap-3 py-1.5 min-h-[32px] group/prop">
         <div className="w-28 shrink-0 flex items-center gap-2 text-slate-500 dark:text-slate-400">
@@ -92,8 +103,6 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
     const [editDescriptionValue, setEditDescriptionValue] = useState('');
     const dueDateRef = useRef(null);
     const [isDueDatePickerOpen, setIsDueDatePickerOpen] = useState(false);
-    const [isEditingTags, setIsEditingTags] = useState(false);
-    const [newTagValue, setNewTagValue] = useState('');
 
     useEffect(() => {
         setActiveTab('details');
