@@ -72,12 +72,37 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
         enabled: !!workspace?.slug
     });
 
-    // Debug log to see the actual structure in the browser console
+    // Discovery Logic: Find 'members' anywhere in the object tree
+    const getMembersFromData = (data) => {
+        if (!data) return [];
+        // Standard paths
+        if (Array.isArray(data.members)) return data.members;
+        if (Array.isArray(data.data?.members)) return data.data.members;
+        if (Array.isArray(data.data?.data?.members)) return data.data.data.members;
+        
+        // Deep search fallback (if structure changed again)
+        console.warn('[TaskDetailPanel] Using deep search for members in:', data);
+        const search = (obj) => {
+            if (!obj || typeof obj !== 'object') return null;
+            if (Array.isArray(obj.members)) return obj.members;
+            for (const key in obj) {
+                const found = search(obj[key]);
+                if (found) return found;
+            }
+            return null;
+        };
+        return search(data) || [];
+    };
+
+    const membersList = getMembersFromData(workspaceMembersQuery.data);
+
+    // Debug log
     useEffect(() => {
         if (workspaceMembersQuery.data) {
-            console.log('[TaskDetailPanel] Members Query Data:', workspaceMembersQuery.data);
+            console.log('[TaskDetailPanel] Raw Query Data:', workspaceMembersQuery.data);
+            console.log('[TaskDetailPanel] Discovered Members:', membersList);
         }
-    }, [workspaceMembersQuery.data]);
+    }, [workspaceMembersQuery.data, membersList]);
 
     const projectDataQuery = useQuery({
         queryKey: ['project', projectId],
