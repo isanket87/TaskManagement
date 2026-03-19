@@ -160,18 +160,30 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                                 collapsed && "justify-center px-0"
                                             )}
                                         >
-                                            {isActive && (
-                                                <motion.div layoutId="active-pill" className="absolute left-0 w-1 h-5 bg-indigo-600 dark:bg-indigo-500 rounded-r-full" />
-                                            )}
-                                            <Icon size={18} className={cn("shrink-0 transition-all", isActive ? "text-indigo-600 dark:text-indigo-400 scale-110" : "text-slate-400 group-hover:text-indigo-500")} />
+                                            <div className="relative shrink-0 transition-all">
+                                                <Icon size={18} className={cn(
+                                                    "transition-all duration-300",
+                                                    isActive ? "text-indigo-600 dark:text-indigo-400 scale-110" : "text-slate-400 group-hover:text-indigo-500"
+                                                )} />
+                                                
+                                                {/* COLLAPSED BADGE DOT */}
+                                                {collapsed && count > 0 && (
+                                                    <span className={cn(
+                                                        "absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ring-2 ring-slate-50 dark:ring-gray-950 shadow-sm animate-in zoom-in duration-300",
+                                                        dangerBadge ? "bg-red-500" : "bg-indigo-600"
+                                                    )} />
+                                                )}
+                                            </div>
+
                                             {!collapsed && <span className="flex-1 truncate tracking-tight">{label}</span>}
-                                            {count > 0 && (
+                                            
+                                            {/* EXPANDED BADGE PILL */}
+                                            {!collapsed && count > 0 && (
                                                 <span className={cn(
                                                     "shrink-0 flex items-center justify-center rounded-full text-[9px] font-black min-w-[18px] h-4.5 px-1",
-                                                    collapsed ? "absolute top-2 right-2 w-2 h-2 p-0 min-w-0 ring-2 ring-slate-50 dark:ring-gray-950" : "",
                                                     dangerBadge ? "bg-red-500 text-white" : "bg-indigo-600 text-white shadow-lg shadow-indigo-200"
                                                 )}>
-                                                    {!collapsed && (count > 99 ? '99+' : count)}
+                                                    {count > 99 ? '99+' : count}
                                                 </span>
                                             )}
                                         </NavLink>
