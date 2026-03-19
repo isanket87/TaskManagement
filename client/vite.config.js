@@ -38,6 +38,11 @@ export default defineConfig(({ mode }) => ({
             }
         })
     ],
+    test: {
+        globals: true,
+        environment: 'jsdom',
+        setupFiles: './src/test/setup.js',
+    },
     server: {
         proxy: mode === 'development' ? {
             '/api': { target: 'http://localhost:3001', changeOrigin: true },

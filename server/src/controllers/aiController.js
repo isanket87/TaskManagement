@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { successResponse, errorResponse } from '../utils/helpers.js';
+import prisma from '../utils/prisma.js';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -12,7 +13,7 @@ export const suggestPriority = async (req, res, next) => {
         const { title, description } = req.body;
         if (!title) return errorResponse(res, 'Title is required', 400);
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
         const prompt = `
             You are a project management assistant. Based on the following task details, suggest a priority level: "low", "medium", "high", or "urgent".
@@ -35,5 +36,48 @@ export const suggestPriority = async (req, res, next) => {
         console.error('AI Suggestion Error:', err);
         // Fallback if AI fails
         return successResponse(res, { priority: 'medium' }, 'Fallback priority used');
+    }
+};
+
+/**
+ * Summarizes a comment thread for a task.
+ * POST /api/tasks/:taskId/ai/summarize-comments
+ */
+export const summarizeComments = async (req, res, next) => {
+    try {
+        const { taskId } = req.params;
+        
+        // Fetch comments for this task
+        const comments = await prisma.comment.findMany({
+            where: { taskId },
+            include: { author: { select: { name: true } } },
+            orderBy: { createdAt: 'asc' }
+        });
+
+        if (comments.length === 0) {
+            return successResponse(res, { summary: 'No comments to summarize.' });
+        }
+
+        // Format comments for the prompt
+        const commentThread = comments.map(c => `${c.author.name}: ${c.text}`).join('\n');
+
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+
+        const prompt = `
+            You are a project management assistant. Summarize the following task comment thread into a concise paragraph (maximum 3-4 sentences). 
+            Focus on the main points discussed, any decisions made, and pending actions.
+            
+            Comment Thread:
+            ${commentThread}
+        `;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const summary = response.text().trim();
+
+        return successResponse(res, { summary }, 'Comments summarized');
+    } catch (err) {
+        console.error('AI Summarization Error:', err);
+        return errorResponse(res, 'Failed to summarize comments', 500);
     }
 };

@@ -7,7 +7,8 @@
         "dev": "vite",
         "build": "vite build",
         "preview": "vite preview",
-        "start": "vite preview --port $PORT --host"
+        "start": "vite preview --port $PORT --host",
+        "test": "vitest"
     },
     "engines": {
         "node": ">=18.0.0"
@@ -48,12 +49,17 @@
         "zustand": "^4.5.2"
     },
     "devDependencies": {
+        "@testing-library/jest-dom": "^6.9.1",
+        "@testing-library/react": "^16.3.2",
+        "@testing-library/user-event": "^14.6.1",
         "@vitejs/plugin-react": "^4.2.1",
         "autoprefixer": "^10.4.19",
+        "jsdom": "^29.0.0",
         "postcss": "^8.4.38",
         "sharp": "^0.34.5",
         "tailwindcss": "^3.4.1",
         "vite": "^5.2.0",
-        "vite-plugin-pwa": "^1.2.0"
+        "vite-plugin-pwa": "^1.2.0",
+        "vitest": "^4.1.0"
     }
 }

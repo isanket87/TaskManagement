@@ -34,6 +34,7 @@ export const taskService = {
     deleteAttachment: (taskId, attachmentId) => api.delete(`/tasks/${taskId}/attachments/${attachmentId}`),
     // AI
     suggestPriority: (data) => api.post('/tasks/ai/suggest-priority', data),
+    summarizeComments: (taskId) => api.post(`/tasks/${taskId}/ai/summarize-comments`),
     // Dependencies
     getDependencies: (projectId, taskId) => api.get(`/projects/${projectId}/tasks/${taskId}/dependencies`),
     addDependency: (projectId, taskId, blockingTaskId) => api.post(`/projects/${projectId}/tasks/${taskId}/dependencies`, { blockingTaskId }),

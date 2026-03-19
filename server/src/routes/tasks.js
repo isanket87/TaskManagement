@@ -5,7 +5,7 @@ import {
     bulkUpdateDueDate, getDueDateSummary, getUpcomingTasks, getOverdueTasks,
     getCalendarTasks, getDashboardStats, getTaskActivities, bulkImportTasks
 } from '../controllers/taskController.js'
-import { suggestPriority } from '../controllers/aiController.js'
+import { suggestPriority, summarizeComments } from '../controllers/aiController.js'
 import { getDependencies, addDependency, removeDependency } from '../controllers/taskDependencyController.js'
 import auth from '../middleware/auth.js'
 
@@ -284,6 +284,29 @@ router.post('/bulk', bulkImportTasks)
  *         description: Priority suggested
  */
 router.post('/ai/suggest-priority', suggestPriority)
+
+/**
+ * @swagger
+ * /api/workspaces/{slug}/tasks/{taskId}/ai/summarize-comments:
+ *   post:
+ *     summary: Summarize task comments using AI
+ *     tags: [Tasks]
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Comments summarized
+ */
+router.post('/:taskId/ai/summarize-comments', summarizeComments)
 
 /**
  * @swagger

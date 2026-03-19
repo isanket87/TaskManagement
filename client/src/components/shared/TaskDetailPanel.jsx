@@ -5,7 +5,7 @@ import {
     X, MoreHorizontal, ArrowLeft,
     MessageSquare, Clock, AlignLeft,
     CheckCircle2, AlertCircle, PlayCircle, RefreshCw,
-    Flag, User, Calendar, Plus, Tag, CircleDashed, Layout, AlertTriangle, Paperclip
+    Flag, User, Calendar, Plus, Tag, CircleDashed, Layout, AlertTriangle, Paperclip, Sparkles, Wand2
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -287,6 +287,16 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
         onError: () => toast.error('Failed to post comment')
     });
 
+    const [aiSummary, setAiSummary] = useState(null);
+    const summarizeMutation = useMutation({
+        mutationFn: () => taskService.summarizeComments(detailedTask.id),
+        onSuccess: (res) => {
+            setAiSummary(res.data.data.summary);
+            toast.success('Summary generated!');
+        },
+        onError: () => toast.error('Failed to summarize comments')
+    });
+
     const handleTitleSave = () => {
         const trimmed = editTitleValue.trim();
         if (trimmed && trimmed !== detailedTask.title) {
@@ -465,9 +475,60 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
 
                                     {/* COMMENTS AREA */}
                                     <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
-                                        <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 mb-4">
-                                            <MessageSquare className="w-4 h-4 text-slate-400" /> Discussion
-                                        </h3>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                                <MessageSquare className="w-4 h-4 text-slate-400" /> Discussion
+                                            </h3>
+                                            {safeArray(commentsQuery.data).length > 0 && (
+                                                <button
+                                                    onClick={() => summarizeMutation.mutate()}
+                                                    disabled={summarizeMutation.isPending}
+                                                    className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg transition-colors disabled:opacity-50"
+                                                >
+                                                    {summarizeMutation.isPending ? (
+                                                        <RefreshCw className="w-3 h-3 animate-spin" />
+                                                    ) : (
+                                                        <Sparkles className="w-3 h-3" />
+                                                    )}
+                                                    Summarize with AI
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* AI Summary Display */}
+                                        <AnimatePresence>
+                                            {aiSummary && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, y: -10 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -10 }}
+                                                    className="mb-6 p-4 bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/20 dark:to-blue-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-xl relative overflow-hidden group/summary"
+                                                >
+                                                    <div className="flex items-start gap-3 relative z-10">
+                                                        <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm border border-indigo-100 dark:border-indigo-700">
+                                                            <Wand2 className="w-4 h-4 text-indigo-500" />
+                                                        </div>
+                                                        <div className="flex-1 space-y-1">
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">AI Summary</span>
+                                                                <button
+                                                                    onClick={() => setAiSummary(null)}
+                                                                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                                                                >
+                                                                    <X className="w-3 h-3" />
+                                                                </button>
+                                                            </div>
+                                                            <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed italic">
+                                                                "{aiSummary}"
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="absolute top-0 right-0 p-1 opacity-10">
+                                                        <Sparkles className="w-12 h-12 text-indigo-500" />
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
 
                                         {/* Comments List */}
                                         <div className="space-y-4 mb-6">
