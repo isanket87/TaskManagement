@@ -72,6 +72,13 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
         enabled: !!workspace?.slug
     });
 
+    // Debug log to see the actual structure in the browser console
+    useEffect(() => {
+        if (workspaceMembersQuery.data) {
+            console.log('[TaskDetailPanel] Members Query Data:', workspaceMembersQuery.data);
+        }
+    }, [workspaceMembersQuery.data]);
+
     const projectDataQuery = useQuery({
         queryKey: ['project', projectId],
         queryFn: () => projectService.getOne(projectId),
@@ -581,12 +588,15 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                                     icon: <User className="w-4 h-4" />,
                                                     onClick: () => propertyMutation.mutate({ assigneeId: null })
                                                 },
-                                                ...safeArray(workspaceMembersQuery.data?.data?.members).map(member => ({
-                                                    label: member.user?.name || 'Unknown',
-                                                    active: detailedTask.assigneeId === member.user?.id,
-                                                    icon: <Avatar user={member.user} size="xs" />,
-                                                    onClick: () => propertyMutation.mutate({ assigneeId: member.user?.id })
-                                                }))
+                                                ...safeArray(workspaceMembersQuery.data?.data?.data?.members).map(member => {
+                                                    const memberUser = member.user;
+                                                    return {
+                                                        label: memberUser?.name || 'Unknown',
+                                                        active: detailedTask.assigneeId === memberUser?.id,
+                                                        icon: <Avatar user={memberUser} size="xs" />,
+                                                        onClick: () => propertyMutation.mutate({ assigneeId: memberUser?.id })
+                                                    };
+                                                })
                                             ]}
                                         />
                                     </PropertyRow>
