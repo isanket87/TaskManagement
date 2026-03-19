@@ -18,6 +18,9 @@ const __dirname = path.dirname(__filename)
 // server/.env is the single source of truth for all environments
 // In production, server/.env.production can overlay additional values
 dotenv.config({ path: path.join(__dirname, '../.env') })
+// Load shared persistent environment variables if they exist (common for VPS)
+dotenv.config({ path: path.join(__dirname, '../../.env.shared'), override: false })
+
 if (process.env.NODE_ENV === 'production') {
     dotenv.config({ path: path.join(__dirname, '../.env.production'), override: true })
 }

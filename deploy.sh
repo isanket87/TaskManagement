@@ -7,7 +7,11 @@ set -e
 APP_DIR="/var/www/brioright"
 BRANCH="main"
 
-echo "🚀 Starting deployment to $BRANCH..."
+echo "🚀 Starting robust deployment (using .env.shared) to $BRANCH..."
+
+# 🛡️ Fix permissions first to ensure we can work
+echo "🛡️ Fixing folder permissions..."
+sudo chown -R $USER:$USER $APP_DIR
 
 # Navigate to app directory
 cd $APP_DIR
@@ -29,7 +33,7 @@ npx prisma migrate deploy
 echo "📦 Setting up Client..."
 cd "$APP_DIR/client"
 
-# Ensure clean state - use sudo if necessary but better to own the dir
+# Ensure clean state
 rm -rf dist
 npm install
 
@@ -37,15 +41,16 @@ npm install
 echo "📝 Generating .env.production for Vite..."
 echo "# Auto-generated during deploy" > .env.production
 
-# 1. Pull VITE_ variables from the server's .env.production
+# 1. Pull VITE_ variables from the server's .env.production (if exists)
 if [ -f "$APP_DIR/server/.env.production" ]; then
   grep '^VITE_' "$APP_DIR/server/.env.production" >> .env.production || true
 fi
 
-# 2. Pull from a PERSISTENT shared file (this stays on the server forever)
+# 2. Pull from a PERSISTENT shared file (REQUIRED for your manual keys)
 if [ -f "$APP_DIR/.env.shared" ]; then
   echo "📄 Merging persistent variables from .env.shared..."
-  grep '^VITE_' "$APP_DIR/.env.shared" >> .env.production || true
+  # Merge both VITE_ (for client) and other keys (for deploy script logic if needed)
+  cat "$APP_DIR/.env.shared" >> .env.production || true
 fi
 
 # 3. Pull from GitHub environment variables (if any)
@@ -68,17 +73,19 @@ npm run build -- --mode production
 rm .env.production
 
 # ----- Sync Client Build -----
-# The server is configured to serve from client/dist, so we ensure it's accessible
-# We also sync to server/public as a backup/legacy location
 echo "📂 Updating public assets..."
 sudo mkdir -p "$APP_DIR/server/public"
 sudo rm -rf "$APP_DIR/server/public/*"
 sudo cp -r "$APP_DIR/client/dist/"* "$APP_DIR/server/public/"
 
+# ----- Clean Port 5000 (Prevent EADDRINUSE) -----
+echo "🧹 Cleaning up port 5000..."
+sudo fuser -k 5000/tcp || true
+
 # ----- Restart App via PM2 -----
 echo "🔄 Restarting PM2 process..."
 cd "$APP_DIR/server"
-# Use 'reload' for zero-downtime if possible, or 'restart'
-pm2 restart ecosystem.config.cjs --env production || pm2 start ecosystem.config.cjs --env production
+# --update-env ensures PM2 reads the latest .env (including .env.shared values we just added)
+pm2 restart ecosystem.config.cjs --env production --update-env || pm2 start ecosystem.config.cjs --env production --update-env
 
 echo "✅ Deployment finished successfully!"
