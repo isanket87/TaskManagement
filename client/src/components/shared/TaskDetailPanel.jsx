@@ -73,9 +73,13 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
         queryKey: ['workspace', workspace?.slug, 'members'],
         queryFn: () => api.get(`/workspaces/${workspace?.slug}/members`),
         enabled: !!workspace?.slug,
-        staleTime: 60 * 1000, // Consider stale after 1 minute
-        gcTime: Infinity,     // NEVER remove from memory once loaded
+        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: Infinity,
+        placeholderData: (previousData) => previousData,
     });
+
+    const membersList = safeArray(workspaceMembersQuery.data?.data?.data);
+    const hasMembers = membersList.length > 0;
 
     const projectDataQuery = useQuery({
         queryKey: ['project', projectId],
