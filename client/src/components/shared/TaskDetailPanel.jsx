@@ -34,7 +34,7 @@ const getStatusLabel = (status) => {
         case 'in-progress': return 'In Progress';
         case 'in-review': return 'In Review';
         case 'done': return 'Done';
-        default: return status;
+        default: return status || 'To Do';
     }
 };
 
@@ -54,6 +54,9 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
     const queryClient = useQueryClient();
     const { workspace } = useWorkspaceStore();
     const [activeTab, setActiveTab] = useState('details');
+
+    // Helper to safely get arrays
+    const safeArray = (arr) => Array.isArray(arr) ? arr : [];
 
     // Core Queries
     const { data: fullTaskData, isLoading } = useQuery({
@@ -292,14 +295,10 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                 <ArrowLeft className="w-5 h-5" />
                             </button>
                             <span className="text-sm font-medium text-slate-400 dark:text-slate-500 flex items-center gap-2">
-                                {/* Add Project Name Breadcrumb here if available */}
                                 Task #{detailedTask?.id?.slice(0, 6)}
                             </span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <button className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 px-3 py-1.5 rounded-lg transition-colors hidden sm:block">
-                                ↗ Open full page
-                            </button>
                             <Dropdown
                                 align="right"
                                 trigger={
@@ -426,7 +425,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                         <TaskSubtasks
                                             parentTaskId={detailedTask.id}
                                             projectId={projectId}
-                                            subtasks={detailedTask.subtasks || []}
+                                            subtasks={safeArray(detailedTask.subtasks)}
                                             onTaskSelect={onTaskSelect}
                                         />
                                     </div>
@@ -441,12 +440,12 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                         <div className="space-y-4 mb-6">
                                             {commentsQuery.isLoading ? (
                                                 <div className="text-center text-sm text-slate-400 py-4">Loading comments...</div>
-                                            ) : commentsQuery.data?.length === 0 ? (
+                                            ) : safeArray(commentsQuery.data).length === 0 ? (
                                                 <div className="text-center text-sm text-slate-400 py-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl">
                                                     No comments yet. Start the discussion!
                                                 </div>
                                             ) : (
-                                                commentsQuery.data?.map(comment => (
+                                                safeArray(commentsQuery.data).map(comment => (
                                                     <div key={comment.id} className="group flex gap-3">
                                                         <Avatar user={comment.author} />
                                                         <div className="flex-1 space-y-1">
@@ -461,7 +460,6 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                                             <div className="text-sm text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl rounded-tl-none inline-block border border-slate-100 dark:border-slate-800 whitespace-pre-wrap">
                                                                 {comment.text}
                                                             </div>
-                                                            {/* Add delete/edit buttons here if author === currentUser */}
                                                         </div>
                                                     </div>
                                                 ))
@@ -521,7 +519,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                                             detailedTask.status === 'in_progress' ? 'bg-blue-500' :
                                                                 detailedTask.status === 'in_review' ? 'bg-purple-500' : 'bg-slate-400'
                                                     )} />
-                                                    {STATUS_OPTIONS.find(s => s.value === detailedTask.status)?.label || detailedTask.status}
+                                                    {STATUS_OPTIONS.find(s => s.value === detailedTask.status)?.label || getStatusLabel(detailedTask.status)}
                                                 </button>
                                             }
                                             items={STATUS_OPTIONS.map(status => ({
@@ -584,7 +582,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                                     icon: <User className="w-4 h-4" />,
                                                     onClick: () => propertyMutation.mutate({ assigneeId: null })
                                                 },
-                                                ...(workspaceMembersQuery.data?.data?.data || []).map(member => ({
+                                                ...safeArray(workspaceMembersQuery.data?.data?.data).map(member => ({
                                                     label: member.user?.name || 'Unknown',
                                                     active: detailedTask.assigneeId === member.user?.id,
                                                     icon: <Avatar user={member.user} size="xs" />,
@@ -672,7 +670,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                     {/* TAGS */}
                                     <PropertyRow icon={Tag} label="Tags">
                                         <div className="flex flex-wrap gap-1.5 items-center pl-2">
-                                            {(detailedTask.tags || []).map(tag => (
+                                            {safeArray(detailedTask.tags).map(tag => (
                                                 <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 group/tag transition-colors">
                                                     {tag}
                                                     <button
@@ -690,8 +688,8 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                                     onChange={(e) => setNewTagValue(e.target.value)}
                                                     onBlur={() => {
                                                         const val = newTagValue.trim();
-                                                        if (val && !(detailedTask.tags || []).includes(val)) {
-                                                            propertyMutation.mutate({ tags: [...(detailedTask.tags || []), val] });
+                                                        if (val && !safeArray(detailedTask.tags).includes(val)) {
+                                                            propertyMutation.mutate({ tags: [...safeArray(detailedTask.tags), val] });
                                                         }
                                                         setNewTagValue('');
                                                         setIsEditingTags(false);
@@ -699,8 +697,8 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Enter') {
                                                             const val = newTagValue.trim();
-                                                            if (val && !(detailedTask.tags || []).includes(val)) {
-                                                                propertyMutation.mutate({ tags: [...(detailedTask.tags || []), val] });
+                                                            if (val && !safeArray(detailedTask.tags).includes(val)) {
+                                                                propertyMutation.mutate({ tags: [...safeArray(detailedTask.tags), val] });
                                                             }
                                                             setNewTagValue('');
                                                             setIsEditingTags(false);
@@ -773,7 +771,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                             <div className="p-6">
                                 {activitiesQuery.isLoading ? (
                                     <div className="text-center text-sm text-slate-400 py-4">Loading activities...</div>
-                                ) : activitiesQuery.data?.length === 0 ? (
+                                ) : safeArray(activitiesQuery.data).length === 0 ? (
                                     <div className="text-center py-12">
                                         <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 dark:border-slate-800">
                                             <Clock className="w-8 h-8 text-slate-300 dark:text-slate-600" />
@@ -785,7 +783,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        {activitiesQuery.data?.map((activity, index, arr) => (
+                                        {safeArray(activitiesQuery.data).map((activity, index, arr) => (
                                             <div key={activity.id} className="flex gap-4 group">
                                                 <div className="relative flex flex-col items-center">
                                                     <Avatar user={activity.user} className="w-8 h-8 shrink-0 z-10 ring-4 ring-white dark:ring-slate-900" />
@@ -798,8 +796,8 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                                         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                                                             {activity.user?.name || 'Unknown User'}
                                                         </span>
-                                                        <span className="text-xs font-medium text-slate-400 title={new Date(activity.createdAt).toLocaleString()}">
-                                                            {format(new Date(activity.createdAt), 'MMM d, h:mm a')}
+                                                        <span className="text-xs font-medium text-slate-400" title={activity.createdAt ? new Date(activity.createdAt).toLocaleString() : ''}>
+                                                            {activity.createdAt ? format(new Date(activity.createdAt), 'MMM d, h:mm a') : ''}
                                                         </span>
                                                     </div>
                                                     <p className="text-[13px] text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700/50 inline-block shadow-sm">
@@ -895,7 +893,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
 
                                     {timeEntriesQuery.isLoading ? (
                                         <div className="text-center text-sm text-slate-400 py-8">Loading entries...</div>
-                                    ) : timeEntriesQuery.data?.length === 0 ? (
+                                    ) : safeArray(timeEntriesQuery.data).length === 0 ? (
                                         <div className="text-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
                                             <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-3">
                                                 <PlayCircle className="w-5 h-5 text-slate-300 dark:text-slate-600" />
@@ -904,7 +902,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                         </div>
                                     ) : (
                                         <div className="space-y-3">
-                                            {timeEntriesQuery.data?.map(entry => (
+                                            {safeArray(timeEntriesQuery.data).map(entry => (
                                                 <div key={entry.id} className="flex gap-4 p-4 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 hover:border-slate-200 dark:hover:border-slate-700 transition-colors group">
                                                     <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
                                                         <Clock className="w-4 h-4 text-slate-500 dark:text-slate-400" />
@@ -922,8 +920,8 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                                             </div>
                                                         </div>
                                                         <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
-                                                            <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {format(new Date(entry.startTime), 'MMM d, yyyy')}</span>
-                                                            <span className="flex items-center gap-1.5"><PlayCircle className="w-3.5 h-3.5" /> {format(new Date(entry.startTime), 'h:mm a')} - {entry.endTime ? format(new Date(entry.endTime), 'h:mm a') : 'Now'}</span>
+                                                            <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> {entry.startTime ? format(new Date(entry.startTime), 'MMM d, yyyy') : ''}</span>
+                                                            <span className="flex items-center gap-1.5"><PlayCircle className="w-3.5 h-3.5" /> {entry.startTime ? format(new Date(entry.startTime), 'h:mm a') : ''} - {entry.endTime ? format(new Date(entry.endTime), 'h:mm a') : 'Now'}</span>
                                                         </div>
                                                     </div>
                                                 </div>
