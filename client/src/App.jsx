@@ -148,6 +148,17 @@ function App() {
         if (isAuthenticated) fetchWorkspaces();
     }, [isAuthenticated]);
 
+    // Global pre-fetcher for critical workspace data
+    useEffect(() => {
+        if (isAuthenticated && workspace?.slug) {
+            queryClient.prefetchQuery({
+                queryKey: ['workspace', workspace.slug, 'members'],
+                queryFn: () => api.get(`/workspaces/${workspace.slug}/members`),
+                staleTime: 30 * 60 * 1000
+            });
+        }
+    }, [isAuthenticated, workspace?.slug, queryClient]);
+
     return (
         <QueryClientProvider client={queryClient}>
             <NotificationInitializer />
