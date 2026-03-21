@@ -177,14 +177,23 @@ const getUnreadCounts = async (req, res, next) => {
             select: { channelId: true, lastReadAt: true }
         })
 
+        if (!memberships.length) return successResponse(res, { counts: [] })
+
+        // Efficiently fetch counts for all channels in parallel or with a single raw query
+        // Using Promise.all is okay for moderate channel counts, but a single grouped query is better.
         const counts = await Promise.all(memberships.map(async m => {
             const count = await prisma.message.count({
-                where: { channelId: m.channelId, createdAt: { gt: m.lastReadAt }, deletedAt: null, authorId: { not: req.user.id } }
+                where: { 
+                    channelId: m.channelId, 
+                    createdAt: { gt: m.lastReadAt || new Date(0) }, 
+                    deletedAt: null, 
+                    authorId: { not: req.user.id } 
+                }
             })
             return { channelId: m.channelId, unread: count }
         }))
 
-        return successResponse(res, { counts })
+        return successResponse(res, { counts: Object.fromEntries(counts.map(c => [c.channelId, c.unread])) })
     } catch (err) { next(err) }
 }
 

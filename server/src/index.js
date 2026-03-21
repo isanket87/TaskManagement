@@ -57,10 +57,12 @@ import apiKeyRoutes from './routes/apiKeys.js'
 import swaggerUi from 'swagger-ui-express'
 import swaggerSpec from './utils/swagger.js'
 import { getRedis, closeRedis } from './utils/redis.js'
+import { authLimiter, generalLimiter } from './middleware/rateLimiter.js'
 
 // Middleware and Utils
 import prisma from './utils/prisma.js'
 import auth from './middleware/auth.js'
+import { verifyAccessToken } from './utils/jwt.js'
 import errorHandler from './middleware/errorHandler.js'
 import { getTimesheet, exportTimesheet } from './controllers/timeEntryController.js'
 import { getOrCreateDM } from './controllers/channelController.js'
@@ -97,7 +99,16 @@ app.set('trust proxy', 1)
 
 // ── SECURITY ──
 app.use(helmet({
-    contentSecurityPolicy: false,
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc:  ["'self'"],
+            styleSrc:   ["'self'", "'unsafe-inline'"],
+            imgSrc:     ["'self'", 'data:', 'https:'],
+            connectSrc: ["'self'", process.env.CLIENT_URL].filter(Boolean),
+            fontSrc:    ["'self'", 'https://fonts.gstatic.com'],
+        }
+    },
     crossOriginEmbedderPolicy: false
 }))
 
@@ -114,7 +125,11 @@ app.use(compression({ level: 6, threshold: 1024 }))
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 app.use(cookieParser())
-app.use(morgan('dev'))
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'))
+
+// ── RATE LIMITING ──
+app.use('/api/', generalLimiter)
+app.use('/api/auth', authLimiter)
 
 // ── RESPONSE TIMER & DEBUG ──
 app.use((req, res, next) => {
@@ -147,10 +162,7 @@ app.use((req, res, next) => {
 app.get('/api/ping', (req, res) => {
     res.json({
         status: 'ok',
-        timestamp: new Date().toISOString(),
-        uptime: Math.floor(process.uptime()),
-        environment: process.env.NODE_ENV,
-        memory: process.memoryUsage()
+        timestamp: new Date().toISOString()
     })
 })
 
@@ -158,11 +170,14 @@ app.get('/api/ping', (req, res) => {
 app.get('/api/users/search', auth, async (req, res, next) => {
     try {
         const { q } = req.query
+        if (!q || q.trim().length < 2) {
+            return res.status(400).json({ success: false, message: 'Search query must be at least 2 characters' })
+        }
         const users = await prisma.user.findMany({
             where: {
                 OR: [
-                    { email: { contains: q, mode: 'insensitive' } },
-                    { name: { contains: q, mode: 'insensitive' } }
+                    { email: { contains: q.trim(), mode: 'insensitive' } },
+                    { name: { contains: q.trim(), mode: 'insensitive' } }
                 ]
             },
             select: { id: true, name: true, email: true, avatar: true },
@@ -184,13 +199,13 @@ app.use('/api/notification-preferences', notificationPrefRoutes)
 app.use('/api/health', healthRoutes)   // public — no auth required
 app.use('/api/api-keys', apiKeyRoutes) // API key management
 
-// ── API DOCUMENTATION ──
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-    swaggerOptions: {
-        persistAuthorization: true,
-    },
-    customSiteTitle: 'Brioright API Docs',
-}));
+// ── API DOCUMENTATION (dev only) ──
+if (process.env.NODE_ENV !== 'production') {
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+        swaggerOptions: { persistAuthorization: true },
+        customSiteTitle: 'Brioright API Docs',
+    }))
+}
 
 // ── SYSTEM TRIGGER ──
 app.post('/api/system/backup', auth, async (req, res, next) => {
@@ -243,6 +258,23 @@ app.use((err, req, res, next) => {
     })
 })
 app.use(errorHandler)
+
+// ── SOCKET.IO AUTH MIDDLEWARE ──
+io.use((socket, next) => {
+    try {
+        // Accept token from handshake auth payload OR from cookie header
+        const authToken = socket.handshake.auth?.token
+        const cookieHeader = socket.handshake.headers?.cookie || ''
+        const cookieToken = cookieHeader.match(/accessToken=([^;]+)/)?.[1]
+        const token = authToken || cookieToken
+        if (!token) return next(new Error('Authentication required'))
+        const decoded = verifyAccessToken(token)
+        socket.user = decoded
+        next()
+    } catch {
+        next(new Error('Invalid or expired token'))
+    }
+})
 
 // ── SOCKET.IO HANDLERS ──
 io.on('connection', (socket) => {

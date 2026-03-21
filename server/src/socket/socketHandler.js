@@ -1,4 +1,6 @@
 const presenceService = require('../services/presenceService');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 const socketHandler = (io) => {
     io.on('connection', (socket) => {
@@ -10,6 +12,25 @@ const socketHandler = (io) => {
             socket.join(`user:${userId}`);
             presenceService.setOnline(userId);
             io.emit('presence:update', { userId, status: 'online' });
+        });
+
+        // Mark channel as read
+        socket.on('channel:read', async ({ channelId, userId }) => {
+            try {
+                const now = new Date();
+                await prisma.channelMember.update({
+                    where: { channelId_userId: { channelId, userId } },
+                    data: { lastReadAt: now }
+                });
+                // Broadcast to other members in the channel room
+                socket.to(`channel:${channelId}`).emit('message:seen', { 
+                    channelId, 
+                    userId, 
+                    lastReadAt: now 
+                });
+            } catch (err) {
+                console.error('Error marking channel read via socket:', err);
+            }
         });
 
         // Join project room

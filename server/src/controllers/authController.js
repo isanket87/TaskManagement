@@ -18,9 +18,9 @@ const getGoogleClient = () => new OAuth2Client(
 
 const COOKIE_OPTIONS = {
     httpOnly: true,
-    // Set COOKIE_SECURE=true in .env.production only after enabling HTTPS/SSL
+    // COOKIE_SECURE=true is set in .env.production (HTTPS is required)
     secure: process.env.COOKIE_SECURE === 'true',
-    sameSite: 'lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
     path: '/'
 }
 

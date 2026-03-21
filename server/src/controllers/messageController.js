@@ -107,20 +107,40 @@ const deleteMessage = async (req, res, next) => {
 // POST /api/channels/:id/messages/:msgId/reactions
 const addReaction = async (req, res, next) => {
     try {
-        const { msgId } = req.params
+        const { msgId, id: channelId } = req.params
         const { emoji } = req.body
         if (!emoji) return errorResponse(res, 'Emoji required', 400)
 
         const existing = await prisma.reaction.findUnique({
             where: { messageId_userId_emoji: { messageId: msgId, userId: req.user.id, emoji } }
         })
+
+        let action = 'added';
         if (existing) {
             await prisma.reaction.delete({ where: { id: existing.id } })
-            return successResponse(res, { action: 'removed' })
+            action = 'removed';
+        } else {
+            await prisma.reaction.create({ data: { emoji, messageId: msgId, userId: req.user.id } })
         }
 
-        await prisma.reaction.create({ data: { emoji, messageId: msgId, userId: req.user.id } })
-        return successResponse(res, { action: 'added' }, 'Reaction added', 201)
+        // Fetch updated reactions to broadcast
+        const updatedMessage = await prisma.message.findUnique({
+            where: { id: msgId },
+            include: { 
+                reactions: { include: { user: { select: { id: true, name: true } } } }
+            }
+        })
+
+        // Broadcast via socket
+        const io = req.app.get('io')
+        if (io) {
+            io.to(channelId).emit('message:reactions:updated', { 
+                messageId: msgId, 
+                reactions: updatedMessage.reactions 
+            })
+        }
+
+        return successResponse(res, { action, reactions: updatedMessage.reactions }, action === 'added' ? 'Reaction added' : 'Reaction removed')
     } catch (err) { next(err) }
 }
 

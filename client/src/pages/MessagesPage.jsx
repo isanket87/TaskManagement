@@ -44,7 +44,7 @@ const TypingIndicator = ({ typingUsers }) => {
 };
 
 // ── Message bubble ─────────────────────────────────────────────────────────────
-const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUserId, showAvatar = true }) => {
+const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUserId, showAvatar = true, channelMembers = [], channelLastRead = {} }) => {
     const [showActions, setShowActions] = useState(false);
     const [editing, setEditing] = useState(false);
     const [editContent, setEditContent] = useState(message.content);
@@ -63,6 +63,11 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
         if (!reactionMap[r.emoji]) reactionMap[r.emoji] = [];
         reactionMap[r.emoji].push(r.userId);
     });
+
+    // Calculate Read Status
+    const seenByCount = Object.entries(channelLastRead).filter(([uid, time]) => 
+        uid !== message.authorId && new Date(time) >= new Date(message.createdAt)
+    ).length;
 
     const handleEditSubmit = (e) => {
         e.preventDefault();
@@ -164,14 +169,83 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
                     </div>
                 )}
 
-                {showAvatar && (
-                    <span className="text-[9px] font-black text-slate-400 mt-1 uppercase tracking-widest opacity-70">
+                <div className={cn("flex items-center gap-2 mt-1 uppercase tracking-widest opacity-70 text-[9px] font-black", isOwn ? "flex-row-reverse" : "flex-row")}>
+                    <span className="text-slate-400">
                         {format(new Date(message.createdAt), 'h:mm a')}
                         {message.editedAt && " • EDITED"}
                     </span>
-                )}
+                    {isOwn && seenByCount > 0 && (
+                        <span className="text-emerald-500 flex items-center gap-0.5">
+                            <CheckCircle2 size={10} />
+                            {seenByCount === (channelMembers.length - 1) ? 'SEEN' : `SEEN BY ${seenByCount}`}
+                        </span>
+                    )}
+                </div>
             </div>
         </div>
+    );
+};
+
+// ── Add Member Modal ─────────────────────────────────────────────────────────
+const AddMemberModal = ({ isOpen, onClose, onAdd, currentMembers = [] }) => {
+    const { workspace } = useWorkspaceStore();
+    const [search, setSearch] = useState('');
+    
+    const { data: membersData, isLoading } = useQuery({
+        queryKey: ['workspace-members-all', workspace?.slug, search],
+        queryFn: () => chatService.getWorkspaceMembers(search),
+        enabled: isOpen && !!workspace?.slug
+    });
+
+    const members = (membersData?.data?.data?.members || [])
+        .filter(m => !currentMembers.find(cm => cm.userId === m.user.id));
+
+    return (
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[110] p-4">
+                    <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+                        className="bg-white dark:bg-slate-900 rounded-[32px] p-8 w-full max-w-md shadow-2xl border border-white/20 flex flex-col max-h-[80vh]">
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Add to Channel</h3>
+                            <button onClick={onClose} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400"><X size={20} /></button>
+                        </div>
+                        
+                        <input 
+                            value={search}
+                            onChange={e => setSearch(e.target.value)}
+                            placeholder="Search members..." 
+                            className="w-full bg-slate-50 dark:bg-slate-950 border-2 border-slate-100 dark:border-slate-800 rounded-2xl px-6 py-3.5 text-sm text-slate-900 dark:text-white outline-none focus:border-indigo-500 mb-6 transition-all font-medium"
+                            autoFocus
+                        />
+
+                        <div className="flex-1 overflow-y-auto no-scrollbar space-y-1">
+                            {isLoading ? (
+                                [1,2,3].map(i => <div key={i} className="h-16 bg-slate-50 dark:bg-slate-800/50 animate-pulse rounded-2xl mb-2" />)
+                            ) : members.length > 0 ? (
+                                members.map(m => (
+                                    <button 
+                                        key={m.user.id}
+                                        onClick={() => onAdd(m.user.id)}
+                                        className="w-full flex items-center gap-4 p-3 rounded-2xl hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all group text-left"
+                                    >
+                                        <Avatar user={m.user} size="sm" className="rounded-xl" />
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-bold text-slate-900 dark:text-white truncate">{m.user.name}</p>
+                                            <p className="text-xs text-slate-500 truncate font-medium">{m.user.email}</p>
+                                        </div>
+                                        <Plus size={18} className="text-slate-300 group-hover:text-indigo-500 transition-colors" />
+                                    </button>
+                                ))
+                            ) : (
+                                <div className="py-12 text-center text-slate-400 font-bold">No members to add</div>
+                            )}
+                        </div>
+                    </motion.div>
+                </motion.div>
+            )}
+        </AnimatePresence>
     );
 };
 
@@ -249,7 +323,8 @@ const NewDirectMessageModal = ({ isOpen, onClose, onSelect, currentUserId }) => 
 const MessagesPage = () => {
     const { user } = useAuthStore();
     const { channels, setChannels, activeChannelId, setActiveChannel, messages, setMessages, appendMessage,
-        updateMessage, removeMessage, unreadCounts, setUnreadCounts, clearUnread, typingUsers, setTyping, setPresence, onlineUsers, threadMessageId, setThreadMessage } = useChatStore();
+        updateMessage, removeMessage, unreadCounts, setUnreadCounts, clearUnread, typingUsers, setTyping, setPresence, onlineUsers, 
+        threadMessageId, setThreadMessage, lastRead, setLastRead } = useChatStore();
     const socket = useSocket();
     const queryClient = useQueryClient();
     const { workspace, workspaces, switchWorkspace } = useWorkspaceStore();
@@ -259,10 +334,41 @@ const MessagesPage = () => {
     const [showNewDM, setShowNewDM] = useState(false);
     const [newChannelName, setNewChannelName] = useState('');
     const [showInfoPanel, setShowInfoPanel] = useState(false);
+    const [showAddMember, setShowAddMember] = useState(false);
     const [isSuggestingResponse, setIsSuggestingResponse] = useState(false);
     
     const feedRef = useRef(null);
     const typingTimerRef = useRef(null);
+
+    // ... (keep previous queries)
+
+    const handleAddMember = async (targetUserId) => {
+        try {
+            await chatService.addMember(activeChannelId, { userId: targetUserId });
+            // Refresh channel data to show new member
+            const res = await chatService.getChannel(activeChannelId);
+            const updatedChannel = res.data.data.channel;
+            setChannels(channels.map(c => c.id === activeChannelId ? updatedChannel : c));
+            setShowAddMember(false);
+            toast.success('Member added to channel');
+            socket?.emit('channel:member:added', { channelId: activeChannelId, userId: targetUserId });
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to add member');
+        }
+    };
+
+    const handleRemoveMember = async (targetUserId) => {
+        if (!window.confirm('Are you sure you want to remove this member?')) return;
+        try {
+            await chatService.removeMember(activeChannelId, targetUserId);
+            const res = await chatService.getChannel(activeChannelId);
+            const updatedChannel = res.data.data.channel;
+            setChannels(channels.map(c => c.id === activeChannelId ? updatedChannel : c));
+            toast.success('Member removed');
+        } catch (err) {
+            toast.error('Failed to remove member');
+        }
+    };
 
     const { isLoading } = useQuery({
         queryKey: ['channels', workspace?.slug],
@@ -282,10 +388,20 @@ const MessagesPage = () => {
         refetchInterval: 30000,
     });
 
+    const [hasMore, setHasMore] = useState(false);
+    const [nextCursor, setNextCursor] = useState(null);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+
     useEffect(() => {
         if (!activeChannelId) return;
+        setHasMore(false);
+        setNextCursor(null);
+        
         chatService.getMessages(activeChannelId).then(res => {
             setMessages(activeChannelId, res.data.data.messages);
+            setNextCursor(res.data.data.nextCursor);
+            setHasMore(!!res.data.data.nextCursor);
+            
             setTimeout(() => {
                 if (feedRef.current) feedRef.current.scrollTop = feedRef.current.scrollHeight;
             }, 50);
@@ -294,8 +410,37 @@ const MessagesPage = () => {
         clearUnread(activeChannelId);
     }, [activeChannelId]);
 
+    const loadMore = async () => {
+        if (!nextCursor || isLoadingMore) return;
+        setIsLoadingMore(true);
+        try {
+            const res = await chatService.getMessages(activeChannelId, nextCursor);
+            const olderMessages = res.data.data.messages;
+            
+            // Prepend older messages to the store
+            const currentMessages = messages[activeChannelId] || [];
+            setMessages(activeChannelId, [...olderMessages, ...currentMessages]);
+            
+            setNextCursor(res.data.data.nextCursor);
+            setHasMore(!!res.data.data.nextCursor);
+            
+            // Maintain scroll position roughly
+            if (feedRef.current) {
+                const el = feedRef.current;
+                const prevHeight = el.scrollHeight;
+                setTimeout(() => {
+                    el.scrollTop = el.scrollHeight - prevHeight;
+                }, 0);
+            }
+        } catch (err) {
+            toast.error('Failed to load more messages');
+        } finally {
+            setIsLoadingMore(false);
+        }
+    };
+
     useEffect(() => {
-        if (feedRef.current) {
+        if (feedRef.current && !nextCursor) { // Only snap to bottom on first load or new message
             const el = feedRef.current;
             el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
         }
@@ -303,11 +448,16 @@ const MessagesPage = () => {
 
     useEffect(() => {
         if (!socket || !activeChannelId) return;
-        socket.emit('join:channel', activeChannelId);
-        socket.emit('join:user', user.id);
-
+        
+        // Mark channel as read locally and via socket
+        socket.emit('channel:read', { channelId: activeChannelId, userId: user.id });
+        
         const onNew = ({ message }) => {
-            if (message.channelId === activeChannelId) appendMessage(activeChannelId, message);
+            if (message.channelId === activeChannelId) {
+                appendMessage(activeChannelId, message);
+                // Auto-mark as read if we're looking at it
+                socket.emit('channel:read', { channelId: activeChannelId, userId: user.id });
+            }
         };
         const onUpdated = ({ message }) => {
             if (message.channelId === activeChannelId) updateMessage(activeChannelId, message);
@@ -323,9 +473,21 @@ const MessagesPage = () => {
         };
         const onPresence = ({ userId, status }) => setPresence(userId, status);
 
+        const onReactionsUpdated = ({ messageId, reactions }) => {
+            const msgs = messages[activeChannelId] || [];
+            const msg = msgs.find(m => m.id === messageId);
+            if (msg) updateMessage(activeChannelId, { ...msg, reactions });
+        };
+
+        const onMessageSeen = ({ channelId, userId, lastReadAt }) => {
+            setLastRead(channelId, userId, lastReadAt);
+        };
+
         socket.on('message:new', onNew);
         socket.on('message:updated', onUpdated);
         socket.on('message:deleted', onDeleted);
+        socket.on('message:reactions:updated', onReactionsUpdated);
+        socket.on('message:seen', onMessageSeen);
         socket.on('typing:start', onTypingStart);
         socket.on('typing:stop', onTypingStop);
         socket.on('presence:update', onPresence);
@@ -334,6 +496,8 @@ const MessagesPage = () => {
             socket.off('message:new', onNew);
             socket.off('message:updated', onUpdated);
             socket.off('message:deleted', onDeleted);
+            socket.off('message:reactions:updated', onReactionsUpdated);
+            socket.off('message:seen', onMessageSeen);
             socket.off('typing:start', onTypingStart);
             socket.off('typing:stop', onTypingStop);
             socket.off('presence:update', onPresence);
@@ -564,6 +728,19 @@ const MessagesPage = () => {
 
                                 <div ref={feedRef} className="flex-1 overflow-y-auto px-4 sm:px-10 pt-8 pb-4 flex flex-col gap-1 no-scrollbar scroll-smooth z-10">
                                     <div className="flex-1" />
+                                    
+                                    {hasMore && (
+                                        <div className="flex justify-center py-4">
+                                            <button 
+                                                onClick={loadMore}
+                                                disabled={isLoadingMore}
+                                                className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 hover:shadow-lg transition-all disabled:opacity-50"
+                                            >
+                                                {isLoadingMore ? 'Loading older messages...' : 'Load Previous Messages'}
+                                            </button>
+                                        </div>
+                                    )}
+
                                     {(messages[activeChannelId] || []).length === 0 ? (
                                         <div className="flex flex-col items-center justify-center py-20 text-center">
                                             <div className="w-20 h-20 rounded-[28px] bg-white dark:bg-slate-800 shadow-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-6 border border-slate-100 dark:border-white/5"><Sparkles size={32} /></div>
@@ -576,7 +753,20 @@ const MessagesPage = () => {
                                             const isSameAuthor = prevMsg && prevMsg.authorId === msg.authorId;
                                             const isRecent = prevMsg && (new Date(msg.createdAt) - new Date(prevMsg.createdAt)) < 5 * 60 * 1000;
                                             const showAvatar = !isSameAuthor || !isRecent;
-                                            return <MessageBubble key={msg.id} message={msg} currentUserId={user.id} showAvatar={showAvatar} onReply={setThreadMessage} onReact={handleReact} onEdit={handleEdit} onDelete={handleDelete} />;
+                                            return (
+                                                <MessageBubble 
+                                                    key={msg.id} 
+                                                    message={msg} 
+                                                    currentUserId={user.id} 
+                                                    showAvatar={showAvatar} 
+                                                    onReply={setThreadMessage} 
+                                                    onReact={handleReact} 
+                                                    onEdit={handleEdit} 
+                                                    onDelete={handleDelete}
+                                                    channelMembers={activeChannel?.members || []}
+                                                    channelLastRead={lastRead[activeChannelId] || {}}
+                                                />
+                                            );
                                         })
                                     )}
                                 </div>
@@ -632,11 +822,40 @@ const MessagesPage = () => {
                                         <><div className="w-24 h-24 rounded-[36px] bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-500/10 dark:to-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-6 shadow-inner border border-white dark:border-white/5"><Hash size={48} /></div><h4 className="font-black text-2xl text-slate-900 dark:text-white mb-2 tracking-tighter">#{activeChannel?.name}</h4><div className="inline-flex items-center px-4 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Created {format(new Date(activeChannel?.createdAt || new Date()), 'MMM yyyy')}</div></>
                                     )}
                                 </div>
-                                <div className="space-y-10"><div><h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 pl-1">Description</h5><div className="p-5 rounded-[20px] bg-slate-50 dark:bg-white/5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-bold border border-slate-100 dark:border-white/5 shadow-sm">{activeChannel?.description || "Collaborate with your team members in real-time."}</div></div><div><h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 pl-1">Toolbox</h5><div className="space-y-2">{[{ icon: <Search size={16} />, label: 'Search history' }, { icon: <Lock size={16} />, label: 'Privacy & Security' }, { icon: <Users size={16} />, label: 'Team members' }, { icon: <ImageIcon size={16} />, label: 'Shared assets' }].map((item, i) => (<button key={i} className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-xs font-black transition-all group border-2 border-transparent hover:border-slate-100 dark:hover:border-white/5"><span className="text-slate-400 group-hover:text-indigo-600 transition-all">{item.icon}</span>{item.label}</button>))}</div></div></div>
+                                <div className="space-y-10">
+                                    <div>
+                                        <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 pl-1">Description</h5>
+                                        <div className="p-5 rounded-[20px] bg-slate-50 dark:bg-white/5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-bold border border-slate-100 dark:border-white/5 shadow-sm">{activeChannel?.description || "Collaborate with your team members in real-time."}</div>
+                                    </div>
+                                    <div>
+                                        <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] mb-4 pl-1">Toolbox</h5>
+                                        <div className="space-y-2">
+                                            {[
+                                                { icon: <Search size={16} />, label: 'Search history' },
+                                                { icon: <Lock size={16} />, label: 'Privacy & Security' },
+                                                { icon: <Users size={16} />, label: 'Team members', onClick: () => setShowAddMember(true) },
+                                                { icon: <ImageIcon size={16} />, label: 'Shared assets' }
+                                            ].map((item, i) => (
+                                                <button key={i} onClick={item.onClick} className="w-full flex items-center gap-4 p-4 rounded-2xl hover:bg-slate-50 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 text-xs font-black transition-all group border-2 border-transparent hover:border-slate-100 dark:hover:border-white/5">
+                                                    <span className="text-slate-400 group-hover:text-indigo-600 transition-all">{item.icon}</span>
+                                                    {item.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                {/* Add Member Modal */}
+                <AddMemberModal
+                    isOpen={showAddMember}
+                    onClose={() => setShowAddMember(false)}
+                    onAdd={handleAddMember}
+                    currentMembers={activeChannel?.members || []}
+                />
 
                 {/* New channel modal */}
                 <AnimatePresence>

@@ -8,9 +8,22 @@ const useChatStore = create((set, get) => ({
     typingUsers: {},     // channelId → { userId, userName }[]
     threadMessageId: null,
     onlineUsers: {},     // userId → 'online' | 'away' | 'offline'
+    lastRead: {},        // channelId → { userId → lastReadAt }
 
     setChannels: (channels) => set({ channels }),
     setActiveChannel: (channelId) => set({ activeChannelId: channelId }),
+    
+    setLastRead: (channelId, userId, timestamp) =>
+        set(s => ({
+            lastRead: {
+                ...s.lastRead,
+                [channelId]: {
+                    ...(s.lastRead[channelId] || {}),
+                    [userId]: timestamp
+                }
+            }
+        })),
+
     setMessages: (channelId, messages) =>
         set(s => ({ messages: { ...s.messages, [channelId]: messages } })),
 
