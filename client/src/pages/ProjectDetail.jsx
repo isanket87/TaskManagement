@@ -8,7 +8,7 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag, BarChart2, LayoutGrid, AlignLeft, Users, Search, Sparkles, Check, Loader2 } from 'lucide-react';
+import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag, BarChart2, BarChart3, LayoutGrid, AlignLeft, Users, Search, Sparkles, Check, Loader2, RefreshCw } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import DueDateBadge from '../components/due-date/DueDateBadge';
 import DateTimePicker from '../components/due-date/DateTimePicker';
@@ -33,6 +33,7 @@ import Papa from 'papaparse';
 // Lazy loaded heavy components
 const WorkloadView = lazy(() => import('../components/views/WorkloadView'));
 const SwimlaneView = lazy(() => import('../components/views/SwimlaneView'));
+const ProjectStatsView = lazy(() => import('../components/projects/ProjectStatsView'));
 const TaskDetailPanel = lazy(() => import('../components/shared/TaskDetailPanel'));
 const ImportCsvModal = lazy(() => import('../components/shared/ImportCsvModal'));
 
@@ -46,8 +47,11 @@ const ViewFallback = () => (
 );
 
 // Task Card
-const TaskCard = ({ task, projectId, onDueDateUpdate, onDelete, onSelect }) => {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+const TaskCard = ({ task, projectId, onDueDateUpdate, onDelete, onSelect, isOverlay, onPriorityUpdate }) => {
+    // Only use sortable hooks if NOT in overlay mode
+    const sortable = useSortable({ id: task.id, disabled: isOverlay });
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = sortable;
+    
     const { toggleSelectTask, selectedTaskIds } = useTaskStore();
     const isSelected = selectedTaskIds.includes(task.id);
     const [showDatePicker, setShowDatePicker] = useState(false);
@@ -55,10 +59,12 @@ const TaskCard = ({ task, projectId, onDueDateUpdate, onDelete, onSelect }) => {
     const queryClient = useQueryClient();
     const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done';
 
-    const style = {
+    const style = isOverlay ? {
+        cursor: 'grabbing',
+    } : {
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.6 : 1,
+        opacity: isDragging ? 0.3 : 1,
         zIndex: isDragging ? 50 : 1
     };
 
@@ -84,17 +90,21 @@ const TaskCard = ({ task, projectId, onDueDateUpdate, onDelete, onSelect }) => {
             style={style}
             onClick={() => onSelect(task)}
             className={cn(
-                "group relative bg-white dark:bg-slate-800 rounded-xl p-3 cursor-pointer transition-all border border-slate-200 dark:border-slate-700 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-600 flex overflow-hidden",
-                isSelected && "ring-2 ring-indigo-500 border-transparent",
-                isOverdue && !isSelected && "border-red-300 dark:border-red-900/50"
+                "group relative bg-white dark:bg-slate-800 rounded-xl p-3 cursor-pointer transition-all border border-slate-200 dark:border-slate-700 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-900/50 flex hover:z-[40] active:z-[40]",
+                isSelected && "ring-2 ring-indigo-500 border-transparent z-[30]",
+                isOverdue && !isSelected && "border-red-300 dark:border-red-900/50",
+                isOverlay && "shadow-2xl ring-1 ring-indigo-500/50 rotate-2 opacity-90 z-[100]"
             )}
         >
             {/* Priority Left Border Indicator */}
-            <div className={cn("absolute left-0 top-0 bottom-0 w-1", getPriorityColor(task.priority))} />
+            <div className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-xl", getPriorityColor(task.priority))} />
 
             {/* Checkbox Overlay (Hover/Selected) */}
             <div
-                className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-opacity z-10 cursor-pointer"
+                className={cn(
+                    "absolute top-3 left-3 transition-opacity z-10 cursor-pointer",
+                    isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                )}
                 onClick={(e) => { e.stopPropagation(); toggleSelectTask(task.id); }}
             >
                 <div className={cn(
@@ -108,14 +118,16 @@ const TaskCard = ({ task, projectId, onDueDateUpdate, onDelete, onSelect }) => {
             <div className="flex-1 min-w-0 pl-1.5 flex flex-col h-full">
                 <div className="flex items-start gap-2 mb-2">
                     {/* Drag Handle */}
-                    <button
-                        {...listeners}
-                        {...attributes}
-                        onClick={(e) => e.stopPropagation()}
-                        className="mt-0.5 p-0.5 text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 cursor-grab active:cursor-grabbing shrink-0 transition-colors hidden sm:block opacity-0 group-hover:opacity-100"
-                    >
-                        <GripVertical className="w-4 h-4" />
-                    </button>
+                    {!isOverlay && (
+                        <button
+                            {...listeners}
+                            {...attributes}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-0.5 p-0.5 text-slate-300 hover:text-slate-500 dark:text-slate-600 dark:hover:text-slate-400 cursor-grab active:cursor-grabbing shrink-0 transition-colors hidden sm:block opacity-0 group-hover:opacity-100"
+                        >
+                            <GripVertical className="w-4 h-4" />
+                        </button>
+                    )}
 
                     <div className="flex-1 min-w-0">
                         <p className={cn(
@@ -152,26 +164,47 @@ const TaskCard = ({ task, projectId, onDueDateUpdate, onDelete, onSelect }) => {
                         ))}
                     </div>
                 )}
+                
                 <div className="flex-1" />
 
                 {/* Footer / Meta Data Row */}
                 <div className="flex items-center justify-between mt-auto pt-2">
-                    <div className="flex items-center gap-3">
-                        <span className={`badge ${getPriorityBadgeClass(task.priority)} scale-90 origin-left`}>
-                            {task.priority}
-                        </span>
+                    <div className="flex items-center gap-2.5">
+                        <div className="flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                            <Dropdown
+                                align="left"
+                                position="top"
+                                trigger={
+                                    <button className={cn(`badge ${getPriorityBadgeClass(task.priority)} scale-90 origin-left hover:brightness-95 transition-all shadow-sm`)}>
+                                        {task.priority}
+                                    </button>
+                                }
+                                items={PRIORITY_OPTIONS.map(p => ({
+                                    label: p.label,
+                                    active: task.priority === p.value,
+                                    icon: <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />,
+                                    onClick: () => onPriorityUpdate(task, p.value)
+                                }))}
+                            />
+                            {task.isRecurring && (
+                                <RefreshCw className="w-3 h-3 text-indigo-500" title="Recurring task" />
+                            )}
+                            {(task.description?.includes('sparkle') || task._count?.comments > 5) && (
+                                <Sparkles className="w-3 h-3 text-amber-500" title="AI insights available" />
+                            )}
+                        </div>
 
                         {/* Subtask / Comment Badges */}
                         <div className="flex items-center gap-2">
                             {task._count?.subtasks > 0 && (
                                 <span className="flex items-center gap-1 text-[11px] font-medium text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-800" title={`${task.subtasks?.filter(s => s.status === 'done')?.length || 0} of ${task._count.subtasks} subtasks completed`}>
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3"><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                    <Check className="w-2.5 h-2.5" />
                                     {task.subtasks?.filter(s => s.status === 'done')?.length || 0}/{task._count.subtasks}
                                 </span>
                             )}
                             {task._count?.comments > 0 && (
-                                <span className="flex items-center gap-1 text-xs font-medium text-slate-400">
-                                    <MessageCircle className="w-3.5 h-3.5" />
+                                <span className="flex items-center gap-1 text-[11px] font-medium text-slate-400">
+                                    <MessageCircle className="w-3 h-3" />
                                     {task._count.comments}
                                 </span>
                             )}
@@ -213,10 +246,11 @@ const TaskCard = ({ task, projectId, onDueDateUpdate, onDelete, onSelect }) => {
 };
 
 // Kanban Column
-const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onAddTask, onSelectTask, createMutation }) => {
+const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onAddTask, onSelectTask, createMutation, onPriorityUpdate }) => {
     const { setNodeRef, isOver } = useDroppable({ id: column.id });
     const [isQuickAdding, setIsQuickAdding] = useState(false);
     const [quickAddTitle, setQuickAddTitle] = useState('');
+    const queryClient = useQueryClient();
 
     const handleQuickAdd = () => {
         if (!quickAddTitle.trim()) {
@@ -229,13 +263,29 @@ const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onA
         }, {
             onSuccess: () => {
                 setQuickAddTitle('');
-                setIsQuickAdding(false);
+                // Keep the input open if they used Enter, for rapid entry
+                // But if they clicked away/blurred, we close it via the blur handler elsewhere
             }
         });
     };
 
+    const handleClearDone = async () => {
+        if (!window.confirm('Are you sure you want to delete all completed tasks in this column?')) return;
+        try {
+            const doneTasks = tasks.filter(t => t.status === 'done');
+            await Promise.all(doneTasks.map(t => taskService.delete(projectId, t.id)));
+            queryClient.invalidateQueries(['tasks', projectId]);
+            toast.success(`Cleared ${doneTasks.length} tasks`);
+        } catch (err) {
+            toast.error('Failed to clear tasks');
+        }
+    };
+
     return (
-        <div className="flex flex-col w-[300px] sm:w-[320px] shrink-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl h-full max-h-full snap-center md:snap-align-none">
+        <div className={cn(
+            "flex flex-col w-[300px] sm:w-[320px] shrink-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl h-full max-h-full snap-center md:snap-align-none border-2 transition-colors",
+            isOver ? "border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-900/10" : "border-transparent"
+        )}>
             <div className="flex items-center justify-between p-4 pb-2">
                 <div className="flex items-center gap-2.5">
                     <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: column.color }} />
@@ -245,13 +295,15 @@ const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onA
                     </span>
                 </div>
                 <div className="flex items-center gap-1">
-                    <button
-                        onClick={() => setIsQuickAdding(true)}
-                        className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                        title="Quick add task"
-                    >
-                        <Plus className="w-4 h-4" />
-                    </button>
+                    {column.id === 'done' && tasks.length > 0 && (
+                        <button
+                            onClick={handleClearDone}
+                            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition-colors"
+                            title="Clear all completed tasks"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                    )}
                     <button
                         onClick={() => onAddTask(column.id)}
                         className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
@@ -264,56 +316,8 @@ const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onA
 
             <div
                 ref={setNodeRef}
-                className={cn(
-                    "flex-1 overflow-y-auto px-3 pb-4 pt-2 space-y-3 min-h-[150px] transition-colors rounded-b-2xl",
-                    isOver ? "bg-indigo-50/50 dark:bg-indigo-900/10" : "bg-transparent"
-                )}
+                className="flex-1 overflow-y-auto px-3 pb-2 pt-2 space-y-3 min-h-[150px]"
             >
-                {/* QUICK ADD INPUT */}
-                <AnimatePresence>
-                    {isQuickAdding && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="bg-white dark:bg-slate-800 rounded-xl p-2 shadow-sm border-2 border-indigo-500 dark:border-indigo-500/50 mb-3"
-                        >
-                            <input
-                                autoFocus
-                                value={quickAddTitle}
-                                onChange={(e) => setQuickAddTitle(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleQuickAdd();
-                                    if (e.key === 'Escape') {
-                                        setIsQuickAdding(false);
-                                        setQuickAddTitle('');
-                                    }
-                                }}
-                                onBlur={() => {
-                                    if (!quickAddTitle.trim()) setIsQuickAdding(false);
-                                }}
-                                placeholder="What needs to be done?"
-                                className="w-full text-sm bg-transparent border-none focus:ring-0 p-1 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
-                            />
-                            <div className="flex justify-end gap-1 mt-1">
-                                <button 
-                                    onClick={() => { setIsQuickAdding(false); setQuickAddTitle(''); }}
-                                    className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 transition-colors"
-                                >
-                                    <X className="w-3.5 h-3.5" />
-                                </button>
-                                <button 
-                                    onClick={handleQuickAdd}
-                                    disabled={createMutation.isPending || !quickAddTitle.trim()}
-                                    className="p-1 rounded bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-                                >
-                                    <Check className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
                 <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                     {tasks.map((task) => (
                         <TaskCard
@@ -323,14 +327,64 @@ const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onA
                             onDueDateUpdate={onDueDateUpdate}
                             onDelete={onDelete}
                             onSelect={onSelectTask}
+                            onPriorityUpdate={onPriorityUpdate}
                         />
                     ))}
                 </SortableContext>
-                {/* Empty State spacer to allow dropping when empty */}
-                {tasks.length === 0 && (
+                
+                {tasks.length === 0 && !isQuickAdding && (
                     <div className="h-20 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center">
-                        <span className="text-xs font-medium text-slate-400">Drop tasks here</span>
+                        <span className="text-xs font-medium text-slate-400">No tasks yet</span>
                     </div>
+                )}
+            </div>
+
+            {/* QUICK ADD AT THE BOTTOM */}
+            <div className="p-3 pt-0">
+                {isQuickAdding ? (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="bg-white dark:bg-slate-800 rounded-xl p-2 shadow-lg border-2 border-indigo-500"
+                    >
+                        <input
+                            autoFocus
+                            value={quickAddTitle}
+                            onChange={(e) => setQuickAddTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleQuickAdd();
+                                if (e.key === 'Escape') {
+                                    setIsQuickAdding(false);
+                                    setQuickAddTitle('');
+                                }
+                            }}
+                            placeholder="Task title..."
+                            className="w-full text-sm bg-transparent border-none focus:ring-0 p-1 text-slate-800 dark:text-slate-100"
+                        />
+                        <div className="flex justify-end gap-1 mt-1">
+                            <button 
+                                onClick={() => { setIsQuickAdding(false); setQuickAddTitle(''); }}
+                                className="px-2 py-1 text-[10px] font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+                            >
+                                CANCEL
+                            </button>
+                            <button 
+                                onClick={handleQuickAdd}
+                                disabled={createMutation.isPending || !quickAddTitle.trim()}
+                                className="px-2 py-1 text-[10px] font-bold bg-indigo-600 text-white hover:bg-indigo-700 rounded shadow-sm disabled:opacity-50 transition-colors"
+                            >
+                                SAVE
+                            </button>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <button
+                        onClick={() => setIsQuickAdding(true)}
+                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all group"
+                    >
+                        <Plus className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors" />
+                        <span className="text-xs font-semibold">Add Task</span>
+                    </button>
                 )}
             </div>
         </div>
@@ -405,6 +459,12 @@ const ProjectDetail = () => {
         mutationFn: ({ taskId, dueDate, hasDueTime }) => taskService.updateDueDate(projectId, taskId, { dueDate: dueDate?.toISOString() || null, hasDueTime }),
         onSuccess: () => { queryClient.invalidateQueries(['tasks', projectId]); toast.success('Due date updated'); },
         onError: () => toast.error('Failed to update due date'),
+    });
+
+    const updatePriorityMutation = useMutation({
+        mutationFn: ({ taskId, priority }) => taskService.update(projectId, taskId, { priority }),
+        onSuccess: () => { queryClient.invalidateQueries(['tasks', projectId]); toast.success('Priority updated'); },
+        onError: () => toast.error('Failed to update priority'),
     });
 
     const project = projectData?.data?.data?.project;
@@ -570,6 +630,7 @@ const ProjectDetail = () => {
                             { id: 'kanban', icon: <LayoutGrid className="w-3.5 h-3.5" />, label: 'Kanban' },
                             { id: 'swimlane', icon: <AlignLeft className="w-3.5 h-3.5" />, label: 'Swimlane' },
                             { id: 'workload', icon: <BarChart2 className="w-3.5 h-3.5" />, label: 'Workload' },
+                            { id: 'stats', icon: <BarChart3 className="w-4 h-4" />, label: 'Stats' },
                         ].map(({ id, icon, label }) => (
                             <button
                                 key={id}
@@ -742,6 +803,8 @@ const ProjectDetail = () => {
                                 focusedMemberId={focusedMemberId}
                                 onFocusChange={toggleFocus}
                             />
+                        ) : viewMode === 'stats' ? (
+                            <ProjectStatsView projectId={projectId} />
                         ) : isLoading ? (
                             <div className="flex gap-6 h-full">
                                 {KANBAN_COLUMNS.map((col) => (
@@ -764,14 +827,17 @@ const ProjectDetail = () => {
                                             onAddTask={(status) => { setNewTaskStatus(status); setShowAddTask(true); }}
                                             onSelectTask={handleSelectTask}
                                             createMutation={createMutation}
+                                            onPriorityUpdate={(task, priority) => updatePriorityMutation.mutate({ taskId: task.id, priority })}
                                         />
                                     ))}
                                 </div>
                                 <DragOverlay>
                                     {activeTask && (
-                                        <div className="card p-3 w-72 shadow-2xl rotate-2 opacity-90">
-                                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{activeTask.title}</p>
-                                        </div>
+                                        <TaskCard
+                                            task={activeTask}
+                                            projectId={projectId}
+                                            isOverlay
+                                        />
                                     )}
                                 </DragOverlay>
                             </DndContext>

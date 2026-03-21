@@ -14,7 +14,11 @@ const Dropdown = ({ trigger, items, align = 'left', position = 'bottom' }) => {
 
     return (
         <div ref={ref} className="relative inline-block">
-            <div onClick={() => setOpen((o) => !o)}>{trigger}</div>
+            <div onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setOpen((o) => !o);
+            }}>{trigger}</div>
             <AnimatePresence>
                 {open && (
                     <motion.div

@@ -147,11 +147,12 @@ const StackedBarChart = ({ creation = [], completion = [] }) => {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 const AnalyticsPage = () => {
     const workspace = useWorkspaceStore(s => s.workspace);
+    const [range, setRange] = useState('30d');
 
     const { data, isLoading } = useQuery({
-        queryKey: ['workspace-analytics', workspace?.slug],
+        queryKey: ['workspace-analytics', workspace?.slug, range],
         queryFn: async () => {
-            const res = await api.get(`/workspaces/${workspace.slug}/analytics`);
+            const res = await api.get(`/workspaces/${workspace.slug}/analytics`, { params: { range } });
             return res.data.data;
         },
         enabled: !!workspace?.slug,
@@ -175,14 +176,40 @@ const AnalyticsPage = () => {
         label: p, value: data?.byPriority?.[p] || 0, color: PRIORITY_COLORS[p]
     }));
 
+    const RANGE_LABELS = {
+        '7d': 'Last 7 Days',
+        '30d': 'Last 30 Days',
+        '90d': 'Last 90 Days',
+        'all': 'All Time (90d max)'
+    };
+
     return (
         <PageWrapper title="Analytics">
             <div className="p-6 space-y-6 max-w-6xl mx-auto">
 
                 {/* Header */}
-                <div>
-                    <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Workspace Analytics</h1>
-                    <p className="text-sm text-slate-500 mt-0.5">Task completion, project progress, and team performance</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">Workspace Analytics</h1>
+                        <p className="text-sm text-slate-500 mt-0.5">Task completion, project progress, and team performance</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                        {Object.entries(RANGE_LABELS).map(([val, label]) => (
+                            <button
+                                key={val}
+                                onClick={() => setRange(val)}
+                                className={cn(
+                                    "px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all",
+                                    range === val 
+                                        ? "bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                                )}
+                            >
+                                {val}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Overview cards */}
@@ -197,12 +224,43 @@ const AnalyticsPage = () => {
                 <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
                     <div className="flex items-center gap-2 mb-4">
                         <TrendingUp className="w-5 h-5 text-indigo-500" />
-                        <h2 className="font-semibold text-slate-900 dark:text-slate-100">Task Completion — Last 30 Days</h2>
+                        <h2 className="font-semibold text-slate-900 dark:text-slate-100">Task Completion Trend</h2>
                     </div>
                     <LineChart data={data?.completionTrend || []} />
                     <div className="flex justify-between mt-1">
-                        <span className="text-xs text-slate-400">30 days ago</span>
+                        <span className="text-xs text-slate-400">{RANGE_LABELS[range]} ago</span>
                         <span className="text-xs text-slate-400">Today</span>
+                    </div>
+                </div>
+
+                {/* Team Workload */}
+                <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
+                    <div className="flex items-center gap-2 mb-6">
+                        <Users className="w-5 h-5 text-indigo-500" />
+                        <h2 className="font-semibold text-slate-900 dark:text-slate-100">Team Workload (Open Tasks)</h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {!data?.workload?.length ? (
+                            <div className="col-span-full py-8 text-center text-sm text-slate-400">No active tasks assigned</div>
+                        ) : (
+                            data.workload.map(entry => (
+                                <div key={entry.user?.id} className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800">
+                                    <Avatar user={entry.user} size="md" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{entry.user?.name}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                            <div className="flex-1 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                                <div 
+                                                    className="h-full bg-indigo-500 rounded-full transition-all" 
+                                                    style={{ width: `${Math.min((entry.count / 10) * 100, 100)}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-xs font-bold text-slate-600 dark:text-slate-400">{entry.count}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
 
@@ -226,7 +284,7 @@ const AnalyticsPage = () => {
                     </div>
                     <StackedBarChart creation={data?.creationTrend} completion={data?.completionTrend} />
                     <div className="flex justify-between mt-1">
-                        <span className="text-xs text-slate-400">30 days ago</span>
+                        <span className="text-xs text-slate-400">{RANGE_LABELS[range]} ago</span>
                         <span className="text-xs text-slate-400">Today</span>
                     </div>
                 </div>

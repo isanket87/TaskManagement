@@ -32,16 +32,28 @@ export const useSocket = (projectId = null) => {
 
         // Task events
         socket.on('task:created', ({ task }) => {
-            if (task.projectId === projectId) updateTaskCache(tasks => [...tasks, task]);
+            if (task.projectId === projectId) {
+                updateTaskCache(tasks => [...tasks, task]);
+                queryClient.invalidateQueries({ queryKey: ['project-activity', projectId] });
+                queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+            }
         });
         socket.on('task:updated', ({ task }) => {
-            if (task.projectId === projectId) updateTaskCache(tasks => tasks.map(t => t.id === task.id ? { ...t, ...task } : t));
+            if (task.projectId === projectId) {
+                updateTaskCache(tasks => tasks.map(t => t.id === task.id ? { ...t, ...task } : t));
+                queryClient.invalidateQueries({ queryKey: ['project-activity', projectId] });
+                queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+            }
         });
         socket.on('task:deleted', ({ taskId }) => {
             updateTaskCache(tasks => tasks.filter(t => t.id !== taskId));
+            queryClient.invalidateQueries({ queryKey: ['project-activity', projectId] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         });
         socket.on('task:moved', ({ taskId, status, position }) => {
             updateTaskCache(tasks => tasks.map(t => t.id === taskId ? { ...t, ...(status && { status }), ...(position !== undefined && { position }) } : t));
+            queryClient.invalidateQueries({ queryKey: ['project-activity', projectId] });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
         });
         socket.on('task:dueDateUpdated', ({ taskId, dueDate, dueDateStatus }) => {
             updateTaskCache(tasks => tasks.map(t => t.id === taskId ? { ...t, dueDate, dueDateStatus } : t));

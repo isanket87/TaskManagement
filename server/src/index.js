@@ -312,6 +312,10 @@ const start = async () => {
   │  PID:      ${process.pid}                    │
   └─────────────────────────────────────────┘
   `)
+            // Signal PM2 that we are ready to take traffic
+            if (process.send) {
+                process.send('ready')
+            }
         })
     } catch (err) {
         console.error('Failed to start:', err)

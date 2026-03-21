@@ -78,7 +78,7 @@ const MembersPage = () => {
         const fetchMembersAndInvites = async () => {
             try {
                 const membersRes = await api.get(`/workspaces/${slug}/members`);
-                setMembers(membersRes.data.data || []);
+                setMembers(membersRes.data.data.members || []);
                 if (isAdmin()) {
                     const invitesRes = await api.get(`/workspaces/${slug}/invites`);
                     setInvites(invitesRes.data.data.invites || []);

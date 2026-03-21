@@ -130,6 +130,9 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
     const [isEditingTags, setIsEditingTags] = useState(false);
     const [newTagValue, setNewTagValue] = useState('');
 
+    const [showRecurrenceSettings, setShowRecurrenceSettings] = useState(false);
+    const [expandedHistory, setExpandedHistory] = useState(null);
+
     // Reset state when task changes (e.g., navigating through subtasks/dependencies)
     useEffect(() => {
         setActiveTab('details');
@@ -630,25 +633,52 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
 
                                     {/* PRIORITY */}
                                     <PropertyRow icon={AlertTriangle} label="Priority">
-                                        <Dropdown
-                                            align="left"
-                                            trigger={
-                                                <button className="flex items-center gap-2 px-2 py-1 -ml-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors text-sm font-medium text-slate-700 dark:text-slate-200 group/btn h-8">
-                                                    <span className={cn(`badge scale-90 origin-left`, getPriorityBadgeClass(detailedTask.priority))}>
-                                                        {detailedTask.priority}
-                                                    </span>
-                                                </button>
-                                            }
-                                            items={PRIORITY_OPTIONS.map(priority => ({
-                                                label: priority.label,
-                                                active: detailedTask.priority === priority.value,
-                                                onClick: () => {
-                                                    if (detailedTask.priority !== priority.value) {
-                                                        propertyMutation.mutate({ priority: priority.value });
+                                        <div className="flex flex-col gap-1 w-full">
+                                            <div className="flex items-center justify-between">
+                                                <Dropdown
+                                                    align="left"
+                                                    trigger={
+                                                        <button className="flex items-center gap-2 px-2 py-1 -ml-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors text-sm font-medium text-slate-700 dark:text-slate-200 group/btn h-8">
+                                                            <span className={cn(`badge scale-90 origin-left`, getPriorityBadgeClass(detailedTask.priority))}>
+                                                                {detailedTask.priority}
+                                                            </span>
+                                                        </button>
                                                     }
-                                                }
-                                            }))}
-                                        />
+                                                    items={PRIORITY_OPTIONS.map(priority => ({
+                                                        label: priority.label,
+                                                        active: detailedTask.priority === priority.value,
+                                                        onClick: () => {
+                                                            if (detailedTask.priority !== priority.value) {
+                                                                propertyMutation.mutate({ priority: priority.value });
+                                                            }
+                                                        }
+                                                    }))}
+                                                />
+                                                <button
+                                                    onClick={async () => {
+                                                        try {
+                                                            const res = await taskService.suggestPriority({ 
+                                                                title: detailedTask.title, 
+                                                                description: detailedTask.description 
+                                                            });
+                                                            const suggested = res.data?.data?.priority;
+                                                            if (suggested && suggested !== detailedTask.priority) {
+                                                                propertyMutation.mutate({ priority: suggested });
+                                                                toast.success(`AI suggested "${suggested}" priority`);
+                                                            } else {
+                                                                toast.success(`Priority is already "${detailedTask.priority}"`);
+                                                            }
+                                                        } catch (err) {
+                                                            toast.error('AI suggestion failed');
+                                                        }
+                                                    }}
+                                                    className="flex items-center gap-1 text-[10px] font-bold text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 opacity-0 group-hover/prop:opacity-100 transition-opacity"
+                                                >
+                                                    <Sparkles className="w-3 h-3" />
+                                                    SUGGEST
+                                                </button>
+                                            </div>
+                                        </div>
                                     </PropertyRow>
 
                                     {/* ASSIGNEE */}
@@ -736,27 +766,123 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
 
                                     {/* RECURRENCE */}
                                     <PropertyRow icon={RefreshCw} label="Recurrence">
-                                        <Dropdown
-                                            align="left"
-                                            trigger={
-                                                <button className="flex items-center gap-2 px-2 py-1 -ml-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors text-sm font-medium text-slate-700 dark:text-slate-200 group/btn h-8">
-                                                    {detailedTask.isRecurring ? (
-                                                        <span className="text-indigo-600 dark:text-indigo-400 capitalize">
-                                                            {detailedTask.recurrenceRule}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-slate-400">None</span>
+                                        <div className="flex flex-col gap-2 w-full">
+                                            <div className="flex items-center justify-between">
+                                                <Dropdown
+                                                    align="left"
+                                                    trigger={
+                                                        <button className="flex items-center gap-2 px-2 py-1 -ml-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors text-sm font-medium text-slate-700 dark:text-slate-200 group/btn h-8">
+                                                            {detailedTask.isRecurring ? (
+                                                                <span className="text-indigo-600 dark:text-indigo-400 capitalize">
+                                                                    {detailedTask.recurrenceRule}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-slate-400">None</span>
+                                                            )}
+                                                        </button>
+                                                    }
+                                                    items={[
+                                                        { label: 'None', active: !detailedTask.isRecurring, onClick: () => propertyMutation.mutate({ isRecurring: false, recurrenceRule: null, recurrenceConfig: null }) },
+                                                        { label: 'Daily', active: detailedTask.recurrenceRule === 'daily', onClick: () => propertyMutation.mutate({ isRecurring: true, recurrenceRule: 'daily', recurrenceConfig: { interval: 1 } }) },
+                                                        { label: 'Weekly', active: detailedTask.recurrenceRule === 'weekly', onClick: () => propertyMutation.mutate({ isRecurring: true, recurrenceRule: 'weekly', recurrenceConfig: { interval: 1, daysOfWeek: [new Date().getDay()] } }) },
+                                                        { label: 'Monthly', active: detailedTask.recurrenceRule === 'monthly', onClick: () => propertyMutation.mutate({ isRecurring: true, recurrenceRule: 'monthly', recurrenceConfig: { interval: 1, dayOfMonth: new Date().getDate() } }) },
+                                                        { label: 'Yearly', active: detailedTask.recurrenceRule === 'yearly', onClick: () => propertyMutation.mutate({ isRecurring: true, recurrenceRule: 'yearly', recurrenceConfig: { interval: 1 } }) },
+                                                    ]}
+                                                />
+                                                {detailedTask.isRecurring && (
+                                                    <button 
+                                                        onClick={() => setShowRecurrenceSettings(!showRecurrenceSettings)}
+                                                        className={cn(
+                                                            "p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors",
+                                                            showRecurrenceSettings && "text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30"
+                                                        )}
+                                                    >
+                                                        <Plus className={cn("w-3.5 h-3.5 transition-transform", showRecurrenceSettings && "rotate-45")} />
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {showRecurrenceSettings && detailedTask.isRecurring && (
+                                                <motion.div 
+                                                    initial={{ opacity: 0, height: 0 }}
+                                                    animate={{ opacity: 1, height: 'auto' }}
+                                                    exit={{ opacity: 0, height: 0 }}
+                                                    className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 border border-slate-200 dark:border-slate-700 space-y-3"
+                                                >
+                                                    {/* Interval */}
+                                                    <div>
+                                                        <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Repeat Every</label>
+                                                        <div className="flex items-center gap-2">
+                                                            <input 
+                                                                type="number" 
+                                                                min="1"
+                                                                value={detailedTask.recurrenceConfig?.interval || 1}
+                                                                onChange={(e) => propertyMutation.mutate({ 
+                                                                    recurrenceConfig: { ...detailedTask.recurrenceConfig, interval: parseInt(e.target.value) || 1 } 
+                                                                })}
+                                                                className="w-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-500"
+                                                            />
+                                                            <span className="text-xs text-slate-500">
+                                                                {detailedTask.recurrenceRule === 'daily' ? 'days' : 
+                                                                 detailedTask.recurrenceRule === 'weekly' ? 'weeks' :
+                                                                 detailedTask.recurrenceRule === 'monthly' ? 'months' : 'years'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Weekly: Days of Week */}
+                                                    {detailedTask.recurrenceRule === 'weekly' && (
+                                                        <div>
+                                                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">On Days</label>
+                                                            <div className="flex gap-1">
+                                                                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => {
+                                                                    const days = detailedTask.recurrenceConfig?.daysOfWeek || [];
+                                                                    const isActive = days.includes(i);
+                                                                    return (
+                                                                        <button
+                                                                            key={i}
+                                                                            onClick={() => {
+                                                                                const newDays = isActive 
+                                                                                    ? days.filter(d => d !== i)
+                                                                                    : [...days, i].sort();
+                                                                                propertyMutation.mutate({ 
+                                                                                    recurrenceConfig: { ...detailedTask.recurrenceConfig, daysOfWeek: newDays } 
+                                                                                });
+                                                                            }}
+                                                                            className={cn(
+                                                                                "w-6 h-6 rounded-full text-[10px] font-bold transition-colors",
+                                                                                isActive 
+                                                                                    ? "bg-indigo-600 text-white" 
+                                                                                    : "bg-white dark:bg-slate-900 text-slate-500 border border-slate-200 dark:border-slate-700 hover:border-indigo-300"
+                                                                            )}
+                                                                        >
+                                                                            {day}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
                                                     )}
-                                                </button>
-                                            }
-                                            items={[
-                                                { label: 'None', active: !detailedTask.isRecurring, onClick: () => propertyMutation.mutate({ isRecurring: false, recurrenceRule: null }) },
-                                                { label: 'Daily', active: detailedTask.recurrenceRule === 'daily', onClick: () => propertyMutation.mutate({ isRecurring: true, recurrenceRule: 'daily' }) },
-                                                { label: 'Weekly', active: detailedTask.recurrenceRule === 'weekly', onClick: () => propertyMutation.mutate({ isRecurring: true, recurrenceRule: 'weekly' }) },
-                                                { label: 'Monthly', active: detailedTask.recurrenceRule === 'monthly', onClick: () => propertyMutation.mutate({ isRecurring: true, recurrenceRule: 'monthly' }) },
-                                                { label: 'Yearly', active: detailedTask.recurrenceRule === 'yearly', onClick: () => propertyMutation.mutate({ isRecurring: true, recurrenceRule: 'yearly' }) },
-                                            ]}
-                                        />
+
+                                                    {/* Monthly: Day of Month */}
+                                                    {detailedTask.recurrenceRule === 'monthly' && (
+                                                        <div>
+                                                            <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Day of Month</label>
+                                                            <input 
+                                                                type="number" 
+                                                                min="1"
+                                                                max="31"
+                                                                value={detailedTask.recurrenceConfig?.dayOfMonth || new Date().getDate()}
+                                                                onChange={(e) => propertyMutation.mutate({ 
+                                                                    recurrenceConfig: { ...detailedTask.recurrenceConfig, dayOfMonth: parseInt(e.target.value) || 1 } 
+                                                                })}
+                                                                className="w-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-indigo-500"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                </motion.div>
+                                            )}
+                                        </div>
                                     </PropertyRow>
 
                                     {/* PROJECT */}
@@ -901,9 +1027,67 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                                             {activity.createdAt ? format(new Date(activity.createdAt), 'MMM d, h:mm a') : ''}
                                                         </span>
                                                     </div>
-                                                    <p className="text-[13px] text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700/50 inline-block shadow-sm">
-                                                        {activity.message}
-                                                    </p>
+                                                    <div className="flex flex-col gap-2">
+                                                        <p className="text-[13px] text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700/50 inline-block shadow-sm">
+                                                            {activity.message}
+                                                        </p>
+                                                        
+                                                        {/* DESCRIPTION HISTORY EXPANDER */}
+                                                        {activity.metadata?.before?.description !== undefined && (
+                                                            <div className="mt-1">
+                                                                <button 
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const id = activity.id;
+                                                                        setExpandedHistory(expandedHistory === id ? null : id);
+                                                                    }}
+                                                                    className="text-[10px] font-bold text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 flex items-center gap-1 uppercase tracking-tight"
+                                                                >
+                                                                    <Clock className="w-3 h-3" />
+                                                                    {expandedHistory === activity.id ? 'Hide History' : 'View History'}
+                                                                </button>
+
+                                                                <AnimatePresence>
+                                                                    {expandedHistory === activity.id && (
+                                                                        <motion.div 
+                                                                            initial={{ opacity: 0, height: 0 }}
+                                                                            animate={{ opacity: 1, height: 'auto' }}
+                                                                            exit={{ opacity: 0, height: 0 }}
+                                                                            className="mt-2 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden"
+                                                                        >
+                                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                                <div className="space-y-1.5">
+                                                                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Previous Version</label>
+                                                                                    <div 
+                                                                                        className="text-xs text-slate-500 line-through opacity-70 prose prose-slate dark:prose-invert max-w-none max-h-[200px] overflow-y-auto"
+                                                                                        dangerouslySetInnerHTML={{ __html: activity.metadata.before.description || '*No description*' }}
+                                                                                    />
+                                                                                </div>
+                                                                                <div className="space-y-1.5">
+                                                                                    <div className="flex items-center justify-between">
+                                                                                        <label className="text-[10px] font-bold text-indigo-500 uppercase">New Version</label>
+                                                                                        <button 
+                                                                                            onClick={() => {
+                                                                                                propertyMutation.mutate({ description: activity.metadata.before.description });
+                                                                                                toast.success('Restored previous description');
+                                                                                            }}
+                                                                                            className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-[10px] font-bold rounded transition-colors"
+                                                                                        >
+                                                                                            Restore Previous
+                                                                                        </button>
+                                                                                    </div>
+                                                                                    <div 
+                                                                                        className="text-xs text-slate-700 dark:text-slate-300 prose prose-slate dark:prose-invert max-w-none max-h-[200px] overflow-y-auto"
+                                                                                        dangerouslySetInnerHTML={{ __html: activity.metadata.after.description || '*No description*' }}
+                                                                                    />
+                                                                                </div>
+                                                                            </div>
+                                                                        </motion.div>
+                                                                    )}
+                                                                </AnimatePresence>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}

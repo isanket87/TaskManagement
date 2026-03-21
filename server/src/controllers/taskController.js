@@ -256,9 +256,41 @@ const updateTask = async (req, res, next) => {
         logChange('title', 'title')
         logChange('status', 'status', (v) => v?.replace('_', ' '))
         logChange('priority', 'priority')
-        
-        if (data.assigneeId !== undefined && data.assigneeId !== currentTask.assigneeId) {
-            // Clean empty string from frontend
+
+        if (data.description !== undefined && data.description !== currentTask.description) {
+            const stripHtml = (html) => html?.replace(/<[^>]*>?/gm, '') || '';
+            const oldPlain = stripHtml(currentTask.description);
+            const newPlain = stripHtml(data.description);
+            
+            const oldSnippet = oldPlain.length > 30 ? oldPlain.substring(0, 30) + '...' : oldPlain;
+            const newSnippet = newPlain.length > 30 ? newPlain.substring(0, 30) + '...' : newPlain;
+
+            changes.push(`description from "${oldSnippet || 'None'}" to "${newSnippet || 'None'}"`)
+            metadata.before.description = currentTask.description
+            metadata.after.description = data.description
+        }
+
+        if (data.tags !== undefined && JSON.stringify(data.tags) !== JSON.stringify(currentTask.tags)) {
+            const oldTags = Array.isArray(currentTask.tags) ? currentTask.tags.join(', ') : 'None'
+            const newTags = Array.isArray(data.tags) ? data.tags.join(', ') : 'None'
+            changes.push(`tags from "${oldTags}" to "${newTags}"`)
+            metadata.before.tags = currentTask.tags
+            metadata.after.tags = data.tags
+        }
+
+        if (data.isRecurring !== undefined && data.isRecurring !== currentTask.isRecurring) {
+            changes.push(`recurrence ${data.isRecurring ? 'enabled' : 'disabled'}`)
+            metadata.before.isRecurring = currentTask.isRecurring
+            metadata.after.isRecurring = data.isRecurring
+        }
+
+        if (data.recurrenceRule !== undefined && data.recurrenceRule !== currentTask.recurrenceRule) {
+            changes.push(`recurrence rule from "${currentTask.recurrenceRule || 'None'}" to "${data.recurrenceRule || 'None'}"`)
+            metadata.before.recurrenceRule = currentTask.recurrenceRule
+            metadata.after.recurrenceRule = data.recurrenceRule
+        }
+
+        if (data.assigneeId !== undefined && data.assigneeId !== currentTask.assigneeId) {            // Clean empty string from frontend
             if (data.assigneeId === '') data.assigneeId = null;
 
             const validId = data.assigneeId ? await validateAssignee(data.assigneeId) : null;
@@ -580,7 +612,10 @@ const getDashboardStats = async (req, res, next) => {
         const now = new Date()
         const weekAgo = addDays(now, -7)
 
-        const [myTasks, projects, overdueTasks, upcomingTasks, recentActivity, completedThisWeek, hoursThisWeekRaw] = await Promise.all([
+        const [
+            myTasks, projects, overdueTasks, upcomingTasks, recentActivity, 
+            completedThisWeek, hoursThisWeekRaw, tasksThisWeek, byPriorityRaw
+        ] = await Promise.all([
             prisma.task.findMany({
                 where: { assigneeId: userId, status: { not: 'done' }, project: { workspaceId } },
                 select: taskSelect,
@@ -609,11 +644,42 @@ const getDashboardStats = async (req, res, next) => {
             prisma.timeEntry.aggregate({
                 where: { userId, startTime: { gte: weekAgo }, project: { workspaceId } },
                 _sum: { duration: true }
+            }),
+            // NEW: Weekly Trend
+            prisma.task.findMany({
+                where: { assigneeId: userId, status: 'done', updatedAt: { gte: weekAgo }, project: { workspaceId } },
+                select: { updatedAt: true }
+            }),
+            // NEW: Priority Breakdown
+            prisma.task.groupBy({
+                by: ['priority'],
+                where: { assigneeId: userId, status: { not: 'done' }, project: { workspaceId } },
+                _count: { _all: true }
             })
         ])
 
         const hoursThisWeek = Math.round(((hoursThisWeekRaw._sum.duration || 0) / 3600) * 10) / 10
-        const stats = { myTasks, projects, overdueTasks, upcomingTasks, recentActivity, completedThisWeek, hoursThisWeek }
+        
+        // Process productivity trend
+        const productivityTrend = []
+        const trendMap = {}
+        for (let i = 6; i >= 0; i--) {
+            const d = addDays(now, -i)
+            trendMap[d.toISOString().split('T')[0]] = 0
+        }
+        tasksThisWeek.forEach(t => {
+            const day = t.updatedAt.toISOString().split('T')[0]
+            if (trendMap[day] !== undefined) trendMap[day]++
+        })
+        Object.entries(trendMap).forEach(([date, count]) => {
+            productivityTrend.push({ date, count })
+        })
+
+        const stats = { 
+            myTasks, projects, overdueTasks, upcomingTasks, recentActivity, 
+            completedThisWeek, hoursThisWeek, productivityTrend,
+            byPriority: Object.fromEntries(byPriorityRaw.map(r => [r.priority, r._count._all]))
+        }
 
         await cache.set(cacheKey, stats, TTL.DASHBOARD)
         return successResponse(res, { stats })

@@ -5,11 +5,14 @@ module.exports = {
             cwd: './server',
             script: 'src/index.js',
             interpreter: 'node',
-            instances: 2,               // 2 instances fit a 3.8 GB VPS alongside PostgreSQL + Nginx.
-            exec_mode: 'cluster',       // Cluster mode for multi-core
-            watch: false,               // Don't watch files in production
-            max_memory_restart: '400M', // Restart if RAM exceeds 400MB
-            node_args: '--max-old-space-size=350', // Hard cap on V8 heap
+            instances: 2,               
+            exec_mode: 'cluster',       
+            watch: false,               
+            max_memory_restart: '500M', 
+            node_args: '--max-old-space-size=450',
+            wait_ready: true,           // Wait for process.send('ready')
+            listen_timeout: 10000,      // Wait 10s for ready signal
+            kill_timeout: 5000,         // Wait 5s before force kill
             env_production: {
                 NODE_ENV: 'production',
                 PORT: 5000
@@ -18,11 +21,8 @@ module.exports = {
             out_file: '/var/log/brioright/out.log',
             log_date_format: 'YYYY-MM-DD HH:mm:ss',
             merge_logs: true,
-            // Auto restart settings
             autorestart: true,
-            restart_delay: 3000,
-            max_restarts: 10,
-            min_uptime: '10s'
+            restart_delay: 3000
         }
     ]
 }

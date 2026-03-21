@@ -634,21 +634,31 @@ const searchWorkspace = async (req, res) => {
 const getWorkspaceAnalytics = async (req, res, next) => {
     try {
         const workspaceId = req.workspace.id
-        const cacheKey = `ws:${workspaceId}:analytics`
+        const { range = '30d' } = req.query
+        
+        const cacheKey = `ws:${workspaceId}:analytics:${range}`
         const cached = await cache.get(cacheKey)
         if (cached) return res.json({ success: true, data: cached })
 
         const now = new Date()
-        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        let startDate
+        switch (range) {
+            case '7d': startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
+            case '90d': startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000); break;
+            case 'all': startDate = new Date(0); break;
+            default: startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30d
+        }
+
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
         const [
             byStatus,
             byPriority,
+            byMember,
             totalTasks,
             completedTasks,
-            completedLast30,
-            createdLast30,
+            completedInPeriod,
+            createdInPeriod,
             projectProgress,
             memberLeaderboard
         ] = await Promise.all([
@@ -664,21 +674,27 @@ const getWorkspaceAnalytics = async (req, res, next) => {
                 where: { project: { workspaceId } },
                 _count: { _all: true }
             }),
+            // Tasks by member (Workload)
+            prisma.task.groupBy({
+                by: ['assigneeId'],
+                where: { project: { workspaceId }, status: { not: 'done' }, assigneeId: { not: null } },
+                _count: { _all: true }
+            }),
             // Total tasks
             prisma.task.count({ where: { project: { workspaceId } } }),
             // Total completed
             prisma.task.count({ where: { project: { workspaceId }, status: 'done' } }),
-            // Completed tasks in last 30 days — only fetch date field
+            // Completed tasks in period
             prisma.task.findMany({
-                where: { project: { workspaceId }, status: 'done', updatedAt: { gte: thirtyDaysAgo } },
+                where: { project: { workspaceId }, status: 'done', updatedAt: { gte: startDate } },
                 select: { updatedAt: true }
             }),
-            // Created tasks in last 30 days
+            // Created tasks in period
             prisma.task.findMany({
-                where: { project: { workspaceId }, createdAt: { gte: thirtyDaysAgo } },
+                where: { project: { workspaceId }, createdAt: { gte: startDate } },
                 select: { createdAt: true }
             }),
-            // Top 5 projects with task counts
+            // Top projects
             prisma.project.findMany({
                 where: { workspaceId },
                 select: {
@@ -686,7 +702,7 @@ const getWorkspaceAnalytics = async (req, res, next) => {
                     _count: { select: { tasks: true } }
                 },
                 orderBy: { tasks: { _count: 'desc' } },
-                take: 5
+                take: 10
             }),
             // Top 5 members by tasks completed this month
             prisma.task.groupBy({
@@ -698,36 +714,48 @@ const getWorkspaceAnalytics = async (req, res, next) => {
             })
         ])
 
-        // Build daily completion & creation trend for last 30 days
+        // Process trends
         const trendMap = {}
         const createTrendMap = {}
-        for (let i = 29; i >= 0; i--) {
+        const daysToFetch = range === 'all' ? 90 : (parseInt(range) || 30)
+        
+        for (let i = daysToFetch - 1; i >= 0; i--) {
             const d = new Date(now.getTime() - i * 86400000)
             const key = d.toISOString().split('T')[0]
             trendMap[key] = 0
             createTrendMap[key] = 0
         }
-        completedLast30.forEach(({ updatedAt }) => {
+        completedInPeriod.forEach(({ updatedAt }) => {
             const key = new Date(updatedAt).toISOString().split('T')[0]
             if (trendMap[key] !== undefined) trendMap[key]++
         })
-        createdLast30.forEach(({ createdAt }) => {
+        createdInPeriod.forEach(({ createdAt }) => {
             const key = new Date(createdAt).toISOString().split('T')[0]
             if (createTrendMap[key] !== undefined) createTrendMap[key]++
         })
         const completionTrend = Object.entries(trendMap).map(([date, count]) => ({ date, count }))
         const creationTrend = Object.entries(createTrendMap).map(([date, count]) => ({ date, count }))
 
-        // Resolve member names for leaderboard
-        const memberIds = memberLeaderboard.map(m => m.assigneeId)
-        const members = await prisma.user.findMany({
+        // Resolve member details for leaderboard and workload
+        const memberIds = [...new Set([
+            ...memberLeaderboard.map(m => m.assigneeId),
+            ...byMember.map(m => m.assigneeId)
+        ])].filter(Boolean)
+
+        const users = await prisma.user.findMany({
             where: { id: { in: memberIds } },
             select: { id: true, name: true, avatar: true }
         })
-        const memberMap = Object.fromEntries(members.map(m => [m.id, m]))
+        const userMap = Object.fromEntries(users.map(u => [u.id, u]))
+
         const leaderboard = memberLeaderboard.map(m => ({
-            user: memberMap[m.assigneeId],
+            user: userMap[m.assigneeId],
             completed: m._count.assigneeId
+        }))
+
+        const workload = byMember.map(m => ({
+            user: userMap[m.assigneeId],
+            count: m._count._all
         }))
 
         // Project completion breakdown
@@ -752,6 +780,7 @@ const getWorkspaceAnalytics = async (req, res, next) => {
             completionRate: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
             byStatus: Object.fromEntries(byStatus.map(r => [r.status, r._count._all])),
             byPriority: Object.fromEntries(byPriority.map(r => [r.priority, r._count._all])),
+            workload,
             completionTrend,
             creationTrend,
             projects,
