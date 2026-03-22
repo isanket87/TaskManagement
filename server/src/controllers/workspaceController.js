@@ -491,7 +491,7 @@ const getInviteDetails = async (req, res) => {
                 workspaceName: invite.workspace.name,
                 workspaceLogo: invite.workspace.logo,
                 inviterName: invite.invitedBy.name,
-                inviterAvatar: invite.invitedBy.avatar,
+                inviterAvatar: invite.invitedBy.avatarUrl,
                 role: invite.role,
                 email: invite.email,
                 userExists: !!existingUser

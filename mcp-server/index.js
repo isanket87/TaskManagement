@@ -76,8 +76,9 @@ function buildServer() {
     const server = new McpServer({ name: 'brioright', version: '1.0.0' })
 
     // ── list_workspaces ───────────────────────────────────────────────────────
-    server.tool('list_workspaces', 'List all Brioright workspaces the API key has access to',
-        { apiKey: z.string().optional().describe('Brioright API Key') },
+    server.tool('list_workspaces',
+        'Returns all Brioright workspaces accessible via the API key. Call this FIRST when the user has not provided a workspaceId, or when they ask "what workspaces do I have?". The response includes each workspace id, slug, and name — use the slug as workspaceId in subsequent tool calls.',
+        { apiKey: z.string().optional().describe('Brioright API key. Only needed if not set in environment.') },
         async ({ apiKey }) => {
             const data = await call('GET', '/workspaces', null, apiKey)
             const workspaces = data.workspaces || data
@@ -86,10 +87,11 @@ function buildServer() {
     )
 
     // ── list_projects ─────────────────────────────────────────────────────────
-    server.tool('list_projects', 'List all projects in a workspace',
+    server.tool('list_projects',
+        'Returns all projects inside a workspace. Use this to discover project IDs before calling list_tasks, create_task, or bulk_create_tasks. Call this when the user mentions a project by name but you need its ID. Returns each project id, name, and status.',
         {
-            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
-            apiKey: z.string().optional().describe('Brioright API Key')
+            workspaceId: z.string().optional().describe('Workspace slug (e.g. "my-team"). Use list_workspaces first if unknown. Defaults to BRIORIGHT_WORKSPACE_ID env var.'),
+            apiKey: z.string().optional().describe('Brioright API key. Only needed if not set in environment.')
         },
         async ({ workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
@@ -101,14 +103,15 @@ function buildServer() {
     )
 
     // ── list_tasks ────────────────────────────────────────────────────────────
-    server.tool('list_tasks', 'List tasks in a project with optional filters',
+    server.tool('list_tasks',
+        'Fetch tasks from a project with optional filters. Use this when the user asks to see tasks, check what is in progress, find tasks by status/priority, or before updating/completing tasks. Filter by status (todo, in_progress, in_review, done, cancelled) or priority (low, medium, high, urgent). Returns task id, title, status, priority, dueDate, and assignee name.',
         {
-            projectId: z.string().describe('Project ID'),
-            workspaceId: z.string().optional(),
-            status: z.enum(['todo', 'in_progress', 'in_review', 'done', 'cancelled']).optional(),
-            priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-            limit: z.number().optional().default(20),
-            apiKey: z.string().optional().describe('Brioright API Key')
+            projectId: z.string().describe('Project ID — use list_projects first if you only know the project name.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            status: z.enum(['todo', 'in_progress', 'in_review', 'done', 'cancelled']).optional().describe('Filter by task status. Omit to return all statuses.'),
+            priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().describe('Filter by priority level. Omit to return all priorities.'),
+            limit: z.number().optional().default(20).describe('Max number of tasks to return. Default 20, max recommended 100.'),
+            apiKey: z.string().optional().describe('Brioright API key. Only needed if not set in environment.')
         },
         async ({ projectId, workspaceId, status, priority, limit, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
@@ -124,8 +127,9 @@ function buildServer() {
     )
 
     // ── get_task ──────────────────────────────────────────────────────────────
-    server.tool('get_task', 'Get full details of a single task',
-        { taskId: z.string(), workspaceId: z.string().optional(), apiKey: z.string().optional().describe('Brioright API Key') },
+    server.tool('get_task',
+        'Fetches complete details for a single task by its ID, including description, status, priority, assignee, due date, tags, subtasks, and dependencies. Use this when you need the full task data before updating it, summarising it, or answering detailed questions about it. Prefer this over list_tasks when you already have the task ID.',
+        { taskId: z.string().describe('The unique task ID (UUID). Use list_tasks to find it if unknown.'), workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'), apiKey: z.string().optional().describe('Brioright API key.') },
         async ({ taskId, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
@@ -135,11 +139,12 @@ function buildServer() {
     )
 
     // ── get_task_attachments ──────────────────────────────────────────────────
-    server.tool('get_task_attachments', 'List all file attachments for a specific task',
+    server.tool('get_task_attachments',
+        'Lists all files attached to a task. Use this when the user asks "what files are on this task?" or before deciding to add a new attachment. Returns file name, URL, size, and uploader.',
         {
-            taskId: z.string(),
-            workspaceId: z.string().optional(),
-            apiKey: z.string().optional().describe('Brioright API Key')
+            taskId: z.string().describe('ID of the task to list attachments for.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
         },
         async ({ taskId, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
@@ -151,14 +156,15 @@ function buildServer() {
     )
 
     // ── add_task_attachment ───────────────────────────────────────────────────
-    server.tool('add_task_attachment', 'Upload a file attachment to a task using a Base64 encoded string',
+    server.tool('add_task_attachment',
+        'Uploads a file to a task as an attachment. Use this when the user wants to attach a document, screenshot, or report to a task. The file must be Base64-encoded. Returns the attachment id, file name, and public URL.',
         {
-            taskId: z.string(),
-            fileName: z.string().describe('Name of the file to attach (e.g. image.png)'),
-            fileContent: z.string().describe('Base64 encoded string of the file content'),
-            mimeType: z.string().optional().describe('MIME type of the file (e.g. image/png)'),
-            workspaceId: z.string().optional(),
-            apiKey: z.string().optional().describe('Brioright API Key')
+            taskId: z.string().describe('ID of the task to attach the file to.'),
+            fileName: z.string().describe('File name with extension, e.g. "report.pdf" or "screenshot.png".'),
+            fileContent: z.string().describe('Full Base64-encoded content of the file.'),
+            mimeType: z.string().optional().describe('MIME type, e.g. "image/png", "application/pdf". Defaults to application/octet-stream.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
         },
         async ({ taskId, fileName, fileContent, mimeType, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
@@ -178,17 +184,18 @@ function buildServer() {
     )
 
     // ── create_task ───────────────────────────────────────────────────────────
-    server.tool('create_task', 'Create a new task in a Brioright project',
+    server.tool('create_task',
+        'Creates a single new task in a project. Use this when the user asks to add one task. For creating multiple tasks at once, prefer bulk_create_tasks instead. Use list_projects to get projectId and list_members to get assigneeId if needed. Returns the created task id, title, status, priority, and due date.',
         {
-            projectId: z.string().describe('Project ID'),
-            title: z.string().describe('Task title'),
-            description: z.string().optional(),
-            status: z.enum(['todo', 'in_progress', 'in_review', 'done']).optional().default('todo'),
-            priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().default('medium'),
-            dueDate: z.string().optional().describe('ISO date string e.g. 2026-03-15'),
-            assigneeId: z.string().optional(),
-            workspaceId: z.string().optional(),
-            apiKey: z.string().optional().describe('Brioright API Key')
+            projectId: z.string().describe('Project ID — use list_projects if you only know the project name.'),
+            title: z.string().describe('Clear, concise task title describing the work to be done.'),
+            description: z.string().optional().describe('Detailed description, acceptance criteria, or context for the task. Supports markdown.'),
+            status: z.enum(['todo', 'in_progress', 'in_review', 'done']).optional().default('todo').describe('Initial task status. Default is todo.'),
+            priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().default('medium').describe('Task priority. Use urgent only for blockers or critical issues.'),
+            dueDate: z.string().optional().describe('Due date as ISO string, e.g. "2026-04-01". Omit if no deadline.'),
+            assigneeId: z.string().optional().describe('User ID of the assignee — use list_members to find IDs. Omit to leave unassigned.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
         },
         async ({ projectId, title, description, status, priority, dueDate, assigneeId, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
@@ -204,11 +211,12 @@ function buildServer() {
     )
 
     // ── duplicate_task ────────────────────────────────────────────────────────
-    server.tool('duplicate_task', 'Duplicate an existing task',
+    server.tool('duplicate_task',
+        'Creates an exact copy of an existing task, including its title, description, priority, and assignee. Use this when the user wants to repeat a task, clone a template task, or create a similar task quickly. The duplicate is placed in the same project. Returns the new task id and title.',
         {
-            taskId: z.string().describe('The ID of the task to duplicate'),
-            workspaceId: z.string().optional(),
-            apiKey: z.string().optional().describe('Brioright API Key')
+            taskId: z.string().describe('ID of the original task to copy.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
         },
         async ({ taskId, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
@@ -225,21 +233,22 @@ function buildServer() {
     )
 
     // ── bulk_create_tasks ─────────────────────────────────────────────────────
-    server.tool('bulk_create_tasks', 'Create multiple tasks at once in a Brioright project',
+    server.tool('bulk_create_tasks',
+        'Creates multiple tasks in one API call — far more efficient than calling create_task repeatedly. Use this when the user provides a list of tasks, a sprint plan, a feature breakdown, or asks you to set up a project. Each task can have its own title, description, status, priority, due date, and assignee. Use parentTaskId to create subtasks under an existing task. Returns the count of created tasks.',
         {
-            projectId: z.string().describe('Project ID'),
+            projectId: z.string().describe('Project ID — use list_projects first if unknown.'),
             tasks: z.array(z.object({
-                title: z.string().describe('Task title'),
-                description: z.string().optional(),
-                status: z.enum(['todo', 'in_progress', 'in_review', 'done']).optional().default('todo'),
-                priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().default('medium'),
-                dueDate: z.string().optional().describe('ISO date string e.g. 2026-03-15'),
-                assigneeId: z.string().optional(),
-                parentTaskId: z.string().optional(),
-                tags: z.array(z.string()).optional()
-            })).describe('Array of tasks to create'),
-            workspaceId: z.string().optional(),
-            apiKey: z.string().optional().describe('Brioright API Key')
+                title: z.string().describe('Clear task title.'),
+                description: z.string().optional().describe('Detailed context or acceptance criteria for the task.'),
+                status: z.enum(['todo', 'in_progress', 'in_review', 'done']).optional().default('todo').describe('Task status. Default: todo.'),
+                priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().default('medium').describe('Priority level.'),
+                dueDate: z.string().optional().describe('ISO date string e.g. "2026-04-01". Omit if no deadline.'),
+                assigneeId: z.string().optional().describe('User ID from list_members. Omit to leave unassigned.'),
+                parentTaskId: z.string().optional().describe('ID of a parent task to nest this as a subtask. Omit for top-level tasks.'),
+                tags: z.array(z.string()).optional().describe('Label tags for categorisation, e.g. ["backend", "auth"].')
+            })).describe('Array of task objects to create. Minimum 1, no hard maximum.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
         },
         async ({ projectId, tasks, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
@@ -262,17 +271,18 @@ function buildServer() {
     )
 
     // ── update_task ───────────────────────────────────────────────────────────
-    server.tool('update_task', 'Update fields on an existing task',
+    server.tool('update_task',
+        'Updates one or more fields on an existing task. Use this when the user asks to change a task title, reassign it, change priority or status, update the description, or set/change a due date. Only provide the fields you want to change — omit the rest. To mark a task done, you can either use this tool with status=done or use complete_task. Returns the updated task.',
         {
-            taskId: z.string(),
-            title: z.string().optional(),
-            description: z.string().optional(),
-            status: z.enum(['todo', 'in_progress', 'in_review', 'done', 'cancelled']).optional(),
-            priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
-            dueDate: z.string().optional(),
-            assigneeId: z.string().optional(),
-            workspaceId: z.string().optional(),
-            apiKey: z.string().optional().describe('Brioright API Key')
+            taskId: z.string().describe('ID of the task to update — use list_tasks or get_task to find it.'),
+            title: z.string().optional().describe('New task title. Omit to keep current.'),
+            description: z.string().optional().describe('New description. Omit to keep current. Supports markdown.'),
+            status: z.enum(['todo', 'in_progress', 'in_review', 'done', 'cancelled']).optional().describe('New status. Use cancelled for tasks that will not be done.'),
+            priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().describe('New priority level.'),
+            dueDate: z.string().optional().describe('New due date as ISO string e.g. "2026-04-15". Omit to keep current.'),
+            assigneeId: z.string().optional().describe('User ID of new assignee — use list_members to find. Omit to keep current.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
         },
         async ({ taskId, workspaceId, apiKey, ...fields }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
@@ -286,8 +296,9 @@ function buildServer() {
     )
 
     // ── complete_task ─────────────────────────────────────────────────────────
-    server.tool('complete_task', 'Mark a task as completed',
-        { taskId: z.string(), workspaceId: z.string().optional(), apiKey: z.string().optional().describe('Brioright API Key') },
+    server.tool('complete_task',
+        'Marks a task as done (status=done). Use this as a shorthand when the user says "complete", "finish", "mark as done", or "close" a task. Equivalent to update_task with status=done but more concise. Returns a confirmation.',
+        { taskId: z.string().describe('ID of the task to complete.'), workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'), apiKey: z.string().optional().describe('Brioright API key.') },
         async ({ taskId, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
@@ -297,13 +308,14 @@ function buildServer() {
     )
 
     // ── create_project ────────────────────────────────────────────────────────
-    server.tool('create_project', 'Create a new project in a workspace',
+    server.tool('create_project',
+        'Creates a new project (board) inside a workspace. Use this when the user asks to set up a new project, initiative, or area of work. After creating the project, you can immediately use bulk_create_tasks to populate it with tasks. Returns the new project id and name.',
         {
-            name: z.string(),
-            description: z.string().optional(),
-            color: z.string().optional().default('#6366f1'),
-            workspaceId: z.string().optional(),
-            apiKey: z.string().optional().describe('Brioright API Key')
+            name: z.string().describe('Project name, e.g. "Q2 Marketing Campaign" or "Mobile App Redesign".'),
+            description: z.string().optional().describe('Brief summary of the project goals or scope.'),
+            color: z.string().optional().default('#6366f1').describe('Hex color for visual identification, e.g. "#f59e0b". Default is indigo (#6366f1).'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
         },
         async ({ name, description, color, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
@@ -315,8 +327,9 @@ function buildServer() {
     )
 
     // ── list_members ──────────────────────────────────────────────────────────
-    server.tool('list_members', 'List workspace members (useful for finding assignee IDs)',
-        { workspaceId: z.string().optional(), apiKey: z.string().optional().describe('Brioright API Key') },
+    server.tool('list_members',
+        'Returns all members of a workspace with their user IDs, names, emails, and roles. Call this BEFORE create_task or update_task when the user mentions assigning a task to someone by name — use this to resolve the name to a user ID. Also use it to answer "who is on this workspace?" or "what is [person]s user ID?".',
+        { workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'), apiKey: z.string().optional().describe('Brioright API key.') },
         async ({ workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
@@ -327,8 +340,9 @@ function buildServer() {
     )
 
     // ── get_workspace_summary ─────────────────────────────────────────────────
-    server.tool('get_workspace_summary', 'Dashboard stats: task counts by status and priority',
-        { workspaceId: z.string().optional(), apiKey: z.string().optional().describe('Brioright API Key') },
+    server.tool('get_workspace_summary',
+        'Returns high-level dashboard statistics for a workspace: total tasks broken down by status (todo, in_progress, done, etc.) and by priority (low, medium, high, urgent). Use this to answer questions like "how many tasks are pending?", "what is our workload?", or "give me a project health overview". Does NOT return individual task details — use list_tasks for that.',
+        { workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'), apiKey: z.string().optional().describe('Brioright API key.') },
         async ({ workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
             if (!ws) throw new Error('workspaceId is required')
@@ -338,12 +352,13 @@ function buildServer() {
     )
 
     // ── add_comment ───────────────────────────────────────────────────────────
-    server.tool('add_comment', 'Add a comment to a task',
+    server.tool('add_comment',
+        'Posts a comment on a task. Use this to leave a status update, ask a question on a task, provide context, or summarise findings. Supports markdown formatting in the text. Returns the posted comment with its ID and timestamp.',
         {
-            taskId: z.string(),
-            text: z.string().describe('The content of the comment'),
-            workspaceId: z.string().optional(),
-            apiKey: z.string().optional().describe('Brioright API Key')
+            taskId: z.string().describe('ID of the task to comment on.'),
+            text: z.string().describe('Comment content. Supports markdown — use **bold**, bullet lists, code blocks etc. for clarity.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
         },
         async ({ taskId, text, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
@@ -355,11 +370,12 @@ function buildServer() {
     )
 
     // ── get_task_comments ─────────────────────────────────────────────────────
-    server.tool('get_task_comments', 'Get all comments for a given task',
+    server.tool('get_task_comments',
+        'Retrieves the full comment thread for a task in chronological order. Use this when the user asks "what has been discussed on this task?", wants a summary of activity, or before adding a new comment to avoid duplicating information. Returns each comment id, text, author name, and timestamp.',
         {
-            taskId: z.string(),
-            workspaceId: z.string().optional(),
-            apiKey: z.string().optional().describe('Brioright API Key')
+            taskId: z.string().describe('ID of the task to fetch comments for.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
         },
         async ({ taskId, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
@@ -371,11 +387,12 @@ function buildServer() {
     )
 
     // ── get_task_activities ───────────────────────────────────────────────────
-    server.tool('get_task_activities', 'Get the activity history for a specific task',
+    server.tool('get_task_activities',
+        'Returns the full audit trail of changes made to a task: who changed what field, when status changed, when it was assigned, due date updates, etc. Use this when the user asks "what changed on this task?", "when was this assigned?", or "show me the task history". Different from get_task_comments — this is system-generated activity, not user comments.',
         {
-            taskId: z.string(),
-            workspaceId: z.string().optional(),
-            apiKey: z.string().optional().describe('Brioright API Key')
+            taskId: z.string().describe('ID of the task to fetch activity history for.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
         },
         async ({ taskId, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
@@ -387,15 +404,16 @@ function buildServer() {
     )
 
     // ── log_time ──────────────────────────────────────────────────────────────
-    server.tool('log_time', 'Log time entry for a project/task',
+    server.tool('log_time',
+        'Records a time entry against a project or specific task. Use this when the user says "log 2 hours on task X", "I spent 30 minutes on the auth feature", or "start a timer". If endTime is omitted, a running timer is started. If both startTime and endTime are provided, a completed time block is logged. projectId is required; taskId narrows it to a specific task.',
         {
-            projectId: z.string(),
-            taskId: z.string().optional(),
-            description: z.string().optional(),
-            startTime: z.string().optional().describe('ISO date string for start time. Defaults to now.'),
-            endTime: z.string().optional().describe('ISO date string for end time. If omitted, starts a running timer.'),
-            workspaceId: z.string().optional(),
-            apiKey: z.string().optional().describe('Brioright API Key')
+            projectId: z.string().describe('Project ID to log time against — use list_projects if unknown.'),
+            taskId: z.string().optional().describe('Optional task ID to associate the time entry with a specific task.'),
+            description: z.string().optional().describe('What was worked on during this time, e.g. "Fixed login bug", "Code review for PR #42".'),
+            startTime: z.string().optional().describe('Start of the work period as ISO string, e.g. "2026-03-22T09:00:00Z". Defaults to now.'),
+            endTime: z.string().optional().describe('End of the work period as ISO string. Omit to start a running timer instead of logging a completed block.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
         },
         async ({ projectId, taskId, description, startTime, endTime, workspaceId, apiKey }) => {
             const ws = workspaceId || DEFAULT_WORKSPACE
@@ -412,7 +430,81 @@ function buildServer() {
         }
     )
 
+
+    // ── delete_task ───────────────────────────────────────────────────────────
+    server.tool('delete_task',
+        'Permanently deletes a task and all its subtasks, comments, and attachments. This action is IRREVERSIBLE. Use this when the user explicitly asks to delete or remove a task. Do NOT use this to cancel a task — use update_task with status=cancelled instead. Always confirm with the user before calling this if there is any ambiguity. Returns a confirmation message.',
+        {
+            taskId: z.string().describe('ID of the task to permanently delete. Use list_tasks or get_task to find it.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ taskId, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            await call('DELETE', `/workspaces/${ws}/tasks/${taskId}`, null, apiKey)
+            return { content: [{ type: 'text', text: `🗑️ Task ${taskId} has been permanently deleted.` }] }
+        }
+    )
+
+    // ── search_workspace ──────────────────────────────────────────────────────
+    server.tool('search_workspace',
+        'Searches across the entire workspace and returns matching tasks, projects, and members in a single call. Use this when the user asks to find something by keyword, e.g. "find tasks about login", "search for the auth project", or "who is named John?". Returns up to 5 results per category (tasks, projects, users). Requires at least 2 characters in the query.',
+        {
+            query: z.string().describe('Search keyword or phrase — minimum 2 characters. Searches task titles/descriptions, project names/descriptions, and member names/emails.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ query, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            if (!query || query.trim().length < 2) throw new Error('Search query must be at least 2 characters')
+            const data = await call('GET', `/workspaces/${ws}/search?q=${encodeURIComponent(query.trim())}`, null, apiKey)
+            const { projects = [], tasks = [], users = [] } = data
+            const result = {
+                summary: `Found ${tasks.length} task(s), ${projects.length} project(s), ${users.length} member(s) for "${query}"`,
+                tasks: tasks.map(t => ({ id: t.id, title: t.title, status: t.status, priority: t.priority, projectId: t.projectId })),
+                projects: projects.map(p => ({ id: p.id, name: p.name, description: p.description })),
+                users: users.map(u => ({ id: u.id, name: u.name, email: u.email }))
+            }
+            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] }
+        }
+    )
+
+    // ── get_workspace_analytics ───────────────────────────────────────────────
+    server.tool('get_workspace_analytics',
+        'Returns detailed analytics for a workspace including: task completion rate, tasks by status and priority, completion trends over time, task creation trends, top performers (leaderboard), member workload distribution, and per-project progress. Use this when the user asks for a report, "how are we doing?", "show me the analytics", "who completed the most tasks?", or "what is our completion rate?". Use get_workspace_summary instead for just basic task counts.',
+        {
+            range: z.enum(['7d', '30d', '90d', 'all']).optional().default('30d').describe('Time range for trend data. 7d=last week, 30d=last month (default), 90d=last quarter, all=all time.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ range, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const data = await call('GET', `/workspaces/${ws}/analytics?range=${range || '30d'}`, null, apiKey)
+            return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] }
+        }
+    )
+
+    // ── get_overdue_tasks ─────────────────────────────────────────────────────
+    server.tool('get_overdue_tasks',
+        'Returns all tasks that are past their due date and still not done. Use this when the user asks "what is overdue?", "what tasks are late?", or "show me missed deadlines". Results include task id, title, due date, assignee, and project. This is a dedicated endpoint — do not try to replicate this by filtering list_tasks manually.',
+        {
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const data = await call('GET', `/workspaces/${ws}/tasks/overdue`, null, apiKey)
+            const tasks = data.tasks || data
+            return { content: [{ type: 'text', text: JSON.stringify(tasks.map(t => ({ id: t.id, title: t.title, dueDate: t.dueDate, assignee: t.assignee?.name, projectId: t.projectId, status: t.status })), null, 2) }] }
+        }
+    )
+
     return server
+
 }
 
 // ── HTTP/SSE transport (for cloud AI clients) ─────────────────────────────────
