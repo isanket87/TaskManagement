@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -34,7 +34,7 @@ const Settings = () => {
     const [deleteOpen, setDeleteOpen] = useState(false);
     const [deletePass, setDeletePass] = useState('');
     const [deleteLoading, setDeleteLoading] = useState(false);
-    const [avatarPreview, setAvatarPreview] = useState(user?.avatar || null);
+    const [avatarPreview, setAvatarPreview] = useState(user?.avatarUrl || null);
     const fileRef = useRef(null);
 
     const profileForm = useForm({
@@ -42,6 +42,13 @@ const Settings = () => {
         defaultValues: { name: user?.name || '', email: user?.email || '' }
     });
     const passForm = useForm({ resolver: zodResolver(passwordSchema) });
+
+    useEffect(() => {
+        if (user) {
+            setAvatarPreview(user.avatarUrl || null);
+            profileForm.reset({ name: user.name, email: user.email });
+        }
+    }, [user]);
 
     // ── Avatar upload ──────────────────────────────────────────────────────
     const handleAvatarChange = async (e) => {
@@ -62,12 +69,12 @@ const Settings = () => {
                 r.onload = (ev) => resolve(ev.target.result);
                 r.readAsDataURL(file);
             });
-            const res = await api.patch('/auth/profile', { avatar: base64 });
+            const res = await api.patch('/auth/profile', { avatarUrl: base64 });
             setUser(res.data.data.user);
             toast.success('Avatar updated!');
         } catch (err) {
             toast.error(err.response?.data?.message || 'Failed to upload avatar');
-            setAvatarPreview(user?.avatar || null);
+            setAvatarPreview(user?.avatarUrl || null);
         } finally {
             setAvatarLoading(false);
         }
@@ -136,7 +143,7 @@ const Settings = () => {
                     <div className="flex items-center gap-5 mb-6">
                         <div className="relative group">
                             <Avatar
-                                user={{ ...user, avatar: avatarPreview }}
+                                user={{ ...user, avatarUrl: avatarPreview }}
                                 size="xl"
                                 className="ring-4 ring-white dark:ring-gray-800 shadow-md"
                             />
@@ -172,7 +179,7 @@ const Settings = () => {
 
                     <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
                         <Input label="Full Name" error={profileForm.formState.errors.name?.message} {...profileForm.register('name')} />
-                        <Input label="Email" type="email" error={profileForm.formState.errors.email?.message} {...profileForm.register('email')} />
+                        <Input label="Email" type="email" error={profileForm.formState.errors.email?.message} {...profileForm.register('email')} disabled />
                         <Button type="submit" isLoading={profileLoading} size="sm">
                             <Save className="w-4 h-4" />
                             Save Profile
@@ -227,7 +234,7 @@ const Settings = () => {
                     ) : (
                         <div className="space-y-4">
                             <div className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                                <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                                AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                                 <p className="text-sm text-red-700 dark:text-red-400">
                                     This action is <strong>permanent</strong>. All your workspaces, projects, and data will be deleted. Enter your password to confirm.
                                 </p>

@@ -147,7 +147,7 @@ const TaskSubtasks = ({ parentTaskId, projectId, subtasks = [], onTaskSelect }) 
 
                             <div className="flex items-center gap-3 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity pl-4">
                                 {task.assignee && (
-                                    <Avatar src={task.assignee.avatar} name={task.assignee.name} size="xs" />
+                                    <Avatar user={task.assignee} size="xs" />
                                 )}
                                 <button className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-1">
                                     <MoreVertical className="w-4 h-4" />

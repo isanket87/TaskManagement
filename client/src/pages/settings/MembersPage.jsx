@@ -255,7 +255,7 @@ const MembersPage = () => {
                             {/* Left — Avatar + Info */}
                             <div className="flex items-center gap-4 min-w-0">
                                 <div className="relative shrink-0">
-                                    <Avatar name={member.user.name} avatar={member.user.avatar} />
+                                    <Avatar user={member.user} />
                                     {isCurrentUser && (
                                         <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-800 flex items-center justify-center">
                                             <CheckCircle2 className="w-2.5 h-2.5 text-white" />
