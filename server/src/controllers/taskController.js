@@ -39,8 +39,8 @@ const taskSelect = {
     createdById: true,
     createdAt: true,
     updatedAt: true,
-    assignee: { select: { id: true, name: true, avatar: true } },
-    createdBy: { select: { id: true, name: true, avatar: true } },
+    assignee: { select: { id: true, name: true, avatarUrl: true } },
+    createdBy: { select: { id: true, name: true, avatarUrl: true } },
     parentTaskId: true,
     _count: { select: { comments: true } }
 }
@@ -184,7 +184,7 @@ const getTask = async (req, res, next) => {
                         title: true,
                         status: true,
                         priority: true,
-                        assignee: { select: { id: true, name: true, avatar: true } },
+                        assignee: { select: { id: true, name: true, avatarUrl: true } },
                         _count: { select: { subtasks: true } }
                     },
                     orderBy: { createdAt: 'asc' }
@@ -634,7 +634,7 @@ const getDashboardStats = async (req, res, next) => {
             }),
             prisma.activityLog.findMany({
                 where: { project: { workspaceId } },
-                include: { user: { select: { id: true, name: true, avatar: true } } },
+                include: { user: { select: { id: true, name: true, avatarUrl: true } } },
                 orderBy: { createdAt: 'desc' },
                 take: 10
             }),
@@ -694,7 +694,7 @@ const getTaskActivities = async (req, res, next) => {
         const { taskId } = req.params
         const activities = await prisma.activityLog.findMany({
             where: { taskId },
-            include: { user: { select: { id: true, name: true, avatar: true } } },
+            include: { user: { select: { id: true, name: true, avatarUrl: true } } },
             orderBy: { createdAt: 'desc' }
         })
         return successResponse(res, { activities })

@@ -4,10 +4,10 @@ import { cn } from '../../utils/helpers';
 const Avatar = ({ user, size = 'md', className }) => {
     const sizes = { xs: 'w-6 h-6 text-xs', sm: 'w-8 h-8 text-xs', md: 'w-9 h-9 text-sm', lg: 'w-12 h-12 text-base', xl: 'w-16 h-16 text-lg' };
 
-    if (user?.avatar) {
+    if (user?.avatarUrl) {
         return (
             <img
-                src={user.avatar}
+                src={user.avatarUrl}
                 alt={user.name}
                 className={cn('rounded-full object-cover ring-2 ring-white dark:ring-gray-900', sizes[size], className)}
             />

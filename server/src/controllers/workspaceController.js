@@ -113,7 +113,7 @@ const getWorkspaceDetails = async (req, res) => {
                 _count: { select: { members: true, projects: true } },
                 members: {
                     take: 5,
-                    include: { user: { select: { id: true, name: true, email: true, avatar: true } } }
+                    include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } }
                 }
             }
         })
@@ -224,7 +224,7 @@ const getMembers = async (req, res) => {
         const members = await prisma.workspaceMember.findMany({
             where,
             include: {
-                user: { select: { id: true, name: true, email: true, avatar: true } },
+                user: { select: { id: true, name: true, email: true, avatarUrl: true } },
                 invitedBy: { select: { name: true } }
             },
             orderBy: { joinedAt: 'asc' }
@@ -462,7 +462,7 @@ const getInviteDetails = async (req, res) => {
             where: { token },
             include: {
                 workspace: { select: { name: true, logo: true } },
-                invitedBy: { select: { name: true, avatar: true } }
+                invitedBy: { select: { name: true, avatarUrl: true } }
             }
         })
 
@@ -612,7 +612,7 @@ const searchWorkspace = async (req, res) => {
                         ]
                     }
                 },
-                include: { user: { select: { id: true, name: true, email: true, avatar: true } } },
+                include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } },
                 take: 5
             })
         ])
@@ -744,7 +744,7 @@ const getWorkspaceAnalytics = async (req, res, next) => {
 
         const users = await prisma.user.findMany({
             where: { id: { in: memberIds } },
-            select: { id: true, name: true, avatar: true }
+            select: { id: true, name: true, avatarUrl: true }
         })
         const userMap = Object.fromEntries(users.map(u => [u.id, u]))
 

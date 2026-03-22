@@ -2,9 +2,9 @@ import prisma from '../utils/prisma.js'
 import { successResponse, errorResponse } from '../utils/helpers.js'
 
 const MESSAGE_INCLUDE = {
-    author: { select: { id: true, name: true, avatar: true } },
+    author: { select: { id: true, name: true, avatarUrl: true } },
     reactions: { include: { user: { select: { id: true, name: true } } } },
-    replies: { where: { deletedAt: null }, include: { author: { select: { id: true, name: true, avatar: true } } } },
+    replies: { where: { deletedAt: null }, include: { author: { select: { id: true, name: true, avatarUrl: true } } } },
     mentions: { include: { user: { select: { id: true, name: true } } } }
 }
 

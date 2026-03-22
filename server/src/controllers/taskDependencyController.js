@@ -14,7 +14,7 @@ const getDependencies = async (req, res, next) => {
                         select: {
                             id: true, title: true, status: true, priority: true,
                             project: { select: { id: true, name: true, color: true } },
-                            assignee: { select: { id: true, name: true, avatar: true } }
+                            assignee: { select: { id: true, name: true, avatarUrl: true } }
                         }
                     }
                 }
@@ -27,7 +27,7 @@ const getDependencies = async (req, res, next) => {
                         select: {
                             id: true, title: true, status: true, priority: true,
                             project: { select: { id: true, name: true, color: true } },
-                            assignee: { select: { id: true, name: true, avatar: true } }
+                            assignee: { select: { id: true, name: true, avatarUrl: true } }
                         }
                     }
                 }
@@ -75,7 +75,7 @@ const addDependency = async (req, res, next) => {
                     select: {
                         id: true, title: true, status: true, priority: true,
                         project: { select: { id: true, name: true, color: true } },
-                        assignee: { select: { id: true, name: true, avatar: true } }
+                        assignee: { select: { id: true, name: true, avatarUrl: true } }
                     }
                 }
             }

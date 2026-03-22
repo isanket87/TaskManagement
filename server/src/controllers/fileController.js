@@ -76,7 +76,7 @@ const uploadFile = async (req, res, next) => {
                 taskId: taskId || null,
                 uploadedById: req.user.id
             },
-            include: { uploadedBy: { select: { id: true, name: true, avatar: true } } }
+            include: { uploadedBy: { select: { id: true, name: true, avatarUrl: true } } }
         })
 
         // Create initial version record
@@ -93,7 +93,7 @@ const getFile = async (req, res, next) => {
     try {
         const file = await prisma.file.findUnique({
             where: { id: req.params.id },
-            include: { uploadedBy: { select: { id: true, name: true, avatar: true } }, versions: true }
+            include: { uploadedBy: { select: { id: true, name: true, avatarUrl: true } }, versions: true }
         })
         if (!file || file.deletedAt) return errorResponse(res, 'Not found', 404)
         return successResponse(res, { file })
@@ -158,7 +158,7 @@ const uploadVersion = async (req, res, next) => {
         const updated = await prisma.file.update({
             where: { id: file.id },
             data: { url, storageKey, thumbnailUrl, size, originalName: originalname },
-            include: { uploadedBy: { select: { id: true, name: true, avatar: true } }, versions: true }
+            include: { uploadedBy: { select: { id: true, name: true, avatarUrl: true } }, versions: true }
         })
 
         return successResponse(res, { file: updated }, 'New version uploaded')
@@ -171,7 +171,7 @@ const getVersions = async (req, res, next) => {
         const versions = await prisma.fileVersion.findMany({
             where: { fileId: req.params.id },
             orderBy: { version: 'desc' },
-            include: { uploadedBy: { select: { id: true, name: true, avatar: true } } }
+            include: { uploadedBy: { select: { id: true, name: true, avatarUrl: true } } }
         })
         return successResponse(res, { versions })
     } catch (err) { next(err) }
@@ -190,7 +190,7 @@ const getProjectFiles = async (req, res, next) => {
                 ...(type ? { type } : {})
             },
             orderBy: { createdAt: 'desc' },
-            include: { uploadedBy: { select: { id: true, name: true, avatar: true } }, task: { select: { id: true, title: true } } }
+            include: { uploadedBy: { select: { id: true, name: true, avatarUrl: true } }, task: { select: { id: true, title: true } } }
         })
         return successResponse(res, { files })
     } catch (err) { next(err) }
@@ -202,7 +202,7 @@ const getTaskFiles = async (req, res, next) => {
         const files = await prisma.file.findMany({
             where: { taskId: req.params.id, deletedAt: null },
             orderBy: { createdAt: 'desc' },
-            include: { uploadedBy: { select: { id: true, name: true, avatar: true } } }
+            include: { uploadedBy: { select: { id: true, name: true, avatarUrl: true } } }
         })
         return successResponse(res, { files })
     } catch (err) { next(err) }

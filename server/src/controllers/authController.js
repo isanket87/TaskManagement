@@ -45,7 +45,7 @@ const register = async (req, res, next) => {
         const hashedPassword = await bcrypt.hash(password, 12)
         const user = await prisma.user.create({
             data: { name, email, password: hashedPassword },
-            select: { id: true, name: true, email: true, avatar: true, role: true, activeWorkspaceId: true, createdAt: true, emailVerified: true }
+            select: { id: true, name: true, email: true, avatarUrl: true, role: true, activeWorkspaceId: true, createdAt: true, emailVerified: true }
         })
 
         // Generate email verification token
@@ -133,7 +133,7 @@ const getMe = async (req, res, next) => {
     try {
         const user = await prisma.user.findUnique({
             where: { id: req.user.id },
-            select: { id: true, name: true, email: true, avatar: true, role: true, activeWorkspaceId: true, createdAt: true, emailVerified: true }
+            select: { id: true, name: true, email: true, avatarUrl: true, role: true, activeWorkspaceId: true, createdAt: true, emailVerified: true }
         })
         if (!user) return errorResponse(res, 'User not found', 404)
         return successResponse(res, { user })
@@ -170,12 +170,12 @@ const googleCallback = async (req, res, next) => {
         let user = await prisma.user.findUnique({ where: { email } })
         if (!user) {
             user = await prisma.user.create({
-                data: { name, email, avatar: picture, password: null }
+                data: { name, email, avatarUrl: picture, password: null }
             })
-        } else if (!user.avatar && picture) {
+        } else if (!user.avatarUrl && picture) {
             user = await prisma.user.update({
                 where: { id: user.id },
-                data: { avatar: picture }
+                data: { avatarUrl: picture }
             })
         }
 
@@ -194,11 +194,11 @@ const googleCallback = async (req, res, next) => {
 
 const updateProfile = async (req, res, next) => {
     try {
-        const { name, avatar } = req.body
+        const { name, avatarUrl } = req.body
         const user = await prisma.user.update({
             where: { id: req.user.id },
-            data: { ...(name && { name }), ...(avatar && { avatar }) },
-            select: { id: true, name: true, email: true, avatar: true, role: true, activeWorkspaceId: true, createdAt: true }
+            data: { ...(name && { name }), ...(avatarUrl && { avatarUrl }) },
+            select: { id: true, name: true, email: true, avatarUrl: true, role: true, activeWorkspaceId: true, createdAt: true }
         })
         return successResponse(res, { user }, 'Profile updated')
     } catch (err) {

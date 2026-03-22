@@ -6,7 +6,7 @@ const getComments = async (req, res, next) => {
         const { taskId } = req.params
         const comments = await prisma.comment.findMany({
             where: { taskId },
-            include: { author: { select: { id: true, name: true, avatar: true } } },
+            include: { author: { select: { id: true, name: true, avatarUrl: true } } },
             orderBy: { createdAt: 'asc' }
         })
         return successResponse(res, { comments })
@@ -23,7 +23,7 @@ const createComment = async (req, res, next) => {
 
         const comment = await prisma.comment.create({
             data: { text, taskId, authorId: req.user.id },
-            include: { author: { select: { id: true, name: true, avatar: true } } }
+            include: { author: { select: { id: true, name: true, avatarUrl: true } } }
         })
 
         const task = await prisma.task.findUnique({ where: { id: taskId }, select: { projectId: true } })

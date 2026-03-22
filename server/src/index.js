@@ -180,7 +180,7 @@ app.get('/api/users/search', auth, async (req, res, next) => {
                     { name: { contains: q.trim(), mode: 'insensitive' } }
                 ]
             },
-            select: { id: true, name: true, email: true, avatar: true },
+            select: { id: true, name: true, email: true, avatarUrl: true },
             take: 10
         })
         res.json({ success: true, data: { users } })

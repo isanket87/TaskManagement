@@ -141,7 +141,7 @@ router.get('/me', auth, getMe)
  *             properties:
  *               name:
  *                 type: string
- *               avatar:
+ *               avatarUrl:
  *                 type: string
  *     responses:
  *       200:

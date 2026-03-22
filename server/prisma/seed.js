@@ -45,7 +45,7 @@ async function main() {
             email: 'admin@demo.com',
             password: hashedPassword,
             role: 'admin',
-            avatar: null
+            avatarUrl: null
         }
     })
 

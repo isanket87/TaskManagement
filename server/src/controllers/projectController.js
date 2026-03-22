@@ -20,8 +20,8 @@ const getProjects = async (req, res, next) => {
         const projects = await prisma.project.findMany({
             where: { workspaceId },
             include: {
-                owner: { select: { id: true, name: true, avatar: true } },
-                members: { include: { user: { select: { id: true, name: true, avatar: true } } } },
+                owner: { select: { id: true, name: true, avatarUrl: true } },
+                members: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } },
                 _count: { select: { tasks: true } }
             },
             orderBy: { createdAt: 'desc' }
@@ -49,8 +49,8 @@ const createProject = async (req, res, next) => {
                 members: { create: { userId, role: 'owner' } }
             },
             include: {
-                owner: { select: { id: true, name: true, avatar: true } },
-                members: { include: { user: { select: { id: true, name: true, avatar: true } } } }
+                owner: { select: { id: true, name: true, avatarUrl: true } },
+                members: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } }
             }
         })
 
@@ -67,8 +67,8 @@ const getProject = async (req, res, next) => {
         const project = await prisma.project.findFirst({
             where: { id, workspaceId: req.workspace.id },
             include: {
-                owner: { select: { id: true, name: true, avatar: true } },
-                members: { include: { user: { select: { id: true, name: true, avatar: true } } } },
+                owner: { select: { id: true, name: true, avatarUrl: true } },
+                members: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } },
                 _count: { select: { tasks: true } }
             }
         })
@@ -128,7 +128,7 @@ const getMembers = async (req, res, next) => {
         const { id } = req.params
         const members = await prisma.projectMember.findMany({
             where: { projectId: id },
-            include: { user: { select: { id: true, name: true, email: true, avatar: true } } }
+            include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } }
         })
         return successResponse(res, { members })
     } catch (err) {
@@ -143,7 +143,7 @@ const addMember = async (req, res, next) => {
 
         const member = await prisma.projectMember.create({
             data: { projectId: id, userId, role },
-            include: { user: { select: { id: true, name: true, email: true, avatar: true } } }
+            include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } }
         })
         return successResponse(res, { member }, 'Member added', 201)
     } catch (err) {
@@ -166,7 +166,7 @@ const getActivity = async (req, res, next) => {
         const { id } = req.params
         const activities = await prisma.activityLog.findMany({
             where: { projectId: id },
-            include: { user: { select: { id: true, name: true, avatar: true } } },
+            include: { user: { select: { id: true, name: true, avatarUrl: true } } },
             orderBy: { createdAt: 'desc' },
             take: 50
         })

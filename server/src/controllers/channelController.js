@@ -9,7 +9,7 @@ const getChannels = async (req, res, next) => {
             include: {
                 channel: {
                     include: {
-                        members: { include: { user: { select: { id: true, name: true, avatar: true } } } },
+                        members: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } },
                         _count: { select: { messages: true } }
                     }
                 }
@@ -46,7 +46,7 @@ const createChannel = async (req, res, next) => {
                     ]
                 }
             },
-            include: { members: { include: { user: { select: { id: true, name: true, avatar: true } } } } }
+            include: { members: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } } }
         })
 
         return successResponse(res, { channel }, 'Channel created', 201)
@@ -62,7 +62,7 @@ const getChannel = async (req, res, next) => {
 
         const channel = await prisma.channel.findUnique({
             where: { id },
-            include: { members: { include: { user: { select: { id: true, name: true, avatar: true } } } } }
+            include: { members: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } } }
         })
         if (!channel) return errorResponse(res, 'Channel not found', 404)
 
@@ -148,7 +148,7 @@ const getOrCreateDM = async (req, res, next) => {
                     { members: { some: { userId: targetId } } }
                 ]
             },
-            include: { members: { include: { user: { select: { id: true, name: true, avatar: true } } } } }
+            include: { members: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } } }
         })
         if (existing) return successResponse(res, { channel: existing })
 
@@ -162,7 +162,7 @@ const getOrCreateDM = async (req, res, next) => {
                 createdById: myId,
                 members: { create: [{ userId: myId, role: 'admin' }, { userId: targetId, role: 'admin' }] }
             },
-            include: { members: { include: { user: { select: { id: true, name: true, avatar: true } } } } }
+            include: { members: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } } }
         })
 
         return successResponse(res, { channel }, 'DM created', 201)
