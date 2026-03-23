@@ -1,8 +1,9 @@
 {
     "name": "brioright-mcp",
-    "version": "1.4.0",
-    "description": "MCP server for Brioright — lets AI assistants create and manage tasks via natural language",
+    "version": "1.5.0",
+    "description": "MCP server for Brioright — lets AI assistants (Claude, Cursor, ChatGPT) create, search, analyse and manage tasks via natural language",
     "type": "module",
+
     "main": "index.js",
     "bin": {
         "brioright-mcp": "index.js"
