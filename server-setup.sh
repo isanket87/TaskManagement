@@ -150,5 +150,5 @@ echo "  mkdir -p ../server/public && cp -r dist/* ../server/public/"
 echo "  cd .. && pm2 start ecosystem.config.cjs --env production"
 echo "  pm2 save && pm2 startup"
 echo ""
-echo "  Visit: http://185.167.99.233 🚀"
+echo "  Visit: http://15.235.202.51 🚀"
 
