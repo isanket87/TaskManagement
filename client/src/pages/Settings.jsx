@@ -234,7 +234,7 @@ const Settings = () => {
                     ) : (
                         <div className="space-y-4">
                             <div className="flex items-start gap-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                                AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+                                <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
                                 <p className="text-sm text-red-700 dark:text-red-400">
                                     This action is <strong>permanent</strong>. All your workspaces, projects, and data will be deleted. Enter your password to confirm.
                                 </p>

@@ -5,7 +5,7 @@ import {
     MoreVertical, Reply, Edit2, Trash2, X, Users, Lock, 
     ChevronRight, Bell, Search, Info, AtSign, Settings,
     Layout, Sidebar as SidebarIcon, Sparkles, Image as ImageIcon,
-    Mic, Video, Phone, Globe
+    Mic, Video, Phone, Globe, CheckSquare, CheckCircle2
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import useAuthStore from '../store/authStore';
@@ -18,12 +18,96 @@ import { useSocket } from '../hooks/useSocket';
 import Avatar from '../components/ui/Avatar';
 import { cn, getInitials } from '../utils/helpers';
 import { taskService } from '../services/taskService';
+import { projectService } from '../services/projectService';
 import PageWrapper from '../components/layout/PageWrapper';
+import Modal from '../components/ui/Modal';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import { STATUS_OPTIONS, PRIORITY_OPTIONS } from '../utils/constants';
 
 // ── Presence dot ──────────────────────────────────────────────────────────────
 const PresenceDot = ({ status, className }) => {
     const colors = { online: 'bg-emerald-500', away: 'bg-amber-400', offline: 'bg-slate-400' };
     return <span className={cn("inline-block w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-slate-900 shadow-sm", colors[status] || colors.offline, className)} />;
+};
+
+// ── MessageToTaskModal ────────────────────────────────────────────────────────
+const MessageToTaskModal = ({ isOpen, onClose, message, workspaceSlug }) => {
+    const queryClient = useQueryClient();
+    const [title, setTitle] = useState('');
+    const [projectId, setProjectId] = useState('');
+    const [status, setStatus] = useState('todo');
+    const [priority, setPriority] = useState('medium');
+
+    const { data: projectsData } = useQuery({
+        queryKey: ['projects', workspaceSlug],
+        queryFn: () => projectService.getAll(),
+        enabled: isOpen,
+    });
+
+    const projects = projectsData?.data?.data?.projects || [];
+
+    useEffect(() => {
+        if (message) {
+            setTitle(message.content.slice(0, 100));
+        }
+    }, [message]);
+
+    const createMutation = useMutation({
+        mutationFn: (data) => taskService.create(projectId, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['tasks', projectId]);
+            toast.success('Task created from message');
+            onClose();
+        },
+        onError: () => toast.error('Failed to create task'),
+    });
+
+    const handleCreate = () => {
+        if (!projectId) return toast.error('Please select a project');
+        createMutation.mutate({ title, status, priority, description: `Created from message: ${message.content}` });
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title="Convert Message to Task">
+            <div className="space-y-4">
+                <Input label="Task Title" value={title} onChange={e => setTitle(e.target.value)} />
+                
+                <div>
+                    <label className="label">Project</label>
+                    <select className="input" value={projectId} onChange={e => setProjectId(e.target.value)}>
+                        <option value="">Select a project...</option>
+                        {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="label">Status</label>
+                        <select className="input" value={status} onChange={e => setStatus(e.target.value)}>
+                            {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="label">Priority</label>
+                        <select className="input" value={priority} onChange={e => setPriority(e.target.value)}>
+                            {PRIORITY_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                        </select>
+                    </div>
+                </div>
+
+                <div className="bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Message Content</p>
+                    <p className="text-xs text-slate-500 italic line-clamp-3">{message?.content}</p>
+                </div>
+
+                <div className="flex gap-2 justify-end pt-2">
+                    <Button variant="secondary" onClick={onClose}>Cancel</Button>
+                    <Button isLoading={createMutation.isPending} onClick={handleCreate} disabled={!title || !projectId}>Create Task</Button>
+                </div>
+            </div>
+        </Modal>
+    );
 };
 
 // ── Typing indicator ──────────────────────────────────────────────────────────
@@ -44,7 +128,7 @@ const TypingIndicator = ({ typingUsers }) => {
 };
 
 // ── Message bubble ─────────────────────────────────────────────────────────────
-const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUserId, showAvatar = true, channelMembers = [], channelLastRead = {} }) => {
+const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, onCreateTask, currentUserId, showAvatar = true, channelMembers = [], channelLastRead = {} }) => {
     const [showActions, setShowActions] = useState(false);
     const [editing, setEditing] = useState(false);
     const [editContent, setEditContent] = useState(message.content);
@@ -142,10 +226,11 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, currentUse
                                         className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-sm transition-all active:scale-125">{emoji}</button>
                                 ))}
                                 <div className="w-px h-3 bg-slate-200 dark:bg-slate-700 mx-1" />
-                                <button onClick={() => onReply(message)} className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-indigo-600 transition-colors"><Reply size={14} /></button>
+                                <button onClick={() => onReply(message)} className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-indigo-600 transition-colors" title="Reply"><Reply size={14} /></button>
+                                <button onClick={() => onCreateTask(message)} className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-emerald-600 transition-colors" title="Convert to Task"><CheckSquare size={14} /></button>
                                 {isOwn && <>
-                                    <button onClick={() => setEditing(true)} className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-indigo-600 transition-colors"><Edit2 size={14} /></button>
-                                    <button onClick={() => onDelete(message.id)} className="w-7 h-7 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-slate-500 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                                    <button onClick={() => setEditing(true)} className="w-7 h-7 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500 hover:text-indigo-600 transition-colors" title="Edit"><Edit2 size={14} /></button>
+                                    <button onClick={() => onDelete(message.id)} className="w-7 h-7 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg text-slate-500 hover:text-red-500 transition-colors" title="Delete"><Trash2 size={14} /></button>
                                 </>}
                             </motion.div>
                         )}
@@ -336,6 +421,8 @@ const MessagesPage = () => {
     const [showInfoPanel, setShowInfoPanel] = useState(false);
     const [showAddMember, setShowAddMember] = useState(false);
     const [isSuggestingResponse, setIsSuggestingResponse] = useState(false);
+    const [showMessageToTask, setShowMessageToTask] = useState(false);
+    const [selectedMessageForTask, setSelectedMessageForTask] = useState(null);
     
     const feedRef = useRef(null);
     const typingTimerRef = useRef(null);
@@ -763,6 +850,10 @@ const MessagesPage = () => {
                                                     onReact={handleReact} 
                                                     onEdit={handleEdit} 
                                                     onDelete={handleDelete}
+                                                    onCreateTask={(msg) => {
+                                                        setSelectedMessageForTask(msg);
+                                                        setShowMessageToTask(true);
+                                                    }}
                                                     channelMembers={activeChannel?.members || []}
                                                     channelLastRead={lastRead[activeChannelId] || {}}
                                                 />
@@ -855,6 +946,17 @@ const MessagesPage = () => {
                     onClose={() => setShowAddMember(false)}
                     onAdd={handleAddMember}
                     currentMembers={activeChannel?.members || []}
+                />
+
+                {/* Message to Task Modal */}
+                <MessageToTaskModal
+                    isOpen={showMessageToTask}
+                    onClose={() => {
+                        setShowMessageToTask(false);
+                        setSelectedMessageForTask(null);
+                    }}
+                    message={selectedMessageForTask}
+                    workspaceSlug={workspace?.slug}
                 />
 
                 {/* New channel modal */}
