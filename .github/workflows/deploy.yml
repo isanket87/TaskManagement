@@ -44,7 +44,7 @@ jobs:
       - name: Install Server Dependencies
         run: |
           cd server
-          npm ci
+          npm install
 
       - name: Setup Test Environment
         run: |
@@ -67,7 +67,7 @@ jobs:
       - name: Install Client Dependencies
         run: |
           cd client
-          npm ci
+          npm install
 
       - name: Run Client Tests
         run: |
