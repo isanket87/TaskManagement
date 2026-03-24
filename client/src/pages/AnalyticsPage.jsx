@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { TrendingUp, CheckCircle2, ListTodo, BarChart3, Trophy, Layers } from 'lucide-react';
+import { TrendingUp, CheckCircle2, ListTodo, BarChart3, Trophy, Layers, Users } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import Avatar from '../components/ui/Avatar';
 import api from '../services/api';
 import useWorkspaceStore from '../store/workspaceStore';
+import { cn } from '../utils/helpers';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const fmt = (n) => (n ?? 0).toLocaleString();

@@ -429,15 +429,23 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                     </div>
 
                                     {/* DESCRIPTION AREA */}
-                                    <div className="space-y-2 group/desc">
+                                    <div className="space-y-4 group/desc max-w-3xl mx-auto w-full mt-8">
+                                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                                            <AlignLeft className="w-4 h-4 text-slate-400" /> Description
+                                        </h3>
                                         {isEditingDescription ? (
                                             <div className="flex flex-col gap-2">
                                                 <RichTextEditor
                                                     value={editDescriptionValue}
                                                     onChange={setEditDescriptionValue}
-                                                    placeholder="Describe this task... (supports basic formatting)"
+                                                    placeholder="Describe this task... Type '/' for commands..."
+                                                    mentions={membersList.map(m => ({
+                                                        id: m.user?.id || m.userId,
+                                                        label: m.user?.name || m.user?.email || 'User',
+                                                        user: m.user
+                                                    }))}
                                                 />
-                                                <div className="flex justify-end gap-2">
+                                                <div className="flex justify-end gap-2 mt-2">
                                                     <button onClick={() => setIsEditingDescription(false)} className="px-3 py-1.5 text-xs font-medium text-slate-600 hover:text-slate-800 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-slate-800 rounded-lg transition-colors">
                                                         Cancel
                                                     </button>
@@ -453,15 +461,15 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                         ) : detailedTask.description ? (
                                             <div
                                                 onClick={() => { setEditDescriptionValue(detailedTask.description); setIsEditingDescription(true); }}
-                                                className="prose prose-slate dark:prose-invert max-w-none text-[15px] text-slate-700 dark:text-slate-300 leading-relaxed cursor-text hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg p-2 -mx-2 transition-colors relative group/block min-h-[100px] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
+                                                className="prose prose-slate prose-base dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed cursor-text hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl p-4 -mx-4 transition-colors relative group/block min-h-[150px] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
                                                 dangerouslySetInnerHTML={{ __html: detailedTask.description }}
                                             />
                                         ) : (
                                             <div
                                                 onClick={() => { setEditDescriptionValue(''); setIsEditingDescription(true); }}
-                                                className="text-[15px] text-slate-400 dark:text-slate-500 cursor-text hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg p-2 -mx-2 transition-colors min-h-[100px]"
+                                                className="text-[15px] text-slate-400 dark:text-slate-500 cursor-text hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl p-6 -mx-4 transition-colors min-h-[150px] border border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center italic"
                                             >
-                                                Add a more detailed description...
+                                                Click to add a detailed description...
                                             </div>
                                         )}
                                     </div>
