@@ -13,6 +13,21 @@ jobs:
     name: Build & Test
     runs-on: ubuntu-latest
     
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: taskmanagement_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -30,6 +45,19 @@ jobs:
         run: |
           cd server
           npm ci
+
+      - name: Setup Test Environment
+        run: |
+          echo "DATABASE_URL=postgresql://user:password@localhost:5432/taskmanagement_test?schema=public" > server/.env.test
+          echo "JWT_SECRET=test-secret-key-for-ci" >> server/.env.test
+          echo "NODE_ENV=test" >> server/.env.test
+
+      - name: Push Prisma Schema
+        run: |
+          cd server
+          npx prisma db push --accept-data-loss
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/taskmanagement_test?schema=public
 
       - name: Run Server Tests
         run: |
