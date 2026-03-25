@@ -103,14 +103,19 @@ app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc:  ["'self'"],
-            styleSrc:   ["'self'", "'unsafe-inline'"],
-            imgSrc:     ["'self'", 'data:', 'https:'],
-            connectSrc: ["'self'", process.env.CLIENT_URL].filter(Boolean),
-            fontSrc:    ["'self'", 'https://fonts.gstatic.com'],
+            scriptSrc:  ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://www.googletagmanager.com"],
+            scriptSrcElem: ["'self'", "'unsafe-inline'", "https://www.googletagmanager.com"],
+            styleSrc:   ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            imgSrc:     ["'self'", 'data:', 'https:', 'blob:', "https://res.cloudinary.com"],
+            connectSrc: ["'self'", 'wss:', 'https:', "https://*.google-analytics.com", "https://*.analytics.google.com"],
+            fontSrc:    ["'self'", 'https://fonts.gstatic.com', 'data:'],
+            workerSrc:  ["'self'", 'blob:'],
+            frameSrc:   ["'self'"],
         }
     },
-    crossOriginEmbedderPolicy: false
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" }
 }))
 
 // ── CORS ──

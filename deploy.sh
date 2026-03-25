@@ -80,10 +80,15 @@ rm .env.production
 
 # ----- Sync Client Build -----
 echo "📂 Updating public assets..."
-# Use sudo only for the mkdir/rm/cp to ensure we can write to the server's public folder
+# Delete and recreate to be 100% sure no old files remain
+sudo rm -rf "$APP_DIR/server/public/assets"
 sudo mkdir -p "$APP_DIR/server/public/assets"
-sudo rm -rf "$APP_DIR/server/public/assets/*"
-sudo rm -rf "$APP_DIR/server/public/index.html"
+sudo rm -f "$APP_DIR/server/public/index.html"
+sudo rm -f "$APP_DIR/server/public/registerSW.js"
+sudo rm -f "$APP_DIR/server/public/sw.js"
+sudo rm -f "$APP_DIR/server/public/manifest.webmanifest"
+
+# Copy new files
 sudo cp -r "$APP_DIR/client/dist/"* "$APP_DIR/server/public/"
 sudo chown -R $USER:$USER "$APP_DIR/server/public"
 
