@@ -1,13 +1,90 @@
-name: Deploy to VPS
+name: CI/CD Pipeline
 
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  deploy:
+  build-and-test:
+    name: Build & Test
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: taskmanagement_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+
+      - name: Install Server Dependencies
+        run: |
+          cd server
+          npm install
+
+      - name: Setup Test Environment
+        run: |
+          echo "DATABASE_URL=postgresql://user:password@localhost:5432/taskmanagement_test?schema=public" > server/.env.test
+          echo "JWT_SECRET=test-secret-key-for-ci" >> server/.env.test
+          echo "NODE_ENV=test" >> server/.env.test
+
+      - name: Push Prisma Schema
+        run: |
+          cd server
+          npx prisma db push --accept-data-loss
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/taskmanagement_test?schema=public
+
+      - name: Run Server Tests
+        run: |
+          cd server
+          npm test
+
+      - name: Install Client Dependencies
+        run: |
+          cd client
+          npm install
+
+      - name: Run Client Tests
+        run: |
+          cd client
+          npm test -- --run
+
+      - name: Verify Client Build
+        run: |
+          cd client
+          npm run build
+
+  deploy:
+    name: Deploy to VPS
+    needs: build-and-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
     steps:
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.3
