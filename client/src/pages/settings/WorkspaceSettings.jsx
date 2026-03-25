@@ -128,7 +128,7 @@ const WorkspaceSettings = () => {
                                 </label>
                                 <div className="mt-1 flex rounded-md shadow-sm">
                                     <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-500 sm:text-sm">
-                                        taskflow.app/
+                                        brioright.app/
                                     </span>
                                     <input
                                         type="text"

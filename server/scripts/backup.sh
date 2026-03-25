@@ -7,8 +7,8 @@
 set -euo pipefail
 
 # ── Config ────────────────────────────────────────────────────────────────────
-DB_NAME="taskflow_db"
-DB_USER="taskflow_user"
+DB_NAME="brioright_db"
+DB_USER="brioright_user"
 DB_HOST="localhost"
 DB_PORT="5432"
 

@@ -22,3 +22,5 @@ export const addReaction = (channelId, msgId, emoji) =>
 export const getThread = (channelId, msgId) => api.get(`/channels/${channelId}/messages/${msgId}/thread`);
 export const replyToThread = (channelId, msgId, data) =>
     api.post(`/channels/${channelId}/messages/${msgId}/thread`, data);
+
+export const generateDraft = (data) => api.post('/ai/generate-draft', data);

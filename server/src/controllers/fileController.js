@@ -1,42 +1,15 @@
 import prisma from '../utils/prisma.js'
 import { successResponse, errorResponse } from '../utils/helpers.js'
 import path from 'path'
-import { v2 as cloudinary } from 'cloudinary'
-import streamifier from 'streamifier'
-
-cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
-})
-
-const uploadToCloudinary = (buffer, options) => {
-    return new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-            options,
-            (error, result) => {
-                if (error) reject(error)
-                else resolve(result)
-            }
-        )
-        streamifier.createReadStream(buffer).pipe(uploadStream)
-    })
-}
+import * as r2Service from '../services/r2Service.js'
 
 const saveFile = async (buffer, originalName, mimeType, workspaceId) => {
-    const result = await uploadToCloudinary(buffer, {
-        resource_type: 'auto',
-        folder: `taskflow/${workspaceId || 'general'}`,
-        use_filename: true,
-        unique_filename: true,
-        transformation: mimeType.startsWith('image/')
-            ? [{ quality: 'auto', fetch_format: 'auto' }]
-            : []
-    })
+    const folder = workspaceId ? `workspace-${workspaceId}` : 'general'
+    const result = await r2Service.uploadFile(buffer, originalName, mimeType, folder)
     return {
-        storageKey: result.public_id,
-        thumbnailUrl: result.secure_url,
-        url: result.secure_url
+        storageKey: result.key,
+        thumbnailUrl: result.url, // R2 doesn't auto-gen thumbs, using same URL
+        url: result.url
     }
 }
 
@@ -56,7 +29,9 @@ const uploadFile = async (req, res, next) => {
         const { taskId, projectId } = req.body
         const { buffer, originalname, mimetype, size } = req.file
 
-        if (size > parseInt(process.env.MAX_FILE_SIZE || 52428800)) { return errorResponse(res, 'File too large', 400) }
+        if (size > parseInt(process.env.MAX_FILE_SIZE || 52428800)) {
+            return errorResponse(res, 'File too large', 400)
+        }
 
         const { storageKey, thumbnailUrl, url } = await saveFile(buffer, originalname, mimetype, req.workspace?.id)
         const fileType = getFileType(mimetype)
@@ -100,19 +75,16 @@ const getFile = async (req, res, next) => {
     } catch (err) { next(err) }
 }
 
-// GET /api/files/:storageKey/raw — raw file serving (auth gated)
+// GET /api/files/:storageKey/raw
 const serveRaw = async (req, res, next) => {
     try {
-        // Note: This was using local file system in original code, but upload uses Cloudinary.
-        // I will redirect to the URL for now or if it's meant to be proxy then fetch and pipe.
-        // For simplicity and since we are using Cloudinary now, redirect is better.
         const file = await prisma.file.findFirst({ where: { storageKey: req.params.storageKey } })
         if (!file) return errorResponse(res, 'Not found', 404)
         res.redirect(file.url)
     } catch (err) { next(err) }
 }
 
-// GET /api/files/preview/:storageKey — thumbnail serving
+// GET /api/files/preview/:storageKey
 const servePreview = async (req, res, next) => {
     try {
         const file = await prisma.file.findFirst({ where: { storageKey: req.params.storageKey } })
@@ -126,13 +98,15 @@ const deleteFile = async (req, res, next) => {
     try {
         const file = await prisma.file.findUnique({ where: { id: req.params.id } })
         if (!file || file.deletedAt) return errorResponse(res, 'Not found', 404)
-        if (file.uploadedById !== req.user.id && req.user.role !== 'admin') { return errorResponse(res, 'Not allowed', 403) }
+        if (file.uploadedById !== req.user.id && req.user.role !== 'admin') {
+            return errorResponse(res, 'Not allowed', 403)
+        }
 
         await prisma.file.update({ where: { id: file.id }, data: { deletedAt: new Date() } })
 
-        // Async cleanup
+        // Async cleanup from R2
         setImmediate(async () => {
-            try { await cloudinary.uploader.destroy(file.storageKey) } catch (e) { }
+            try { await r2Service.deleteFile(file.storageKey) } catch (e) { }
         })
 
         return successResponse(res, null, 'File deleted')

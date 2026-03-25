@@ -5,12 +5,13 @@ import {
     MoreVertical, Reply, Edit2, Trash2, X, Users, Lock, 
     ChevronRight, Bell, Search, Info, AtSign, Settings,
     Layout, Sidebar as SidebarIcon, Sparkles, Image as ImageIcon,
-    Mic, Video, Phone, Globe, CheckSquare, CheckCircle2
+    Mic, Video, Phone, Globe, CheckSquare, CheckCircle2, FileText, Download, Loader2
 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import useAuthStore from '../store/authStore';
 import useChatStore from '../store/chatStore';
 import * as chatService from '../services/chatService';
+import * as fileService from '../services/fileService';
 import toast from 'react-hot-toast';
 import useWorkspaceStore from '../store/workspaceStore';
 import { formatDistanceToNow, format } from 'date-fns';
@@ -29,6 +30,47 @@ import { STATUS_OPTIONS, PRIORITY_OPTIONS } from '../utils/constants';
 const PresenceDot = ({ status, className }) => {
     const colors = { online: 'bg-emerald-500', away: 'bg-amber-400', offline: 'bg-slate-400' };
     return <span className={cn("inline-block w-2.5 h-2.5 rounded-full ring-2 ring-white dark:ring-slate-900 shadow-sm", colors[status] || colors.offline, className)} />;
+};
+
+// ── MessageAttachments ────────────────────────────────────────────────────────
+const MessageAttachments = ({ attachments, isOwn }) => {
+    if (!attachments?.length) return null;
+
+    return (
+        <div className={cn("flex flex-wrap gap-2 mt-2", isOwn ? "justify-end" : "justify-start")}>
+            {attachments.map(({ file }) => {
+                const isImage = file.type === 'image';
+                return (
+                    <div key={file.id} className="relative group max-w-[240px]">
+                        {isImage ? (
+                            <div className="relative rounded-xl overflow-hidden border border-slate-100 dark:border-white/5 shadow-sm bg-slate-100 dark:bg-slate-800">
+                                <img src={file.thumbnailUrl || file.url} alt={file.name} className="max-h-48 object-cover transition-transform group-hover:scale-105" />
+                                <a href={file.url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                    <Download size={20} />
+                                </a>
+                            </div>
+                        ) : (
+                            <a href={file.url} target="_blank" rel="noopener noreferrer" 
+                                className={cn(
+                                    "flex items-center gap-3 p-3 rounded-xl border transition-all",
+                                    isOwn 
+                                        ? "bg-white/10 border-white/20 text-white hover:bg-white/20" 
+                                        : "bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-white/5 text-slate-700 dark:text-slate-200 hover:border-slate-200"
+                                )}>
+                                <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shrink-0">
+                                    <FileText size={20} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-xs font-bold truncate">{file.name}</p>
+                                    <p className="text-[10px] opacity-60">{(file.size / 1024).toFixed(1)} KB</p>
+                                </div>
+                            </a>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
 };
 
 // ── MessageToTaskModal ────────────────────────────────────────────────────────
@@ -207,6 +249,7 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, onCreateTa
                                 : "bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-[20px] rounded-tl-none shadow-sm border border-slate-100 dark:border-white/5"
                         )}>
                             <p className="whitespace-pre-wrap">{message.content}</p>
+                            <MessageAttachments attachments={message.attachments} isOwn={isOwn} />
                         </div>
                     )}
 
@@ -423,9 +466,37 @@ const MessagesPage = () => {
     const [isSuggestingResponse, setIsSuggestingResponse] = useState(false);
     const [showMessageToTask, setShowMessageToTask] = useState(false);
     const [selectedMessageForTask, setSelectedMessageForTask] = useState(null);
+    const [attachments, setAttachments] = useState([]);
+    const [isUploading, setIsUploading] = useState(false);
     
     const feedRef = useRef(null);
     const typingTimerRef = useRef(null);
+    const fileInputRef = useRef(null);
+
+    const handleFileUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+
+        setIsUploading(true);
+        const toastId = toast.loading('Uploading files...');
+
+        try {
+            const uploadPromises = files.map(file => fileService.uploadFile(file));
+            const results = await Promise.all(uploadPromises);
+            const newAttachments = results.map(res => res.data.data.file);
+            setAttachments(prev => [...prev, ...newAttachments]);
+            toast.success('Files uploaded', { id: toastId });
+        } catch (err) {
+            toast.error('Upload failed', { id: toastId });
+        } finally {
+            setIsUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const removeAttachment = (fileId) => {
+        setAttachments(prev => prev.filter(a => a.id !== fileId));
+    };
 
     // ... (keep previous queries)
 
@@ -594,13 +665,19 @@ const MessagesPage = () => {
 
     const sendMsg = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim() || !activeChannelId) return;
+        if (!newMessage.trim() && !attachments.length) return;
+        if (!activeChannelId) return;
+        
         try {
-            const res = await chatService.sendMessage(activeChannelId, { content: newMessage });
+            const res = await chatService.sendMessage(activeChannelId, { 
+                content: newMessage,
+                fileIds: attachments.map(a => a.id)
+            });
             const msg = res.data.data.message;
             appendMessage(activeChannelId, msg);
             socket?.emit('message:broadcast', { channelId: activeChannelId, message: msg });
             setNewMessage('');
+            setAttachments([]); // Clear attachments after sending
             socket?.emit('typing:stop', { channelId: activeChannelId, userId: user.id });
         } catch { toast.error('Failed to send'); }
     };
@@ -616,14 +693,21 @@ const MessagesPage = () => {
     };
 
     const handleSuggestResponse = async () => {
-        const lastMessages = (messages[activeChannelId] || []).slice(-5);
+        const lastMessages = (messages[activeChannelId] || []).slice(-10);
         if (!lastMessages.length) return;
         setIsSuggestingResponse(true);
         try {
-            const prompt = lastMessages.map(m => `${m.author?.name}: ${m.content}`).join('\n');
-            const res = await taskService.suggestPriority({ title: "Draft a reply to:", description: prompt });
-            setNewMessage(prev => prev + (prev ? ' ' : '') + `Replying with: ${res.data?.data?.priority}...`);
-        } catch { toast.error('AI draft failed'); } finally { setIsSuggestingResponse(false); }
+            const context = lastMessages.map(m => `${m.author?.name}: ${m.content}`).join('\n');
+            const res = await chatService.generateDraft({ context });
+            const draft = res.data?.data?.draft;
+            if (draft) {
+                setNewMessage(draft);
+            }
+        } catch { 
+            toast.error('AI draft failed'); 
+        } finally { 
+            setIsSuggestingResponse(false); 
+        }
     };
 
     const handleReact = async (msgId, emoji) => {
@@ -865,17 +949,53 @@ const MessagesPage = () => {
 
                             <div className="px-6 py-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-white/5 z-20 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
                                 <TypingIndicator typingUsers={typingUsers[activeChannelId]} />
+                                
+                                {attachments.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mb-3 px-2">
+                                        {attachments.map(file => (
+                                            <div key={file.id} className="relative group p-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 flex items-center gap-3 pr-8">
+                                                <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                                    {file.type === 'image' ? <ImageIcon size={16} /> : <FileText size={16} />}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-[10px] font-bold truncate max-w-[120px]">{file.name}</p>
+                                                </div>
+                                                <button 
+                                                    onClick={() => removeAttachment(file.id)}
+                                                    className="absolute -top-1 -right-1 w-5 h-5 bg-white dark:bg-slate-700 rounded-full shadow-md border border-slate-100 dark:border-slate-600 flex items-center justify-center text-slate-400 hover:text-red-500 transition-colors"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
                                 <form onSubmit={sendMsg} className="relative">
+                                    <input 
+                                        type="file" 
+                                        ref={fileInputRef} 
+                                        onChange={handleFileUpload} 
+                                        multiple 
+                                        className="hidden" 
+                                    />
                                     <div className="group bg-slate-50 dark:bg-gray-950 rounded-[24px] border-2 border-transparent focus-within:border-indigo-500/30 focus-within:bg-white dark:focus-within:bg-gray-950 shadow-sm transition-all duration-500">
                                         <textarea value={newMessage} onChange={handleTyping} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(e); } }} placeholder={`Message ${activeChannel?.type === 'direct' ? directOther?.name : '#' + activeChannel?.name}...`} className="w-full bg-transparent text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none p-5 resize-none max-h-40 font-bold leading-relaxed" rows={1} />
                                         <div className="px-4 py-3 flex items-center justify-between border-t border-slate-100 dark:border-white/5">
                                             <div className="flex items-center gap-1">
-                                                <button type="button" className="p-2.5 hover:bg-white dark:hover:bg-white/5 rounded-[14px] text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><Paperclip size={18} /></button>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    disabled={isUploading}
+                                                    className="p-2.5 hover:bg-white dark:hover:bg-white/5 rounded-[14px] text-slate-400 hover:text-indigo-600 transition-all shadow-sm disabled:opacity-50"
+                                                >
+                                                    {isUploading ? <Loader2 size={18} className="animate-spin" /> : <Paperclip size={18} />}
+                                                </button>
                                                 <button type="button" className="p-2.5 hover:bg-white dark:hover:bg-white/5 rounded-[14px] text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><Smile size={18} /></button>
                                                 <div className="w-px h-4 bg-slate-200 dark:bg-white/10 mx-2" />
                                                 <button type="button" onClick={handleSuggestResponse} disabled={isSuggestingResponse} className="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:bg-white dark:hover:bg-white/10 transition-all disabled:opacity-50 shadow-sm"><Sparkles size={14} className={cn(isSuggestingResponse && "animate-pulse")} />AI Draft</button>
                                             </div>
-                                            <button type="submit" disabled={!newMessage.trim()} className="px-6 py-2 bg-indigo-600 text-white rounded-[14px] font-black shadow-xl shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-95 disabled:opacity-30 disabled:shadow-none transition-all flex items-center gap-2"><span className="hidden sm:inline text-xs">Send</span><Send size={16} /></button>
+                                            <button type="submit" disabled={(!newMessage.trim() && !attachments.length) || isUploading} className="px-6 py-2 bg-indigo-600 text-white rounded-[14px] font-black shadow-xl shadow-indigo-200 dark:shadow-none hover:bg-indigo-700 active:scale-95 disabled:opacity-30 disabled:shadow-none transition-all flex items-center gap-2"><span className="hidden sm:inline text-xs">Send</span><Send size={16} /></button>
                                         </div>
                                     </div>
                                 </form>

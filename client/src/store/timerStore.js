@@ -32,7 +32,7 @@ const useTimerStore = create(
             },
         }),
         {
-            name: 'taskflow-timer',
+            name: 'brioright-timer',
             partialize: (state) => ({ activeEntry: state.activeEntry }),
             onRehydrateStorage: () => (state) => {
                 if (state?.activeEntry) {

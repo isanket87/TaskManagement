@@ -53,6 +53,7 @@ import channelRoutes from './routes/channels.js'
 import attachmentRoutes from './routes/attachments.js'
 import notificationPrefRoutes from './routes/notificationPreferences.js'
 import healthRoutes from './routes/health.js'
+import aiRoutes from './routes/ai.js'
 import apiKeyRoutes from './routes/apiKeys.js'
 import swaggerUi from 'swagger-ui-express'
 import swaggerSpec from './utils/swagger.js'
@@ -191,6 +192,7 @@ app.get('/api/users/search', auth, async (req, res, next) => {
 
 app.use('/api/auth', authRoutes)
 app.use('/api/workspaces', workspaceRoutes)
+app.use('/api/ai', aiRoutes)
 
 // Legacy top-level mounts for specific non-scoped calls if any
 app.use('/api/notifications', notificationRoutes)

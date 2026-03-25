@@ -19,10 +19,8 @@ const AnalyticsTracker = () => {
         if (isInitialized.current) return;
 
         try {
-            // Standard GA4 initialization with explicit URL fix
-            ReactGA.initialize(trackingId, {
-                gtagUrl: `https://www.googletagmanager.com/gtag/js?id=${trackingId}`
-            });
+            // Standard GA4 initialization
+            ReactGA.initialize(trackingId);
             isInitialized.current = true;
 
             // Send initial pageview

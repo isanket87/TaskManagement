@@ -1,11 +1,11 @@
-# TaskFlow 🚀
+# Brioright 🚀
 
 > A full-stack project management SaaS built for
 > small teams who move fast.
 
-**🌐 Live Demo:** [taskflow.up.railway.app](https://taskflow.up.railway.app)
+**🌐 Live Demo:** [brioright.up.railway.app](https://brioright.up.railway.app)
 
-![TaskFlow Screenshot](docs/screenshot.png)
+![Brioright Screenshot](docs/screenshot.png)
 
 ## ✨ Features
 
@@ -43,8 +43,8 @@
 ### Setup
 
 # Clone
-git clone https://github.com/YOUR_USERNAME/taskflow.git
-cd taskflow
+git clone https://github.com/YOUR_USERNAME/brioright.git
+cd brioright
 
 # Server setup
 cd server

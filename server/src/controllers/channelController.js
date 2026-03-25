@@ -49,6 +49,18 @@ const createChannel = async (req, res, next) => {
             include: { members: { include: { user: { select: { id: true, name: true, avatarUrl: true } } } } }
         })
 
+        // Broadcast to involved members
+        const io = req.app.get('io')
+        if (io) {
+            const allMemberIds = memberIds.concat(req.user.id)
+            allMemberIds.forEach(userId => {
+                io.to(`user:${userId}`).emit('channel:created', channel)
+            })
+            if (projectId) {
+                io.to(`project:${projectId}`).emit('channel:created', channel)
+            }
+        }
+
         return successResponse(res, { channel }, 'Channel created', 201)
     } catch (err) { next(err) }
 }
@@ -79,6 +91,13 @@ const updateChannel = async (req, res, next) => {
         if (!member || member.role !== 'admin') return errorResponse(res, 'Admin only', 403)
 
         const channel = await prisma.channel.update({ where: { id }, data: { name, description } })
+
+        // Broadcast update
+        const io = req.app.get('io')
+        if (io) {
+            io.to(`channel:${id}`).emit('channel:updated', channel)
+        }
+
         return successResponse(res, { channel })
     } catch (err) { next(err) }
 }
@@ -91,6 +110,13 @@ const deleteChannel = async (req, res, next) => {
         if (!member || member.role !== 'admin') return errorResponse(res, 'Admin only', 403)
 
         await prisma.channel.delete({ where: { id } })
+
+        // Broadcast deletion
+        const io = req.app.get('io')
+        if (io) {
+            io.to(`channel:${id}`).emit('channel:deleted', { id })
+        }
+
         return successResponse(res, null, 'Channel deleted')
     } catch (err) { next(err) }
 }
@@ -103,8 +129,19 @@ const addMember = async (req, res, next) => {
         const existing = await prisma.channelMember.findUnique({ where: { channelId_userId: { channelId: id, userId } } })
         if (existing) return errorResponse(res, 'Already a member', 409)
 
-        await prisma.channelMember.create({ data: { channelId: id, userId, role } })
-        return successResponse(res, null, 'Member added')
+        const member = await prisma.channelMember.create({ 
+            data: { channelId: id, userId, role },
+            include: { user: { select: { id: true, name: true, avatarUrl: true } } }
+        })
+
+        // Broadcast membership change
+        const io = req.app.get('io')
+        if (io) {
+            io.to(`channel:${id}`).emit('channel:member:added', { channelId: id, member })
+            io.to(`user:${userId}`).emit('channel:joined', { channelId: id })
+        }
+
+        return successResponse(res, { member }, 'Member added')
     } catch (err) { next(err) }
 }
 
@@ -116,6 +153,14 @@ const removeMember = async (req, res, next) => {
         if (!me || (me.role !== 'admin' && req.user.id !== userId)) return errorResponse(res, 'Not allowed', 403)
 
         await prisma.channelMember.delete({ where: { channelId_userId: { channelId: id, userId } } })
+
+        // Broadcast membership change
+        const io = req.app.get('io')
+        if (io) {
+            io.to(`channel:${id}`).emit('channel:member:removed', { channelId: id, userId })
+            io.to(`user:${userId}`).emit('channel:left', { channelId: id })
+        }
+
         return successResponse(res, null, 'Member removed')
     } catch (err) { next(err) }
 }

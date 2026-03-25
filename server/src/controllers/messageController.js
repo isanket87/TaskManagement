@@ -5,7 +5,8 @@ const MESSAGE_INCLUDE = {
     author: { select: { id: true, name: true, avatarUrl: true } },
     reactions: { include: { user: { select: { id: true, name: true } } } },
     replies: { where: { deletedAt: null }, include: { author: { select: { id: true, name: true, avatarUrl: true } } } },
-    mentions: { include: { user: { select: { id: true, name: true } } } }
+    mentions: { include: { user: { select: { id: true, name: true } } } },
+    attachments: { include: { file: true } }
 }
 
 // Verify channel membership
@@ -46,21 +47,30 @@ const sendMessage = async (req, res, next) => {
         const { id: channelId } = req.params
         if (!await requireMember(channelId, req.user.id)) return errorResponse(res, 'Access denied', 403)
 
-        const { content, type = 'text', mentionIds = [] } = req.body
-        if (!content?.trim()) return errorResponse(res, 'Content required', 400)
+        const { content, type = 'text', mentionIds = [], fileIds = [] } = req.body
+        if (!content?.trim() && !fileIds.length) return errorResponse(res, 'Content or file required', 400)
 
         const message = await prisma.message.create({
             data: {
-                content: content.trim(),
+                content: content?.trim() || '',
                 type,
                 channelId,
                 authorId: req.user.id,
                 mentions: mentionIds.length
                     ? { create: mentionIds.map(userId => ({ userId })) }
+                    : undefined,
+                attachments: fileIds.length
+                    ? { create: fileIds.map(fileId => ({ fileId })) }
                     : undefined
             },
             include: MESSAGE_INCLUDE
         })
+
+        // Broadcast via socket
+        const io = req.app.get('io')
+        if (io) {
+            io.to(`channel:${channelId}`).emit('message:new', message)
+        }
 
         return successResponse(res, { message }, 'Message sent', 201)
     } catch (err) { next(err) }
@@ -69,7 +79,7 @@ const sendMessage = async (req, res, next) => {
 // PUT /api/channels/:id/messages/:msgId
 const editMessage = async (req, res, next) => {
     try {
-        const { msgId } = req.params
+        const { id: channelId, msgId } = req.params
         const { content } = req.body
 
         const msg = await prisma.message.findUnique({ where: { id: msgId } })
@@ -81,6 +91,12 @@ const editMessage = async (req, res, next) => {
             data: { content: content.trim(), editedAt: new Date() },
             include: MESSAGE_INCLUDE
         })
+
+        // Broadcast via socket
+        const io = req.app.get('io')
+        if (io) {
+            io.to(`channel:${channelId}`).emit('message:updated', updated)
+        }
 
         return successResponse(res, { message: updated })
     } catch (err) { next(err) }
@@ -100,6 +116,13 @@ const deleteMessage = async (req, res, next) => {
         if (!allowed) return errorResponse(res, 'Not allowed', 403)
 
         await prisma.message.update({ where: { id: msgId }, data: { deletedAt: new Date() } })
+
+        // Broadcast via socket
+        const io = req.app.get('io')
+        if (io) {
+            io.to(`channel:${channelId}`).emit('message:deleted', { id: msgId, channelId })
+        }
+
         return successResponse(res, null, 'Message deleted')
     } catch (err) { next(err) }
 }
@@ -163,13 +186,27 @@ const replyToThread = async (req, res, next) => {
         const { id: channelId, msgId } = req.params
         if (!await requireMember(channelId, req.user.id)) return errorResponse(res, 'Access denied', 403)
 
-        const { content } = req.body
-        if (!content?.trim()) return errorResponse(res, 'Content required', 400)
+        const { content, fileIds = [] } = req.body
+        if (!content?.trim() && !fileIds.length) return errorResponse(res, 'Content or file required', 400)
 
         const reply = await prisma.message.create({
-            data: { content: content.trim(), channelId, authorId: req.user.id, parentId: msgId },
+            data: { 
+                content: content?.trim() || '', 
+                channelId, 
+                authorId: req.user.id, 
+                parentId: msgId,
+                attachments: fileIds.length
+                    ? { create: fileIds.map(fileId => ({ fileId })) }
+                    : undefined
+            },
             include: MESSAGE_INCLUDE
         })
+
+        // Broadcast via socket
+        const io = req.app.get('io')
+        if (io) {
+            io.to(`channel:${channelId}`).emit('message:new', reply)
+        }
 
         return successResponse(res, { message: reply }, 'Reply sent', 201)
     } catch (err) { next(err) }

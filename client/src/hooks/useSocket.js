@@ -63,6 +63,12 @@ export const useSocket = (projectId = null) => {
         socket.on('notification:new', ({ notification }) => addNotification(notification));
         socket.on('dueDateSummary:updated', (summary) => setDueDateSummary(summary));
 
+        // Global Channel events
+        socket.on('channel:created', (channel) => {
+            queryClient.invalidateQueries({ queryKey: ['channels'] });
+            queryClient.invalidateQueries({ queryKey: ['unread-counts'] });
+        });
+
         return () => {
             if (projectId) socket.emit('leave:project', projectId);
             socket.off('task:created');
@@ -72,6 +78,7 @@ export const useSocket = (projectId = null) => {
             socket.off('task:dueDateUpdated');
             socket.off('notification:new');
             socket.off('dueDateSummary:updated');
+            socket.off('channel:created');
         };
     }, [user, projectId]);
 

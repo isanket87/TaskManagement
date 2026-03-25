@@ -27,15 +27,71 @@ export const suggestPriority = async (req, res, next) => {
         const response = await result.response;
         const priority = response.text().trim().toLowerCase();
 
-        // Validate that it's one of the expected values
         const validPriorities = ['low', 'medium', 'high', 'urgent'];
         const finalPriority = validPriorities.includes(priority) ? priority : 'medium';
 
         return successResponse(res, { priority: finalPriority }, 'Priority suggested');
     } catch (err) {
         console.error('AI Suggestion Error:', err);
-        // Fallback if AI fails
         return successResponse(res, { priority: 'medium' }, 'Fallback priority used');
+    }
+};
+
+/**
+ * Generates a draft reply for a message or conversation context.
+ * POST /api/ai/generate-draft
+ */
+export const generateDraft = async (req, res, next) => {
+    try {
+        const { context, instruction } = req.body;
+        if (!context) return errorResponse(res, 'Context is required', 400);
+
+        console.log('[AI Draft] Received Context:', context.substring(0, 100) + '...');
+
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-flash-latest",
+            generationConfig: {
+                maxOutputTokens: 200,
+                temperature: 0.8,
+            },
+        });
+
+        // More assertive system instruction to prevent "How can I help you" loops
+        const prompt = `
+            SYSTEM: You are an expert communication assistant for the Brioright Project Management platform.
+            TASK: Generate a professional, natural, and helpful reply to the conversation below.
+            
+            CONVERSATION HISTORY:
+            ${context}
+
+            ${instruction ? `USER INSTRUCTION: ${instruction}` : 'INSTRUCTION: Write a reply that logically continues this conversation. Be concise (max 2 sentences).'}
+
+            CRITICAL RULES:
+            - DO NOT offer general help (e.g. "How can I help you today?").
+            - DO NOT introduce yourself.
+            - DO NOT use generic AI filler.
+            - Write ONLY the message content itself.
+            - If you cannot generate a logical reply, write a natural polite acknowledgment.
+
+            DRAFT REPLY:
+        `;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const draft = response.text().trim().replace(/^["']|["']$/g, '');
+        
+        console.log('[AI Draft] Raw Output:', draft);
+
+        // Final safety check for generic phrases
+        const lowerDraft = draft.toLowerCase();
+        if (lowerDraft.includes("how can i help you") || lowerDraft.includes("i am an ai")) {
+             return successResponse(res, { draft: "Got it, looking into this now." }, 'Fallback used');
+        }
+
+        return successResponse(res, { draft }, 'Draft generated');
+    } catch (err) {
+        console.error('AI Draft Error:', err);
+        return errorResponse(res, 'Failed to generate draft', 500);
     }
 };
 
@@ -47,7 +103,6 @@ export const summarizeComments = async (req, res, next) => {
     try {
         const { taskId } = req.params;
         
-        // Fetch comments for this task
         const comments = await prisma.comment.findMany({
             where: { taskId },
             include: { author: { select: { name: true } } },
@@ -58,7 +113,6 @@ export const summarizeComments = async (req, res, next) => {
             return successResponse(res, { summary: 'No comments to summarize.' });
         }
 
-        // Format comments for the prompt
         const commentThread = comments.map(c => `${c.author.name}: ${c.text}`).join('\n');
 
         const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
