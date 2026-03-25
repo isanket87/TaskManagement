@@ -233,11 +233,17 @@ app.get('/api/timesheets/export', auth, exportTimesheet)
 if (process.env.NODE_ENV === 'production') {
     const publicPath = path.join(__dirname, '../public')
     
-    // Serve static assets with long-term caching
-    app.use(express.static(publicPath, {
+    // Serve static assets with long-term caching (fingerprinted files like .js, .css)
+    app.use('/assets', express.static(path.join(publicPath, 'assets'), {
         maxAge: '1y',
         immutable: true,
-        index: false // Don't serve index.html via express.static
+        index: false
+    }))
+
+    // Serve other public files (manifest, robots, etc.) with shorter cache
+    app.use(express.static(publicPath, {
+        maxAge: '1h',
+        index: false
     }))
 
     // Serve index.html for all other routes, but NEVER cache it

@@ -5,38 +5,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 export default defineConfig(({ mode }) => ({
     plugins: [
         react(),
+        // VitePWA plugin disabled to fix preload/caching issues
+        /*
         VitePWA({
             registerType: 'autoUpdate',
-            workbox: {
-                navigateFallbackDenylist: [/^\/api/],
-            },
-            manifest: {
-                name: 'Brioright',
-                short_name: 'Brioright',
-                description: 'Brioright — One workspace for tasks, chat, time & files.',
-                theme_color: '#3b82f6',
-                background_color: '#ffffff',
-                display: 'standalone',
-                icons: [
-                    {
-                        src: 'pwa-192x192.png',
-                        sizes: '192x192',
-                        type: 'image/png'
-                    },
-                    {
-                        src: 'pwa-512x512.png',
-                        sizes: '512x512',
-                        type: 'image/png'
-                    },
-                    {
-                        src: 'pwa-512x512.png',
-                        sizes: '512x512',
-                        type: 'image/png',
-                        purpose: 'any maskable'
-                    }
-                ]
-            }
+            ...
         })
+        */
     ],
     test: {
         globals: true,

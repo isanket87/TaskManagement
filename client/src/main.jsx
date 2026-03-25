@@ -18,45 +18,19 @@ window.addEventListener('error', (event) => {
     }
 });
 
-// PWA Service Worker Registration & Auto-Update
+// ── EMERGENCY CACHE CLEAR ──
+// Run this once to kill any rogue service workers and clear old caches
 if ('serviceWorker' in navigator) {
-    // 1. Nuclear option v2: Force a clean slate for everyone one time.
-    if (localStorage.getItem('sw_fix_version') !== '3') {
-        navigator.serviceWorker.getRegistrations().then(registrations => {
-            for (let registration of registrations) {
-                registration.unregister();
-            }
-            // Also clear the cache storage to be extra safe
-            if ('caches' in window) {
-                caches.keys().then(names => {
-                    for (let name of names) caches.delete(name);
-                });
-            }
-            localStorage.setItem('sw_fix_version', '3');
-            console.log('Force Reset v3 applied. Reloading for clean slate...');
-            window.location.reload();
-        });
-    }
-
-    if (import.meta.env.PROD) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js', { scope: '/' })
-                .then(registration => {
-                    console.log('SW registered:', registration);
-                    // If there's an updated service worker waiting, skip waiting and reload
-                    registration.addEventListener('updatefound', () => {
-                        const newWorker = registration.installing;
-                        newWorker.addEventListener('statechange', () => {
-                            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                console.log('New content available, reloading...');
-                                window.location.reload();
-                            }
-                        });
-                    });
-                })
-                .catch(error => console.error('SW registration failed:', error));
-        });
-    }
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (let registration of registrations) {
+            registration.unregister();
+        }
+    });
+}
+if ('caches' in window) {
+    caches.keys().then((names) => {
+        for (let name of names) caches.delete(name);
+    });
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(
