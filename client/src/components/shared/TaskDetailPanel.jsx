@@ -27,6 +27,19 @@ import TaskDependencies from './TaskDependencies';
 import TaskSubtasks from './TaskSubtasks';
 import RichTextEditor from '../ui/RichTextEditor';
 import ActivityFeed from './ActivityFeed';
+import { marked } from 'marked';
+
+// ─── Description helpers ───────────────────────────────────────────────────
+// Detect whether a string is HTML (output from TipTap) or legacy markdown/plain text.
+const isHtml = (str) => str && /<[a-z][\s\S]*>/i.test(str);
+
+// Always return a safe HTML string suitable for dangerouslySetInnerHTML.
+const normalizeDescription = (desc) => {
+    if (!desc) return '';
+    if (isHtml(desc)) return desc;          // TipTap HTML — use as-is
+    return marked.parse(desc);              // Legacy markdown → HTML
+};
+// ───────────────────────────────────────────────────────────────────────────
 
 // Helper for status colors
 const getStatusLabel = (status) => {
@@ -471,9 +484,16 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                             </div>
                                         ) : detailedTask.description ? (
                                             <div
-                                                onClick={() => { setEditDescriptionValue(detailedTask.description); setIsEditingDescription(true); }}
+                                                onClick={() => {
+                                                    // Normalize legacy markdown → HTML before opening the TipTap editor
+                                                    const normalized = isHtml(detailedTask.description)
+                                                        ? detailedTask.description
+                                                        : marked.parse(detailedTask.description);
+                                                    setEditDescriptionValue(normalized);
+                                                    setIsEditingDescription(true);
+                                                }}
                                                 className="prose prose-slate prose-base dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-relaxed cursor-text hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl p-4 -mx-4 transition-colors relative group/block min-h-[150px] [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
-                                                dangerouslySetInnerHTML={{ __html: detailedTask.description }}
+                                                dangerouslySetInnerHTML={{ __html: normalizeDescription(detailedTask.description) }}
                                             />
                                         ) : (
                                             <div
