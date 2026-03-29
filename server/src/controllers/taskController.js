@@ -60,10 +60,30 @@ const createTaskSchema = z.object({
     recurrenceConfig: z.any().optional().nullable()
 })
 
-// Helper to validate assignee existence
-const validateAssignee = async (assigneeId) => {
-    if (!assigneeId) return null;
-    const user = await prisma.user.findUnique({ where: { id: assigneeId }, select: { id: true } });
+// Helper to validate assignee existence and recover from names
+const validateAssignee = async (assigneeIdentifier) => {
+    if (!assigneeIdentifier) return null;
+    
+    // Check by ID first (assuming UUID/CUID length structure)
+    let user;
+    if (assigneeIdentifier.length >= 20) {
+        user = await prisma.user.findFirst({ where: { id: assigneeIdentifier }, select: { id: true } });
+    }
+    
+    // If not found by ID, try resolving by name or email (useful for MCP AI guessing names)
+    if (!user) {
+        user = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { name: { equals: assigneeIdentifier, mode: 'insensitive' } },
+                    { email: { equals: assigneeIdentifier, mode: 'insensitive' } },
+                    { name: { contains: assigneeIdentifier, mode: 'insensitive' } }
+                ]
+            },
+            select: { id: true }
+        });
+    }
+
     return user ? user.id : null;
 };
 
@@ -112,12 +132,10 @@ const createTask = async (req, res, next) => {
         const data = createTaskSchema.parse(req.body)
         const userId = req.user.id
 
-        // Validate assignee existence to prevent FK crashes
+        // Validate assignee existence to prevent FK crashes and auto-match names
         if (data.assigneeId) {
             const validId = await validateAssignee(data.assigneeId);
-            if (!validId) {
-                data.assigneeId = null; // Default to unassigned if user not found instead of crashing
-            }
+            data.assigneeId = validId || null; // Update the payload with the true User ID
         }
 
         const maxPosition = await prisma.task.aggregate({
@@ -290,12 +308,14 @@ const updateTask = async (req, res, next) => {
             metadata.after.recurrenceRule = data.recurrenceRule
         }
 
-        if (data.assigneeId !== undefined && data.assigneeId !== currentTask.assigneeId) {            // Clean empty string from frontend
+        if (data.assigneeId !== undefined && data.assigneeId !== currentTask.assigneeId) {
+            // Clean empty string from frontend
             if (data.assigneeId === '') data.assigneeId = null;
 
-            const validId = data.assigneeId ? await validateAssignee(data.assigneeId) : null;
-            if (data.assigneeId && !validId) {
-                data.assigneeId = null; // Reset to null if invalid
+            // Resolve name to actual ID if the MCP passed a name
+            if (data.assigneeId) {
+                const validId = await validateAssignee(data.assigneeId);
+                data.assigneeId = validId || null;
             }
 
             const newAssigneeName = data.assigneeId 
@@ -809,11 +829,10 @@ const bulkImportTasks = async (req, res, next) => {
             const status = t.status || 'todo';
             const dueDateStatus = computeDueDateStatus(dueDate, status);
 
-            // Clean empty string and validate existence
+            // Clean empty string, validate existence, and map names to user IDs
             let assigneeId = t.assigneeId === '' ? null : (t.assigneeId || null);
             if (assigneeId) {
-                const validId = await validateAssignee(assigneeId);
-                if (!validId) assigneeId = null;
+                assigneeId = await validateAssignee(assigneeId) || null;
             }
 
             return {
