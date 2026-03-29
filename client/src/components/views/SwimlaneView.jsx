@@ -71,36 +71,60 @@ const SwimlaneView = ({ tasks = [], members = [], projectId, focusedMemberId = n
         const [sourceMemberId, sourceStatus] = source.droppableId.split('::');
         const [destMemberId, destStatus] = destination.droppableId.split('::');
 
-        // Optimistic UI update
-        queryClient.setQueryData(['tasks', projectId], (old) => {
+        // ── Optimistic update ────────────────────────────────────────────────
+        // The cache shape is the full axios envelope: { data: { data: { tasks: [] } } }
+        // We must unwrap → patch → rewrap to keep React Query happy.
+        queryClient.setQueriesData({ queryKey: ['tasks', projectId] }, (old) => {
             if (!old) return old;
-            return old.map(t => {
-                if (t.id === draggableId) {
-                    const newAssignee = destMemberId !== 'unassigned'
-                        ? members.find(m => m.user.id === destMemberId)?.user || t.assignee
-                        : null;
-                    return { ...t, status: destStatus, assignee: newAssignee, assigneeId: destMemberId };
-                }
-                return t;
+            const taskList = old?.data?.data?.tasks;
+            if (!Array.isArray(taskList)) return old;
+
+            const newAssignee = destMemberId !== 'unassigned'
+                ? members.find(m => m.user.id === destMemberId)?.user ?? null
+                : null;
+
+            const updatedTasks = taskList.map(t => {
+                if (t.id !== draggableId) return t;
+                return {
+                    ...t,
+                    status: destStatus,
+                    assignee: newAssignee,
+                    assigneeId: destMemberId === 'unassigned' ? null : destMemberId,
+                };
             });
+
+            return {
+                ...old,
+                data: {
+                    ...old.data,
+                    data: { ...old.data.data, tasks: updatedTasks },
+                },
+            };
         });
 
-        // Persist to backend
-        if (sourceMemberId !== destMemberId) {
-            taskService.update(projectId, draggableId, { status: destStatus, assigneeId: destMemberId === 'unassigned' ? null : destMemberId })
-                .then(() => toast.success('Task reassigned and moved'))
-                .catch(() => {
-                    toast.error('Failed to move task');
-                    queryClient.invalidateQueries(['tasks', projectId]);
-                });
-        } else {
-            taskService.updateStatus(projectId, draggableId, destStatus)
-                .then(() => toast.success(`Moved to ${COLUMNS.find(c => c.id === destStatus)?.label}`))
-                .catch(() => {
-                    toast.error('Failed to move task');
-                    queryClient.invalidateQueries(['tasks', projectId]);
-                });
-        }
+        // ── Persist to backend ───────────────────────────────────────────────
+        const apiCall = sourceMemberId !== destMemberId
+            ? taskService.update(projectId, draggableId, {
+                status: destStatus,
+                assigneeId: destMemberId === 'unassigned' ? null : destMemberId,
+              })
+            : taskService.updateStatus(projectId, draggableId, destStatus);
+
+        const successMsg = sourceMemberId !== destMemberId
+            ? 'Task reassigned and moved'
+            : `Moved to ${COLUMNS.find(c => c.id === destStatus)?.label}`;
+
+        apiCall
+            .then(() => toast.success(successMsg))
+            .catch(() => {
+                toast.error('Failed to move task');
+                // Roll back by refetching fresh data
+                queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+            })
+            .finally(() => {
+                // Always sync with server to ensure consistency
+                queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+            });
     };
 
     const toggleFocus = (memberId) => onFocusChange?.(memberId);

@@ -18,10 +18,9 @@ const ProjectCard = ({ project, onDelete }) => {
         { icon: <Trash2 className="w-4 h-4" />, label: 'Delete Project', danger: true, onClick: () => onDelete(project.id) },
     ];
 
-    // Dummy progress calculation if tasks exist
+    // Real progress from backend-supplied completedTasksCount
     const totalTasks = project._count?.tasks || 0;
-    // Assuming we don't have completed count from API right now, simulating progress for visual purposes or just showing 0 if none
-    const completedTasks = project.completedTasks || 0;
+    const completedTasks = project.completedTasksCount || 0;
     const progress = totalTasks === 0 ? 0 : Math.round((completedTasks / totalTasks) * 100);
 
     const isOverdue = project.dueDate && isPast(new Date(project.dueDate));
@@ -93,22 +92,26 @@ const ProjectCard = ({ project, onDelete }) => {
                 {/* Footer Meta Row */}
                 <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-700/50 mt-auto">
                     {/* Avatars */}
-                    <div className="flex -space-x-2">
-                        {project.members?.slice(0, 3).map((m) => (
+                    <div className="flex -space-x-2 items-center">
+                        {project.members?.slice(0, 4).map((m) => (
                             <div
-                                key={m.id}
-                                className="w-7 h-7 rounded-full ring-2 ring-white dark:ring-slate-800 bg-indigo-500 flex items-center justify-center text-white text-[10px] font-bold shadow-sm"
+                                key={m.userId || m.id}
+                                className="w-7 h-7 rounded-full ring-2 ring-white dark:ring-slate-800 bg-indigo-500 flex items-center justify-center text-white text-[10px] font-bold shadow-sm shrink-0 overflow-hidden"
                                 title={m.user?.name}
                             >
-                                {(m.user?.name || '?')[0].toUpperCase()}
+                                {m.user?.avatarUrl ? (
+                                    <img src={m.user.avatarUrl} alt={m.user.name} className="w-full h-full object-cover" />
+                                ) : (
+                                    (m.user?.name || '?')[0].toUpperCase()
+                                )}
                             </div>
                         ))}
-                        {(project.members?.length || 0) > 3 && (
-                            <div className="w-7 h-7 rounded-full ring-2 ring-white dark:ring-slate-800 bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-[10px] font-medium text-slate-600 dark:text-slate-300 shadow-sm">
-                                +{project.members.length - 3}
+                        {(project.members?.length || 0) > 4 && (
+                            <div className="w-7 h-7 rounded-full ring-2 ring-white dark:ring-slate-800 bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-[10px] font-medium text-slate-600 dark:text-slate-300 shadow-sm shrink-0">
+                                +{project.members.length - 4}
                             </div>
                         )}
-                        {(project.members?.length === 0) && (
+                        {(project.members?.length === 0 || !project.members) && (
                             <span className="text-xs text-slate-400">No members</span>
                         )}
                     </div>

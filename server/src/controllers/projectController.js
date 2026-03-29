@@ -26,8 +26,60 @@ const getProjects = async (req, res, next) => {
             },
             orderBy: { createdAt: 'desc' }
         })
-        await cache.set(cacheKey, projects, TTL.PROJECTS)
-        return successResponse(res, { projects })
+
+        // Task has no workspaceId — must filter by projectId instead.
+        // Single groupBy across all project IDs = one DB round-trip for all projects.
+        const projectIds = projects.map(p => p.id)
+        
+        // Parallel fetch for task completions and unique assignees
+        const [doneCounts, activeAssignees] = await Promise.all([
+            projectIds.length > 0
+                ? prisma.task.groupBy({
+                    by: ['projectId'],
+                    where: { projectId: { in: projectIds }, status: 'done' },
+                    _count: { _all: true }
+                })
+                : [],
+            projectIds.length > 0
+                ? prisma.task.findMany({
+                    where: { projectId: { in: projectIds }, assigneeId: { not: null } },
+                    select: { projectId: true, assigneeId: true, assignee: { select: { id: true, name: true, avatarUrl: true } } },
+                    distinct: ['projectId', 'assigneeId']
+                })
+                : []
+        ])
+
+        const doneMap = Object.fromEntries(doneCounts.map(r => [r.projectId, r._count._all]))
+        
+        const assigneeMap = {}
+        activeAssignees.forEach(a => {
+            if (!assigneeMap[a.projectId]) assigneeMap[a.projectId] = []
+            assigneeMap[a.projectId].push({ userId: a.assignee.id, user: a.assignee })
+        })
+
+        const projectsWithProgress = projects.map(p => {
+            // Merge explicit members with active assignees
+            const allMembersMap = new Map()
+            
+            // Add explicit members
+            p.members?.forEach(m => allMembersMap.set(m.userId, m))
+            
+            // Add active assignees
+            if (assigneeMap[p.id]) {
+                assigneeMap[p.id].forEach(m => allMembersMap.set(m.userId, m))
+            }
+
+            return {
+                ...p,
+                members: Array.from(allMembersMap.values()),
+                completedTasksCount: doneMap[p.id] || 0
+            }
+        })
+
+        // Bust any stale cache then store fresh result
+        await cache.del(cacheKey)
+        await cache.set(cacheKey, projectsWithProgress, TTL.PROJECTS)
+        return successResponse(res, { projects: projectsWithProgress })
     } catch (err) {
         next(err)
     }
@@ -73,6 +125,29 @@ const getProject = async (req, res, next) => {
             }
         })
         if (!project) return errorResponse(res, 'Project not found', 404)
+
+        const activeAssignees = await prisma.task.findMany({
+            where: { projectId: id, assigneeId: { not: null } },
+            select: { assigneeId: true, assignee: { select: { id: true, name: true, avatarUrl: true } } },
+            distinct: ['assigneeId']
+        })
+
+        const allMembersMap = new Map()
+        project.members?.forEach(m => allMembersMap.set(m.userId, m))
+        activeAssignees.forEach(a => {
+            if (!allMembersMap.has(a.assigneeId)) {
+                allMembersMap.set(a.assigneeId, {
+                    id: `virtual-${a.assigneeId}`,
+                    projectId: id,
+                    userId: a.assigneeId,
+                    role: 'assignee',
+                    user: a.assignee
+                })
+            }
+        })
+        
+        project.members = Array.from(allMembersMap.values())
+
         return successResponse(res, { project })
     } catch (err) {
         next(err)
@@ -126,11 +201,35 @@ const deleteProject = async (req, res, next) => {
 const getMembers = async (req, res, next) => {
     try {
         const { id } = req.params
-        const members = await prisma.projectMember.findMany({
-            where: { projectId: id },
-            include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } }
+        
+        const [members, activeAssignees] = await Promise.all([
+            prisma.projectMember.findMany({
+                where: { projectId: id },
+                include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } }
+            }),
+            prisma.task.findMany({
+                where: { projectId: id, assigneeId: { not: null } },
+                select: { assigneeId: true, assignee: { select: { id: true, name: true, email: true, avatarUrl: true } } },
+                distinct: ['assigneeId']
+            })
+        ])
+
+        const allMembersMap = new Map()
+        members.forEach(m => allMembersMap.set(m.userId, m))
+        
+        activeAssignees.forEach(a => {
+            if (!allMembersMap.has(a.assigneeId)) {
+                allMembersMap.set(a.assigneeId, {
+                    id: `virtual-${a.assigneeId}`,
+                    projectId: id,
+                    userId: a.assigneeId,
+                    role: 'assignee',
+                    user: a.assignee
+                })
+            }
         })
-        return successResponse(res, { members })
+
+        return successResponse(res, { members: Array.from(allMembersMap.values()) })
     } catch (err) {
         next(err)
     }
@@ -145,6 +244,8 @@ const addMember = async (req, res, next) => {
             data: { projectId: id, userId, role },
             include: { user: { select: { id: true, name: true, email: true, avatarUrl: true } } }
         })
+        
+        await cache.del(`ws:${req.workspace.id}:projects`)
         return successResponse(res, { member }, 'Member added', 201)
     } catch (err) {
         next(err)
@@ -155,6 +256,8 @@ const removeMember = async (req, res, next) => {
     try {
         const { id, userId } = req.params
         await prisma.projectMember.deleteMany({ where: { projectId: id, userId } })
+        
+        await cache.del(`ws:${req.workspace.id}:projects`)
         return successResponse(res, null, 'Member removed')
     } catch (err) {
         next(err)
