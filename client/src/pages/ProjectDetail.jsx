@@ -8,7 +8,9 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag, BarChart2, BarChart3, LayoutGrid, AlignLeft, Users, Search, Sparkles, Check, Loader2, RefreshCw } from 'lucide-react';
+import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag, BarChart2, BarChart3, LayoutGrid, AlignLeft, Sparkles, Check, Loader2, RefreshCw } from 'lucide-react';
+import BoardFilterBar from '../components/shared/BoardFilterBar';
+import BoardSortGroup from '../components/shared/BoardSortGroup';
 import PageWrapper from '../components/layout/PageWrapper';
 import DueDateBadge from '../components/due-date/DueDateBadge';
 import DateTimePicker from '../components/due-date/DateTimePicker';
@@ -304,6 +306,7 @@ const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onA
                             <Trash2 className="w-3.5 h-3.5" />
                         </button>
                     )}
+                    {onAddTask && (
                     <button
                         onClick={() => onAddTask(column.id)}
                         className="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
@@ -311,6 +314,7 @@ const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onA
                     >
                         <LayoutGrid className="w-4 h-4" />
                     </button>
+                    )}
                 </div>
             </div>
 
@@ -377,7 +381,7 @@ const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onA
                             </button>
                         </div>
                     </motion.div>
-                ) : (
+                ) : onAddTask ? (
                     <button
                         onClick={() => setIsQuickAdding(true)}
                         className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all group"
@@ -385,7 +389,7 @@ const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onA
                         <Plus className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-colors" />
                         <span className="text-xs font-semibold">Add Task</span>
                     </button>
-                )}
+                ) : null}
             </div>
         </div>
     );
@@ -427,6 +431,10 @@ const ProjectDetail = () => {
     const [viewMode, setViewMode] = useState('kanban'); // 'kanban' | 'swimlane' | 'workload'
     const [focusedMemberId, setFocusedMemberId] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
+    const [boardFilters, setBoardFilters] = useState({ statuses: [], priorities: [], assigneeIds: [], dueDates: [] });
+    const [sortField, setSortField] = useState('none');   // 'none' | 'priority' | 'dueDate' | 'title' | 'createdAt'
+    const [sortDir, setSortDir] = useState('asc');         // 'asc' | 'desc'
+    const [groupBy, setGroupBy] = useState('status');       // 'status' | 'priority' | 'assignee' | 'dueDate'
 
     const toggleFocus = (memberId) => setFocusedMemberId(prev => prev === memberId ? null : memberId);
     const clearFocus = () => setFocusedMemberId(null);
@@ -475,14 +483,47 @@ const ProjectDetail = () => {
     // but weren't explicitly added to the project's member list
     const tasksList = Array.isArray(tasks) ? tasks : [];
     
-    // Apply local search filtering
+    // Apply local filtering: search + status + priority + assignee + due date
     const filteredTasks = tasksList.filter(task => {
-        if (!searchQuery.trim()) return true;
-        const query = searchQuery.toLowerCase();
-        const matchesTitle = task.title?.toLowerCase().includes(query);
-        const matchesTags = task.tags?.some(tag => tag.toLowerCase().includes(query));
-        const matchesAssignee = task.assignee?.name?.toLowerCase().includes(query);
-        return matchesTitle || matchesTags || matchesAssignee;
+        // Search
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            const matchesTitle = task.title?.toLowerCase().includes(q);
+            const matchesTags = task.tags?.some(tag => tag.toLowerCase().includes(q));
+            const matchesAssignee = task.assignee?.name?.toLowerCase().includes(q);
+            if (!matchesTitle && !matchesTags && !matchesAssignee) return false;
+        }
+
+        // Status filter
+        if (boardFilters.statuses?.length > 0 && !boardFilters.statuses.includes(task.status)) return false;
+
+        // Priority filter
+        if (boardFilters.priorities?.length > 0 && !boardFilters.priorities.includes(task.priority)) return false;
+
+        // Assignee filter
+        if (boardFilters.assigneeIds?.length > 0) {
+            if (!task.assignee || !boardFilters.assigneeIds.includes(task.assignee.id)) return false;
+        }
+
+        // Due date filter (local)
+        if (boardFilters.dueDates?.length > 0) {
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const todayEnd = new Date(todayStart.getTime() + 86400000);
+            const weekEnd = new Date(todayStart.getTime() + 7 * 86400000);
+            const due = task.dueDate ? new Date(task.dueDate) : null;
+
+            const matchesDue = boardFilters.dueDates.some(df => {
+                if (df === 'overdue') return due && due < todayStart && task.status !== 'done';
+                if (df === 'today') return due && due >= todayStart && due < todayEnd;
+                if (df === 'this_week') return due && due >= todayStart && due < weekEnd;
+                if (df === 'no_date') return !due;
+                return true;
+            });
+            if (!matchesDue) return false;
+        }
+
+        return true;
     });
 
     const effectiveMembers = (() => {
@@ -571,12 +612,96 @@ const ProjectDetail = () => {
         }
     };
 
+    // ── Sort filteredTasks ─────────────────────────────────────────────────────
+    const PRIORITY_RANK = { urgent: 0, critical: 0, high: 1, medium: 2, low: 3 };
+    const sortedFilteredTasks = [...filteredTasks].sort((a, b) => {
+        if (sortField === 'none') return 0;
+        let aVal, bVal;
+        if (sortField === 'priority') {
+            aVal = PRIORITY_RANK[a.priority] ?? 99;
+            bVal = PRIORITY_RANK[b.priority] ?? 99;
+        } else if (sortField === 'dueDate') {
+            aVal = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+            bVal = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+        } else if (sortField === 'title') {
+            aVal = (a.title || '').toLowerCase();
+            bVal = (b.title || '').toLowerCase();
+        } else if (sortField === 'createdAt') {
+            aVal = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            bVal = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        }
+        if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    // ── Dynamic group columns ─────────────────────────────────────────────────
+    const buildGroupColumns = () => {
+        if (groupBy === 'status') {
+            return KANBAN_COLUMNS.map(col => ({
+                id: col.id,
+                title: col.title,
+                color: col.color,
+                tasks: sortedFilteredTasks.filter(t => t.status === col.id),
+            }));
+        }
+        if (groupBy === 'priority') {
+            const cols = [
+                { id: 'urgent',   title: '🔴 Urgent',  color: '#ef4444' },
+                { id: 'high',     title: '🟠 High',    color: '#f97316' },
+                { id: 'medium',   title: '🟡 Medium',  color: '#eab308' },
+                { id: 'low',      title: '🟢 Low',     color: '#22c55e' },
+                { id: 'none',     title: '⚪ No Priority', color: '#94a3b8' },
+            ];
+            return cols.map(col => ({
+                ...col,
+                tasks: sortedFilteredTasks.filter(t =>
+                    col.id === 'none' ? !t.priority : t.priority === col.id
+                ),
+            })).filter(col => col.tasks.length > 0 || groupBy === 'priority');
+        }
+        if (groupBy === 'assignee') {
+            const unassigned = sortedFilteredTasks.filter(t => !t.assignee);
+            const assigneeMap = {};
+            sortedFilteredTasks.filter(t => t.assignee).forEach(task => {
+                const id = task.assignee.id;
+                if (!assigneeMap[id]) assigneeMap[id] = { user: task.assignee, tasks: [] };
+                assigneeMap[id].tasks.push(task);
+            });
+            const cols = Object.values(assigneeMap).map(({ user, tasks }) => ({
+                id: user.id,
+                title: user.name || user.email || 'Member',
+                color: '#6366f1',
+                tasks,
+                user,
+            }));
+            if (unassigned.length > 0) {
+                cols.unshift({ id: 'unassigned', title: 'Unassigned', color: '#94a3b8', tasks: unassigned });
+            }
+            return cols;
+        }
+        if (groupBy === 'dueDate') {
+            const now = new Date();
+            const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const todayEnd = new Date(todayStart.getTime() + 86400000);
+            const weekEnd = new Date(todayStart.getTime() + 7 * 86400000);
+            const cols = [
+                { id: 'overdue',   title: '🔴 Overdue',   color: '#ef4444', fn: t => t.dueDate && new Date(t.dueDate) < todayStart && t.status !== 'done' },
+                { id: 'today',     title: '📅 Due Today',  color: '#3b82f6', fn: t => t.dueDate && new Date(t.dueDate) >= todayStart && new Date(t.dueDate) < todayEnd },
+                { id: 'this_week', title: '📆 This Week',  color: '#8b5cf6', fn: t => t.dueDate && new Date(t.dueDate) >= todayEnd && new Date(t.dueDate) < weekEnd },
+                { id: 'later',     title: '🗓 Later',      color: '#10b981', fn: t => t.dueDate && new Date(t.dueDate) >= weekEnd },
+                { id: 'no_date',   title: '⚪ No Due Date', color: '#94a3b8', fn: t => !t.dueDate },
+            ];
+            return cols.map(col => ({ ...col, tasks: sortedFilteredTasks.filter(col.fn) }))
+                       .filter(col => col.tasks.length > 0);
+        }
+        return [];
+    };
+    const groupColumns = buildGroupColumns();
+
+    // Legacy tasksByStatus (for DnD — only used in status grouping)
     const tasksByStatus = KANBAN_COLUMNS.reduce((acc, col) => {
-        acc[col.id] = filteredTasks.filter((t) => {
-            if (t.status !== col.id) return false;
-            if (focusedMemberId) return t.assignee?.id === focusedMemberId;
-            return true;
-        });
+        acc[col.id] = sortedFilteredTasks.filter((t) => t.status === col.id);
         return acc;
     }, {});
 
@@ -648,94 +773,26 @@ const ProjectDetail = () => {
                         ))}
                     </div>
 
-                    {/* NEW: Local Board Filter */}
-                    <div className="relative flex items-center group">
-                        <Search className={cn(
-                            "w-3.5 h-3.5 absolute left-3 transition-colors",
-                            searchQuery ? "text-indigo-500" : "text-slate-400 group-hover:text-slate-500"
-                        )} />
-                        <input
-                            type="text"
-                            placeholder="Filter cards..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className={cn(
-                                "pl-8 pr-8 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 border-none rounded-lg focus:ring-2 focus:ring-indigo-500/20 w-32 sm:w-48 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500",
-                                searchQuery && "bg-white dark:bg-slate-700 shadow-sm ring-1 ring-slate-200 dark:ring-slate-600"
-                            )}
+                    {/* Board Filter Bar */}
+                    <BoardFilterBar
+                        searchQuery={searchQuery}
+                        onSearchChange={setSearchQuery}
+                        filters={boardFilters}
+                        onFiltersChange={setBoardFilters}
+                        members={effectiveMembers}
+                        totalCount={tasksList.length}
+                        filteredCount={filteredTasks.length}
+                    />
+
+                    {/* Sort & Group By controls — only in kanban */}
+                    {viewMode === 'kanban' && (
+                        <BoardSortGroup
+                            sortField={sortField}
+                            sortDir={sortDir}
+                            onSortChange={(f, d) => { setSortField(f); setSortDir(d); }}
+                            groupBy={groupBy}
+                            onGroupByChange={setGroupBy}
                         />
-                        {searchQuery && (
-                            <button
-                                onClick={() => setSearchQuery('')}
-                                className="absolute right-2 p-1 rounded-full hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-400 hover:text-slate-600 transition-colors"
-                            >
-                                <X className="w-3 h-3" />
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Divider */}
-                    <div className="hidden sm:block h-5 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
-
-                    {/* Member filter — labelled so users know it's interactive */}
-                    {effectiveMembers.length > 0 && (
-                        <div className={cn(
-                            'flex items-center gap-1.5 px-2 py-1 rounded-lg border transition-all shrink-0',
-                            focusedMemberId
-                                ? 'bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-700'
-                                : 'bg-slate-50 border-slate-200 dark:bg-slate-800/60 dark:border-slate-700'
-                        )}>
-                            <Users className={cn(
-                                'w-3 h-3 shrink-0 transition-colors',
-                                focusedMemberId ? 'text-orange-500' : 'text-slate-400'
-                            )} />
-                            <span className={cn(
-                                'text-[10px] font-semibold uppercase tracking-wider shrink-0 transition-colors',
-                                focusedMemberId ? 'text-orange-600 dark:text-orange-400' : 'text-slate-400 dark:text-slate-500'
-                            )}>
-                                Members
-                            </span>
-                            <div className="flex items-center gap-1">
-                                {effectiveMembers.map((m) => {
-                                    const isFocused = focusedMemberId === m.user.id;
-                                    return (
-                                        <button
-                                            key={m.user.id}
-                                            title={isFocused ? `Clear filter (${m.user.name})` : `Filter by ${m.user.name}`}
-                                            onClick={() => toggleFocus(m.user.id)}
-                                            className={cn(
-                                                'relative transition-all duration-150 rounded-full',
-                                                isFocused ? '-translate-y-0.5' : 'hover:-translate-y-0.5 opacity-70 hover:opacity-100'
-                                            )}
-                                        >
-                                            <Avatar
-                                                user={m.user}
-                                                size="xs"
-                                                className={cn(
-                                                    'ring-2 transition-all',
-                                                    isFocused
-                                                        ? 'ring-orange-400 shadow-sm shadow-orange-200 dark:shadow-orange-900/40'
-                                                        : 'ring-white dark:ring-slate-900'
-                                                )}
-                                            />
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                            {/* Active filter name + clear */}
-                            {focusedMemberId && (
-                                <span className="flex items-center gap-1 text-[10px] font-semibold text-orange-700 dark:text-orange-300 pl-0.5">
-                                    {effectiveMembers.find(m => m.user.id === focusedMemberId)?.user.name.split(' ')[0]}
-                                    <button
-                                        onClick={clearFocus}
-                                        title="Clear member filter"
-                                        className="w-3.5 h-3.5 flex items-center justify-center rounded-full bg-orange-200 dark:bg-orange-800 hover:bg-orange-300 dark:hover:bg-orange-700 text-orange-800 dark:text-orange-200 transition-colors"
-                                    >
-                                        <X className="w-2 h-2" />
-                                    </button>
-                                </span>
-                            )}
-                        </div>
                     )}
 
                     {/* Spacer */}
@@ -758,28 +815,7 @@ const ProjectDetail = () => {
                     )}
                 </div>
 
-                {/* ── Secondary toolbar: due-date filters (Kanban only) ── */}
-                {viewMode === 'kanban' && (
-                    <div className="px-4 sm:px-6 flex items-center gap-1.5 mb-4 shrink-0 overflow-x-auto hide-scrollbar">
-                        {DUE_FILTERS.map((f) => (
-                            <button
-                                key={f.value}
-                                onClick={() => setFilter(f.value)}
-                                className={cn(
-                                    'px-2.5 py-1 rounded-md text-xs font-medium whitespace-nowrap transition-all border flex items-center gap-1.5',
-                                    filter === f.value
-                                        ? 'bg-indigo-50 border-indigo-200 text-indigo-700 dark:bg-indigo-500/10 dark:border-indigo-500/30 dark:text-indigo-300'
-                                        : 'bg-transparent border-transparent text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-slate-200 dark:hover:border-slate-700'
-                                )}
-                            >
-                                {getFilterColor(f.value) && (
-                                    <span className={cn("w-2 h-2 rounded-full", getFilterColor(f.value))} />
-                                )}
-                                {f.label}
-                            </button>
-                        ))}
-                    </div>
-                )}
+
 
                 {/* Board / Workload / Swimlane area */}
                 <div className={cn(
@@ -792,16 +828,16 @@ const ProjectDetail = () => {
                                 tasks={filteredTasks}
                                 members={effectiveMembers}
                                 projectId={projectId}
-                                focusedMemberId={focusedMemberId}
-                                onFocusChange={toggleFocus}
+                                focusedMemberId={null}
+                                onFocusChange={() => {}}
                             />
                         ) : viewMode === 'swimlane' ? (
                             <SwimlaneView
                                 tasks={filteredTasks}
                                 members={effectiveMembers}
                                 projectId={projectId}
-                                focusedMemberId={focusedMemberId}
-                                onFocusChange={toggleFocus}
+                                focusedMemberId={null}
+                                onFocusChange={() => {}}
                             />
                         ) : viewMode === 'stats' ? (
                             <ProjectStatsView projectId={projectId} />
@@ -813,18 +849,41 @@ const ProjectDetail = () => {
                                     </div>
                                 ))}
                             </div>
+                        ) : filteredTasks.length === 0 && tasksList.length > 0 ? (
+                            <motion.div
+                                initial={{ opacity: 0, y: 8 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex flex-col items-center justify-center w-full h-full py-24 gap-4"
+                            >
+                                <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-3xl shadow-inner">
+                                    🔍
+                                </div>
+                                <div className="text-center">
+                                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">No tasks match your filters</p>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Try adjusting your search or filter criteria</p>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        setSearchQuery('');
+                                        setBoardFilters({ statuses: [], priorities: [], assigneeIds: [], dueDates: [] });
+                                    }}
+                                    className="px-4 py-2 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-600 hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/30 transition-all"
+                                >
+                                    Clear all filters
+                                </button>
+                            </motion.div>
                         ) : (
-                            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={groupBy === 'status' ? handleDragEnd : () => {}}>
                                 <div className="flex gap-6 h-full items-start">
-                                    {KANBAN_COLUMNS.map((col) => (
+                                    {groupColumns.map((col) => (
                                         <KanbanColumn
                                             key={col.id}
                                             column={col}
-                                            tasks={tasksByStatus[col.id] || []}
+                                            tasks={col.tasks}
                                             projectId={projectId}
                                             onDueDateUpdate={(task, date, hasDueTime) => updateDueDateMutation.mutate({ taskId: task.id, dueDate: date, hasDueTime })}
                                             onDelete={(task) => deleteMutation.mutate({ taskId: task.id })}
-                                            onAddTask={(status) => { setNewTaskStatus(status); setShowAddTask(true); }}
+                                            onAddTask={groupBy === 'status' ? (status) => { setNewTaskStatus(status); setShowAddTask(true); } : null}
                                             onSelectTask={handleSelectTask}
                                             createMutation={createMutation}
                                             onPriorityUpdate={(task, priority) => updatePriorityMutation.mutate({ taskId: task.id, priority })}

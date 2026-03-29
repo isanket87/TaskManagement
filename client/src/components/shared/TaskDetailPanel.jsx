@@ -26,6 +26,7 @@ import TaskAttachments from '../tasks/TaskAttachments';
 import TaskDependencies from './TaskDependencies';
 import TaskSubtasks from './TaskSubtasks';
 import RichTextEditor from '../ui/RichTextEditor';
+import ActivityFeed from './ActivityFeed';
 
 // Helper for status colors
 const getStatusLabel = (status) => {
@@ -254,14 +255,14 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
         enabled: !!detailedTask.id
     });
 
-    // Activities Query
     const activitiesQuery = useQuery({
         queryKey: ['task', projectId, detailedTask.id, 'activities'],
         queryFn: async () => {
             const res = await taskService.getActivities(projectId, detailedTask.id);
             return res.data.data.activities;
         },
-        enabled: !!detailedTask.id && activeTab === 'activity'
+        enabled: !!detailedTask.id,
+        staleTime: 30 * 1000, // 30s
     });
 
     const manualTimeMutation = useMutation({
@@ -376,7 +377,7 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                         {[
                             { id: 'details', label: 'Details', icon: AlignLeft },
                             { id: 'attachments', label: 'Attachments', icon: Paperclip },
-                            { id: 'activity', label: 'Activity', icon: Clock },
+                            { id: 'activity', label: 'Activity', icon: Clock, count: safeArray(activitiesQuery.data).length || null },
                             { id: 'time', label: 'Time Log', icon: PlayCircle }
                         ].map(tab => (
                             <button
@@ -391,6 +392,16 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                             >
                                 <tab.icon className="w-4 h-4" />
                                 <span className="hidden sm:inline">{tab.label}</span>
+                                {tab.count > 0 && (
+                                    <span className={cn(
+                                        'text-[10px] font-bold px-1.5 py-0.5 rounded-full leading-none',
+                                        activeTab === tab.id
+                                            ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300'
+                                            : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                                    )}>
+                                        {tab.count}
+                                    </span>
+                                )}
                             </button>
                         ))}
                     </div>
@@ -1004,103 +1015,36 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
 
                         {activeTab === 'activity' && (
                             <div className="p-6">
-                                {activitiesQuery.isLoading ? (
-                                    <div className="text-center text-sm text-slate-400 py-4">Loading activities...</div>
-                                ) : safeArray(activitiesQuery.data).length === 0 ? (
-                                    <div className="text-center py-12">
-                                        <div className="w-16 h-16 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-100 dark:border-slate-800">
-                                            <Clock className="w-8 h-8 text-slate-300 dark:text-slate-600" />
-                                        </div>
-                                        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">No Activity Yet</h3>
-                                        <p className="text-xs text-slate-500 max-w-[200px] mx-auto">
-                                            Changes to this task will appear here over time.
-                                        </p>
+                                {/* Activity header */}
+                                <div className="flex items-center justify-between mb-5">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1 h-5 rounded-full bg-indigo-500" />
+                                        <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">Task History</h3>
+                                        {safeArray(activitiesQuery.data).length > 0 && (
+                                            <span className="text-xs font-semibold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
+                                                {safeArray(activitiesQuery.data).length} events
+                                            </span>
+                                        )}
                                     </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {safeArray(activitiesQuery.data).map((activity, index, arr) => (
-                                            <div key={activity.id} className="flex gap-4 group">
-                                                <div className="relative flex flex-col items-center">
-                                                    <Avatar user={activity.user} className="w-8 h-8 shrink-0 z-10 ring-4 ring-white dark:ring-slate-900" />
-                                                    {index !== arr.length - 1 && (
-                                                        <div className="w-px h-full bg-slate-200 dark:bg-slate-700 absolute top-8 bottom-[-16px]" />
-                                                    )}
-                                                </div>
-                                                <div className="flex-1 pb-6 pt-1">
-                                                    <div className="flex items-baseline gap-2 mb-1">
-                                                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                                            {activity.user?.name || 'Unknown User'}
-                                                        </span>
-                                                        <span className="text-xs font-medium text-slate-400" title={activity.createdAt ? new Date(activity.createdAt).toLocaleString() : ''}>
-                                                            {activity.createdAt ? format(new Date(activity.createdAt), 'MMM d, h:mm a') : ''}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex flex-col gap-2">
-                                                        <p className="text-[13px] text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700/50 inline-block shadow-sm">
-                                                            {activity.message}
-                                                        </p>
-                                                        
-                                                        {/* DESCRIPTION HISTORY EXPANDER */}
-                                                        {activity.metadata?.before?.description !== undefined && (
-                                                            <div className="mt-1">
-                                                                <button 
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        const id = activity.id;
-                                                                        setExpandedHistory(expandedHistory === id ? null : id);
-                                                                    }}
-                                                                    className="text-[10px] font-bold text-indigo-500 hover:text-indigo-600 dark:text-indigo-400 flex items-center gap-1 uppercase tracking-tight"
-                                                                >
-                                                                    <Clock className="w-3 h-3" />
-                                                                    {expandedHistory === activity.id ? 'Hide History' : 'View History'}
-                                                                </button>
+                                    <button
+                                        onClick={() => {
+                                            queryClient.invalidateQueries(['task', projectId, detailedTask.id, 'activities']);
+                                        }}
+                                        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                                        title="Refresh activity"
+                                    >
+                                        <RefreshCw className={cn('w-3.5 h-3.5', activitiesQuery.isFetching && 'animate-spin')} />
+                                    </button>
+                                </div>
 
-                                                                <AnimatePresence>
-                                                                    {expandedHistory === activity.id && (
-                                                                        <motion.div 
-                                                                            initial={{ opacity: 0, height: 0 }}
-                                                                            animate={{ opacity: 1, height: 'auto' }}
-                                                                            exit={{ opacity: 0, height: 0 }}
-                                                                            className="mt-2 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden"
-                                                                        >
-                                                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                                                <div className="space-y-1.5">
-                                                                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Previous Version</label>
-                                                                                    <div 
-                                                                                        className="text-xs text-slate-500 line-through opacity-70 prose prose-slate dark:prose-invert max-w-none max-h-[200px] overflow-y-auto"
-                                                                                        dangerouslySetInnerHTML={{ __html: activity.metadata.before.description || '*No description*' }}
-                                                                                    />
-                                                                                </div>
-                                                                                <div className="space-y-1.5">
-                                                                                    <div className="flex items-center justify-between">
-                                                                                        <label className="text-[10px] font-bold text-indigo-500 uppercase">New Version</label>
-                                                                                        <button 
-                                                                                            onClick={() => {
-                                                                                                propertyMutation.mutate({ description: activity.metadata.before.description });
-                                                                                                toast.success('Restored previous description');
-                                                                                            }}
-                                                                                            className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-[10px] font-bold rounded transition-colors"
-                                                                                        >
-                                                                                            Restore Previous
-                                                                                        </button>
-                                                                                    </div>
-                                                                                    <div 
-                                                                                        className="text-xs text-slate-700 dark:text-slate-300 prose prose-slate dark:prose-invert max-w-none max-h-[200px] overflow-y-auto"
-                                                                                        dangerouslySetInnerHTML={{ __html: activity.metadata.after.description || '*No description*' }}
-                                                                                    />
-                                                                                </div>
-                                                                            </div>
-                                                                        </motion.div>
-                                                                    )}
-                                                                </AnimatePresence>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                                <ActivityFeed
+                                    activities={safeArray(activitiesQuery.data)}
+                                    isLoading={activitiesQuery.isLoading}
+                                    onRestoreDescription={(desc) => {
+                                        propertyMutation.mutate({ description: desc });
+                                        toast.success('Restored previous description');
+                                    }}
+                                />
                             </div>
                         )}
 
