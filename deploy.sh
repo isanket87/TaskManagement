@@ -109,4 +109,8 @@ fi
 # Save PM2 state
 pm2 save
 
+# Clean up build-time env file
+cd "$APP_DIR/client"
+rm -f .env.production
+
 echo "✅ Deployment finished successfully!"
