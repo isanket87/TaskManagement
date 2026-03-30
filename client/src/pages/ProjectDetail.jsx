@@ -746,73 +746,126 @@ const ProjectDetail = () => {
 
     return (
         <PageWrapper title={project?.name || 'Project Board'}>
-            <div className="h-full flex flex-col pt-4">
-                {/* ── Primary toolbar ─────────────────────────────── */}
-                <div className="px-4 sm:px-6 flex flex-wrap items-center gap-3 mb-2 shrink-0">
-                    {/* View toggle */}
-                    <div className="flex items-center gap-0.5 p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 shrink-0">
-                        {[
-                            { id: 'kanban', icon: <LayoutGrid className="w-3.5 h-3.5" />, label: 'Kanban' },
-                            { id: 'swimlane', icon: <AlignLeft className="w-3.5 h-3.5" />, label: 'Swimlane' },
-                            { id: 'workload', icon: <BarChart2 className="w-3.5 h-3.5" />, label: 'Workload' },
-                            { id: 'stats', icon: <BarChart3 className="w-4 h-4" />, label: 'Stats' },
-                        ].map(({ id, icon, label }) => (
-                            <button
-                                key={id}
-                                onClick={() => setViewMode(id)}
-                                className={cn(
-                                    'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all whitespace-nowrap',
-                                    viewMode === id
-                                        ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm'
-                                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-                                )}
-                            >
-                                {icon}
-                                {label}
-                            </button>
-                        ))}
+            <div className="h-full flex flex-col relative w-full overflow-hidden bg-slate-50 dark:bg-gray-950">
+                
+                {/* ── Atmospheric Hero Header ─────────────────────────────── */}
+                <div className="relative pt-6 pb-5 px-4 sm:px-6 shrink-0 border-b border-white/20 dark:border-slate-800/50 shadow-[0_4px_30px_-5px_rgba(0,0,0,0.05)] z-10 transition-colors duration-700"
+                     style={{ 
+                         backgroundColor: `${project?.color || '#6366f1'}06`, 
+                         backgroundImage: `linear-gradient(to bottom, ${project?.color || '#6366f1'}15, transparent)` 
+                     }}>
+                    
+                    {/* Background floating glows */}
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] rounded-full blur-[100px] opacity-20 mix-blend-screen transition-colors duration-1000" style={{ backgroundColor: project?.color || '#6366f1' }} />
+                        <div className="absolute -top-20 -left-20 w-[400px] h-[400px] rounded-full blur-[80px] opacity-10 mix-blend-screen transition-colors duration-1000 delay-150" style={{ backgroundColor: project?.color || '#6366f1' }} />
                     </div>
 
-                    {/* Board Filter Bar */}
-                    <BoardFilterBar
-                        searchQuery={searchQuery}
-                        onSearchChange={setSearchQuery}
-                        filters={boardFilters}
-                        onFiltersChange={setBoardFilters}
-                        members={effectiveMembers}
-                        totalCount={tasksList.length}
-                        filteredCount={filteredTasks.length}
-                    />
+                    <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
+                       <div className="flex items-center gap-4">
+                           <motion.div 
+                                whileHover={{ rotate: 5, scale: 1.05 }}
+                                className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg border border-white/40 dark:border-white/5 backdrop-blur-md"
+                                style={{ backgroundColor: `${project?.color || '#6366f1'}30`, color: project?.color || '#6366f1' }}>
+                                <LayoutGrid className="w-7 h-7 drop-shadow-sm" />
+                           </motion.div>
+                           <div>
+                               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight break-words drop-shadow-sm">
+                                    {project?.name || 'Project Name'}
+                               </h1>
+                               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                                   <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-slate-800/50 px-2 py-0.5 rounded-md border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm shadow-sm">
+                                       {project?._count?.tasks || 0} total tasks
+                                   </span>
+                                   <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
+                                   <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-500/20 backdrop-blur-sm shadow-sm">
+                                       {filteredTasks.length} visible
+                                   </span>
+                               </div>
+                           </div>
+                       </div>
 
-                    {/* Sort & Group By controls — only in kanban */}
-                    {viewMode === 'kanban' && (
-                        <BoardSortGroup
-                            sortField={sortField}
-                            sortDir={sortDir}
-                            onSortChange={(f, d) => { setSortField(f); setSortDir(d); }}
-                            groupBy={groupBy}
-                            onGroupByChange={setGroupBy}
-                        />
-                    )}
+                       <div className="flex -space-x-2.5 items-center">
+                            {effectiveMembers.slice(0, 5).map((m, i) => (
+                                <motion.div whileHover={{ y: -4, scale: 1.15, zIndex: 20 }} key={m.user.id} className="relative w-10 h-10 rounded-full ring-4 ring-slate-50 dark:ring-gray-950 shadow-md flex items-center justify-center bg-indigo-500 text-white font-bold text-xs cursor-help" style={{ zIndex: 10 - i }} title={m.user.name}>
+                                    {m.user.avatarUrl ? <img src={m.user.avatarUrl} className="w-full h-full rounded-full object-cover" /> : m.user.name[0].toUpperCase()}
+                                </motion.div>
+                            ))}
+                            {effectiveMembers.length > 5 && (
+                                <div className="relative w-10 h-10 rounded-full ring-4 ring-slate-50 dark:ring-gray-950 shadow-md flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs" style={{ zIndex: 0 }}>
+                                    +{effectiveMembers.length - 5}
+                                </div>
+                            )}
+                       </div>
+                    </div>
 
-                    {/* Spacer */}
-                    <div className="flex-1 hidden sm:block" />
-
-                    {/* Action Buttons — only in Kanban */}
-                    {viewMode === 'kanban' && (
-                        <div className="flex w-full sm:w-auto sm:justify-end gap-2 shrink-0 items-center mt-2 sm:mt-0">
-                            <Button variant="secondary" onClick={() => setIsImportModalOpen(true)} className="hidden sm:inline-flex shadow-sm text-xs py-1.5">
-                                Import CSV
-                            </Button>
-                            <Button variant="secondary" onClick={handleExportCSV} className="hidden sm:inline-flex shadow-sm text-xs py-1.5">
-                                Export CSV
-                            </Button>
-                            <Button onClick={() => { setNewTaskStatus('todo'); setShowAddTask(true); }} className="w-full sm:w-auto shadow-sm">
-                                <Plus className="w-4 h-4 mr-1.5" />
-                                New Task
-                            </Button>
+                    {/* Filter / Sort / Actions Toolbar inside a frosted pill */}
+                    <div className="relative flex flex-wrap items-center gap-3 p-2 bg-white/70 dark:bg-slate-900/60 backdrop-blur-2xl border border-white/60 dark:border-slate-700/50 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)]">
+                        {/* View toggle */}
+                        <div className="flex items-center gap-0.5 p-1 bg-slate-100/80 dark:bg-slate-800/80 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shrink-0">
+                            {[
+                                { id: 'kanban', icon: <LayoutGrid className="w-3.5 h-3.5" />, label: 'Kanban' },
+                                { id: 'swimlane', icon: <AlignLeft className="w-3.5 h-3.5" />, label: 'Swimlane' },
+                                { id: 'workload', icon: <BarChart2 className="w-3.5 h-3.5" />, label: 'Workload' },
+                                { id: 'stats', icon: <BarChart3 className="w-4 h-4" />, label: 'Stats' },
+                            ].map(({ id, icon, label }) => (
+                                <button
+                                    key={id}
+                                    onClick={() => setViewMode(id)}
+                                    className={cn(
+                                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap',
+                                        viewMode === id
+                                            ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm'
+                                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                                    )}
+                                >
+                                    {icon}
+                                    {label}
+                                </button>
+                            ))}
                         </div>
-                    )}
+
+                        {/* Board Filter Bar */}
+                        <BoardFilterBar
+                            searchQuery={searchQuery}
+                            onSearchChange={setSearchQuery}
+                            filters={boardFilters}
+                            onFiltersChange={setBoardFilters}
+                            members={effectiveMembers}
+                            totalCount={tasksList.length}
+                            filteredCount={filteredTasks.length}
+                        />
+
+                        {/* Sort & Group By controls */}
+                        {viewMode === 'kanban' && (
+                            <BoardSortGroup
+                                sortField={sortField}
+                                sortDir={sortDir}
+                                onSortChange={(f, d) => { setSortField(f); setSortDir(d); }}
+                                groupBy={groupBy}
+                                onGroupByChange={setGroupBy}
+                            />
+                        )}
+
+                        {/* Spacer */}
+                        <div className="flex-1 hidden xl:block" />
+
+                        {/* Action Buttons */}
+                        {viewMode === 'kanban' && (
+                            <div className="flex w-full xl:w-auto xl:justify-end gap-2.5 shrink-0 items-center mt-2 xl:mt-0 ml-auto">
+                                <Button variant="secondary" onClick={() => setIsImportModalOpen(true)} className="hidden sm:inline-flex shadow-sm bg-white/50 hover:bg-white dark:bg-slate-800/50 text-xs py-1.5 border-white/50 border">
+                                    Import CSV
+                                </Button>
+                                <Button variant="secondary" onClick={handleExportCSV} className="hidden sm:inline-flex shadow-sm bg-white/50 hover:bg-white dark:bg-slate-800/50 text-xs py-1.5 border-white/50 border">
+                                    Export CSV
+                                </Button>
+                                <Button onClick={() => { setNewTaskStatus('todo'); setShowAddTask(true); }} className="w-full sm:w-auto shadow-md hover:shadow-lg transition-all">
+                                    <Plus className="w-4 h-4 mr-1.5" />
+                                    New Task
+                                </Button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
 
