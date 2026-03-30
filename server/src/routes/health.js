@@ -86,6 +86,7 @@ router.get('/status', async (req, res) => {
         claudePing,
         stripePing,
         resendPing,
+        gaPing,
         nginxPing,
         sslDays,
         dnsMs,
@@ -110,6 +111,8 @@ router.get('/status', async (req, res) => {
         pingHttps('https://api.stripe.com/v1/charges?limit=1', 5000),
         // 4. Resend email (real ping — Unauthorized is expected, still means service is UP)
         pingHttps('https://api.resend.com/emails', 5000),
+        // 4b. Google Analytics (gtag.js reachability)
+        pingHttps('https://www.googletagmanager.com/gtag/js', 5000),
         // 5. Nginx / front-end domain
         pingHttps(`https://${domain}`, 6000),
         // 6. SSL cert days remaining
@@ -151,13 +154,14 @@ router.get('/status', async (req, res) => {
     const claudeStatus = !claudePing.ok ? 'down' : claudePing.latencyMs > 1500 ? 'degraded' : 'ok';
     const stripeStatus = !stripePing.ok ? 'down' : stripePing.latencyMs > 1000 ? 'degraded' : 'ok';
     const resendStatus = !resendPing.ok ? 'down' : resendPing.latencyMs > 1000 ? 'degraded' : 'ok';
+    const gaStatus = !gaPing.ok ? 'down' : gaPing.latencyMs > 1000 ? 'degraded' : 'ok';
     const nginxStatus = !nginxPing.ok ? 'down' : nginxPing.latencyMs > 2000 ? 'degraded' : 'ok';
     const dnsStatus = dnsMs == null ? 'down' : dnsMs > 200 ? 'degraded' : 'ok';
     const nodeStatus = 'ok';
     const vpsStatus = ramPct > 90 ? 'degraded' : 'ok';
 
     // ── Assemble response ──────────────────────────────────────────────────
-    const allServices = [dbStatus, claudeStatus, stripeStatus, resendStatus, nginxStatus, dnsStatus, nodeStatus, vpsStatus];
+    const allServices = [dbStatus, claudeStatus, stripeStatus, resendStatus, gaStatus, nginxStatus, dnsStatus, nodeStatus, vpsStatus];
     const healthy = allServices.filter(s => s === 'ok').length;
     const degraded = allServices.filter(s => s === 'degraded').length;
     const down = allServices.filter(s => s === 'down').length;
@@ -188,6 +192,14 @@ router.get('/status', async (req, res) => {
                     uptime: '99.5%',
                     note: resendPing.ok ? 'Resend API reachable' : 'Resend API unreachable',
                     configured: !!process.env.RESEND_API_KEY,
+                },
+                googleAnalytics: {
+                    status: gaStatus,
+                    latencyMs: gaPing.latencyMs,
+                    uptime: '99.9%',
+                    note: gaPing.ok ? 'Google Tag Manager reachable' : 'Google Tag Manager unreachable',
+                    configured: !!process.env.VITE_GA_TRACKING_ID,
+                    trackingId: process.env.VITE_GA_TRACKING_ID || null,
                 },
             },
 

@@ -233,6 +233,7 @@ export default function HealthDashboard() {
     const [claudeSpark, setClaudeSpark] = useState([]);
     const [stripeSpark, setStripeSpark] = useState([]);
     const [resendSpark, setResendSpark] = useState([]);
+    const [gaSpark, setGaSpark] = useState([]);
     const [dbSpark, setDbSpark] = useState([]);
     const [cpuSpark, setCpuSpark] = useState([]);
     const tickRef = useRef(null);
@@ -253,6 +254,7 @@ export default function HealthDashboard() {
             if (d?.services?.claude?.latencyMs) setClaudeSpark(p => [...p.slice(-9), d.services.claude.latencyMs]);
             if (d?.services?.stripe?.latencyMs) setStripeSpark(p => [...p.slice(-9), d.services.stripe.latencyMs]);
             if (d?.services?.resend?.latencyMs) setResendSpark(p => [...p.slice(-9), d.services.resend.latencyMs]);
+            if (d?.services?.googleAnalytics?.latencyMs) setGaSpark(p => [...p.slice(-9), d.services.googleAnalytics.latencyMs]);
             if (d?.infra?.postgres?.latencyMs) setDbSpark(p => [...p.slice(-9), d.infra.postgres.latencyMs]);
             if (d?.infra?.vps?.cpuPct) setCpuSpark(p => [...p.slice(-9), d.infra.vps.cpuPct]);
             startTicker();
@@ -356,6 +358,17 @@ export default function HealthDashboard() {
                         ]}
                         sparkValues={resendSpark} sparkColor="#f59e0b"
                         footer={{ left: svc.resend?.note || 'Checking…', right: 'api.resend.com' }}
+                    />
+                    <ServiceCard
+                        icon={Globe} iconBg="bg-emerald-50 dark:bg-emerald-950/30 text-emerald-500"
+                        name="Google Analytics" desc="GA4 — User behavior & site traffic"
+                        status={svc.googleAnalytics?.status || 'checking'}
+                        metrics={[
+                            { label: 'Ping Latency', value: svc.googleAnalytics ? `${svc.googleAnalytics.latencyMs}ms` : '—', good: (svc.googleAnalytics?.latencyMs || 9999) < 1000, warn: svc.googleAnalytics?.latencyMs >= 1000 },
+                            { label: 'Tracking ID', value: svc.googleAnalytics?.configured ? 'Configured ✓' : 'Missing ✗', good: svc.googleAnalytics?.configured, bad: !svc.googleAnalytics?.configured },
+                        ]}
+                        sparkValues={gaSpark} sparkColor="#10b981"
+                        footer={{ left: svc.googleAnalytics?.note || 'Checking…', right: svc.googleAnalytics?.trackingId || 'G-XXXXXXXXXX' }}
                     />
                 </div>
 
