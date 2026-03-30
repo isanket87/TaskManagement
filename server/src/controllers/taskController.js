@@ -136,6 +136,9 @@ const createTask = async (req, res, next) => {
         if (data.assigneeId) {
             const validId = await validateAssignee(data.assigneeId);
             data.assigneeId = validId || null; // Update the payload with the true User ID
+        } else if (req.apiKey) {
+            // Auto-assign to API key owner if no assignee is explicitly provided via MCP
+            data.assigneeId = req.user.id;
         }
 
         const maxPosition = await prisma.task.aggregate({
@@ -833,6 +836,9 @@ const bulkImportTasks = async (req, res, next) => {
             let assigneeId = t.assigneeId === '' ? null : (t.assigneeId || null);
             if (assigneeId) {
                 assigneeId = await validateAssignee(assigneeId) || null;
+            } else if (req.apiKey) {
+                // Auto-assign to API key owner if no assignee is explicitly provided via MCP
+                assigneeId = req.user.id;
             }
 
             return {

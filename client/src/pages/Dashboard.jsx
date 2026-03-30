@@ -32,6 +32,7 @@ import {
     FolderOpen,
     Clock4
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 const PRIORITY_COLORS = {
@@ -51,9 +52,21 @@ const LineChart = ({ data = [] }) => {
     
     return (
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-20" preserveAspectRatio="none">
-            <polyline points={points} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            <motion.polyline 
+                initial={{ pathLength: 0, opacity: 0 }}
+                animate={{ pathLength: 1, opacity: 1 }}
+                transition={{ duration: 1.5, ease: "easeOut" }}
+                points={points} fill="none" stroke="#6366f1" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" 
+            />
             {xs.map((x, i) => (
-                <circle key={i} cx={x} cy={ys[i]} r="3" fill="#6366f1" className="opacity-0 hover:opacity-100 transition-opacity" />
+                <motion.circle 
+                    key={i} cx={x} cy={ys[i]} r="3" fill="#6366f1" 
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 0 }}
+                    whileHover={{ opacity: 1, scale: 1.5 }}
+                    transition={{ delay: 1 + i * 0.1 }}
+                    className="cursor-pointer" 
+                />
             ))}
         </svg>
     );
@@ -174,13 +187,18 @@ const Dashboard = () => {
                                 { label: 'Done (Week)', value: stats?.completedThisWeek, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-950/30', link: `/workspace/${workspace?.slug}/analytics` },
                                 { label: 'Upcoming', value: stats?.upcomingTasks?.length, icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-950/30', link: `/workspace/${workspace?.slug}/calendar` },
                                 { label: 'Hours (Week)', value: `${stats?.hoursThisWeek}h`, icon: Clock4, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-950/30', link: `/workspace/${workspace?.slug}/timesheets` },
-                            ].map(({ label, value, icon: Icon, color, bg, link }) => (
-                                <Link key={label} to={link} className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm hover:border-indigo-300 dark:hover:border-indigo-900/50 transition-colors">
-                                    <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-3", bg)}>
+                            ].map(({ label, value, icon: Icon, color, bg, link }, i) => (
+                                <Link 
+                                    key={label} 
+                                    to={link} 
+                                    className="group relative bg-white/80 dark:bg-slate-900/40 backdrop-blur-xl rounded-2xl border border-slate-200/60 dark:border-slate-700/50 p-4 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] dark:shadow-[0_4px_20px_-5px_rgba(0,0,0,0.3)] hover:shadow-xl hover:-translate-y-1 transition-all overflow-hidden"
+                                >
+                                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-gradient-to-br from-indigo-500/5 to-transparent pointer-events-none" />
+                                    <div className={cn("relative z-10 w-8 h-8 rounded-lg flex items-center justify-center mb-3", bg)}>
                                         <Icon className={cn("w-4 h-4", color)} />
                                     </div>
-                                    <p className="text-xl font-bold text-slate-900 dark:text-white">{value ?? 0}</p>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+                                    <p className="relative z-10 text-xl font-bold text-slate-900 dark:text-white">{value ?? 0}</p>
+                                    <p className="relative z-10 text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
                                 </Link>
                             ))}
                         </div>
@@ -188,7 +206,7 @@ const Dashboard = () => {
                         {/* Insights & Trends Row */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* Productivity Trend */}
-                            <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                            <div className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-xl rounded-3xl border border-slate-200/60 dark:border-slate-700/50 p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] dark:shadow-[0_4px_20px_-5px_rgba(0,0,0,0.3)]">
                                 <div className="flex items-center justify-between mb-6">
                                     <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 text-sm">
                                         <TrendingUp className="w-4 h-4 text-indigo-500" />
@@ -209,7 +227,7 @@ const Dashboard = () => {
                             </div>
 
                             {/* Priority Breakdown */}
-                            <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+                            <div className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-xl rounded-3xl border border-slate-200/60 dark:border-slate-700/50 p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] dark:shadow-[0_4px_20px_-5px_rgba(0,0,0,0.3)]">
                                 <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2 mb-6 text-sm">
                                     <BarChart3 className="w-4 h-4 text-amber-500" />
                                     Open Priorities
@@ -239,8 +257,8 @@ const Dashboard = () => {
                         </div>
 
                         {/* Recent Tasks List */}
-                        <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm">
-                            <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-xl rounded-3xl border border-slate-200/60 dark:border-slate-700/50 overflow-hidden shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] dark:shadow-[0_4px_20px_-5px_rgba(0,0,0,0.3)]">
+                            <div className="p-6 border-b border-slate-200/60 dark:border-slate-700/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div className="flex items-center gap-2">
                                     <ClipboardList className="w-5 h-5 text-indigo-500" />
                                     <h3 className="font-bold text-slate-800 dark:text-slate-100">Your Focus Tasks</h3>
@@ -252,13 +270,20 @@ const Dashboard = () => {
                                     </Link>
                                 </div>
                             </div>
-                            <div className="divide-y divide-slate-50 dark:divide-slate-700/50">
+                            <motion.div 
+                                initial="hidden"
+                                animate="visible"
+                                variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+                                className="divide-y divide-slate-200/60 dark:divide-slate-700/50"
+                            >
                                 {myTasks.slice(0, 6).map(task => (
-                                    <button 
+                                    <motion.button 
+                                        variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
                                         key={task.id} 
                                         onClick={() => navigate(`/workspace/${workspace?.slug}/projects/${task.projectId}`)}
-                                        className="w-full p-4 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-all flex items-center justify-between group text-left"
+                                        className="w-full p-4 hover:bg-white/50 dark:hover:bg-slate-800/50 transition-all flex items-center justify-between group text-left relative overflow-hidden"
                                     >
+                                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-50/50 dark:via-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 -translate-x-full group-hover:translate-x-full transition-all duration-1000 ease-in-out pointer-events-none" />
                                         <div className="flex items-center gap-4 min-w-0">
                                             <div className={cn("w-2 h-2 rounded-full shrink-0", 
                                                 task.priority === 'urgent' ? 'bg-red-500' : 
@@ -277,14 +302,14 @@ const Dashboard = () => {
                                             </span>
                                             <DueDateBadge dueDate={task.dueDate} hasDueTime={task.hasDueTime} taskStatus={task.status} compact />
                                         </div>
-                                    </button>
+                                    </motion.button>
                                 ))}
                                 {myTasks.length === 0 && (
                                     <div className="py-12">
                                         <EmptyState icon={ClipboardList} title="No tasks" description="You have no assigned tasks right now." />
                                     </div>
                                 )}
-                            </div>
+                            </motion.div>
                         </div>
                     </div>
 
@@ -319,7 +344,7 @@ const Dashboard = () => {
                         <UpcomingDeadlines tasks={myTasks} />
 
                         {/* Recent Activity */}
-                        <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 p-6 shadow-sm flex flex-col h-[400px]">
+                        <div className="bg-white/80 dark:bg-slate-900/40 backdrop-blur-xl rounded-3xl border border-slate-200/60 dark:border-slate-700/50 p-6 shadow-[0_2px_10px_-3px_rgba(6,81,237,0.1)] dark:shadow-[0_4px_20px_-5px_rgba(0,0,0,0.3)] flex flex-col h-[400px]">
                             <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-2 shrink-0">
                                 <Clock className="w-5 h-5 text-slate-400" />
                                 Activity

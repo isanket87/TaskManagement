@@ -6,6 +6,7 @@ import {
 } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useDraggable, useDroppable, DndContext } from '@dnd-kit/core';
+import { motion } from 'framer-motion';
 import PageWrapper from '../components/layout/PageWrapper';
 import { taskService } from '../services/taskService';
 import { getDueDateBadgeStyles } from '../utils/dueDateUtils';
@@ -17,13 +18,15 @@ const TaskPill = ({ task }) => {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id, data: { task } });
     const { className } = getDueDateBadgeStyles(task.dueDateStatus || 'on_track');
     return (
-        <div ref={setNodeRef} {...listeners} {...attributes}
-            className={cn('text-xs px-2 py-0.5 rounded-full truncate cursor-grab active:cursor-grabbing mb-0.5', className, isDragging && 'opacity-50')}
+        <motion.div 
+            whileHover={{ scale: 1.02 }}
+            ref={setNodeRef} {...listeners} {...attributes}
+            className={cn('text-[11px] font-medium px-2 py-1 rounded-lg truncate cursor-grab active:cursor-grabbing mb-1 border shadow-sm transition-all', className, isDragging && 'opacity-50 scale-105 shadow-md z-50')}
             style={{ maxWidth: '100%' }}
             title={task.title}
         >
             {task.title}
-        </div>
+        </motion.div>
     );
 };
 
@@ -35,17 +38,24 @@ const DayCell = ({ date, tasks, currentMonth, onDrop }) => {
         <div
             ref={setNodeRef}
             className={cn(
-                'border border-gray-200 dark:border-gray-800 min-h-[100px] p-1 rounded-lg transition-colors',
-                !isSameMonth(date, currentMonth) && 'opacity-40',
-                isToday(date) && 'bg-primary-50 dark:bg-primary-950/30 border-primary-300 dark:border-primary-700',
-                isOver && 'bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-700',
+                'relative group bg-white/40 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-slate-700/50 min-h-[120px] p-2 rounded-2xl transition-all overflow-hidden',
+                !isSameMonth(date, currentMonth) && 'opacity-30',
+                isToday(date) && 'ring-2 ring-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.3)] bg-indigo-50/50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800',
+                isOver && 'bg-green-50/80 dark:bg-green-900/40 border-green-400 ring-2 ring-green-400 scale-[1.02] z-10 shadow-lg',
             )}
         >
-            <div className={cn('text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full mb-1', isToday(date) && 'bg-primary-600 text-white')}>
+            {/* Hover Glow */}
+            {!isToday(date) && <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none" />}
+            
+            <div className={cn('text-xs font-bold w-7 h-7 flex items-center justify-center rounded-full mb-2 cursor-default', 
+                isToday(date) ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'
+            )}>
                 {format(date, 'd')}
             </div>
-            {dayTasks.slice(0, 3).map((t) => <TaskPill key={t.id} task={t} />)}
-            {dayTasks.length > 3 && <div className="text-xs text-gray-400 px-1">+{dayTasks.length - 3} more</div>}
+            <div className="space-y-1 relative z-10 w-full">
+                {dayTasks.slice(0, 3).map((t) => <TaskPill key={t.id} task={t} />)}
+                {dayTasks.length > 3 && <div className="text-[10px] font-bold text-slate-400 px-1 mt-1">+{dayTasks.length - 3} more</div>}
+            </div>
         </div>
     );
 };
@@ -103,10 +113,12 @@ const CalendarView = () => {
                         ))}
                     </div>
                     {/* Calendar grid */}
-                    <div className="grid grid-cols-7 gap-1">
-                        {days.map((day) => (
-                            <DayCell key={day.toISOString()} date={day} tasks={tasks} currentMonth={currentMonth} />
-                        ))}
+                    <div className="bg-slate-50/50 dark:bg-slate-800/20 p-2 md:p-4 rounded-3xl border border-slate-200/50 dark:border-slate-700/50 shadow-[0_4px_30px_-5px_rgba(0,0,0,0.1)]">
+                        <div className="grid grid-cols-7 gap-2 md:gap-3">
+                            {days.map((day) => (
+                                <DayCell key={day.toISOString()} date={day} tasks={tasks} currentMonth={currentMonth} />
+                            ))}
+                        </div>
                     </div>
                 </DndContext>
 
