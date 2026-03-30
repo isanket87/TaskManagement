@@ -63,8 +63,10 @@ if [ -f "$APP_DIR/.env.shared" ]; then
   cat "$APP_DIR/.env.shared" >> .env.production || true
 fi
 
-# 3. Pull from GitHub environment variables
+# 3. Pull from GitHub environment variables (ONLY if not empty)
 if [ ! -z "$VITE_GA_TRACKING_ID" ]; then
+  # Remove any existing GA ID to avoid duplicates before appending the GitHub one
+  sed -i '/VITE_GA_TRACKING_ID/d' .env.production
   echo "VITE_GA_TRACKING_ID=$VITE_GA_TRACKING_ID" >> .env.production
   echo "📄 Injected VITE_GA_TRACKING_ID from GitHub."
 fi
