@@ -3,6 +3,7 @@ import {
     getProjects, createProject, getProject, updateProject, deleteProject,
     getMembers, addMember, removeMember, getActivity, getAnalytics
 } from '../controllers/projectController.js'
+import { generateProjectFromPrompt } from '../controllers/aiController.js'
 import auth from '../middleware/auth.js'
 import authorize from '../middleware/authorize.js'
 
@@ -71,6 +72,17 @@ router.get('/', getProjects)
  *         description: Project created
  */
 router.post('/', createProject)
+
+/**
+ * @swagger
+ * /api/workspaces/{slug}/projects/ai/generate:
+ *   post:
+ *     summary: Generate a project and backlog using AI
+ *     tags: [Projects]
+ *     security:
+ *       - cookieAuth: []
+ */
+router.post('/ai/generate', generateProjectFromPrompt)
 
 /**
  * @swagger

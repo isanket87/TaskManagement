@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Plus, FolderKanban, MoreVertical, Trash2, Edit, CheckCircle } from 'lucide-react';
+import { Plus, FolderKanban, MoreVertical, Trash2, Edit, CheckCircle, Sparkles } from 'lucide-react';
 import PageWrapper from '../components/layout/PageWrapper';
 import Modal from '../components/ui/Modal';
 import Button from '../components/ui/Button';
@@ -16,9 +16,11 @@ import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
 
 import ProjectCard from '../components/projects/ProjectCard';
+import AIGenerateModal from '../components/project/AIGenerateModal';
 
 const Projects = () => {
     const [showCreate, setShowCreate] = useState(false);
+    const [showAIGenerate, setShowAIGenerate] = useState(false);
     const [form, setForm] = useState({ name: '', description: '', color: '#6366f1' });
     const queryClient = useQueryClient();
     const navigate = useNavigate();
@@ -61,10 +63,19 @@ const Projects = () => {
                         </h2>
                         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage your team's initiatives and folders</p>
                     </div>
-                    <Button onClick={() => setShowCreate(true)} className="w-full sm:w-auto shadow-sm">
-                        <Plus className="w-4 h-4 mr-1.5" />
-                        New Project
-                    </Button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setShowAIGenerate(true)}
+                            className="flex items-center gap-2 px-4 py-2 font-medium bg-gradient-to-r from-indigo-500/10 to-fuchsia-500/10 hover:from-indigo-500/20 hover:to-fuchsia-500/20 text-indigo-700 dark:text-indigo-300 dark:from-indigo-500/20 dark:to-fuchsia-500/20 border border-indigo-200/50 dark:border-indigo-500/30 rounded-xl transition-all hover:scale-105"
+                        >
+                            <Sparkles className="w-4 h-4 text-fuchsia-500" />
+                            Gen-Create
+                        </button>
+                        <Button onClick={() => setShowCreate(true)} className="w-full sm:w-auto shadow-sm">
+                            <Plus className="w-4 h-4 mr-1.5" />
+                            New Project
+                        </Button>
+                    </div>
                 </div>
 
 
@@ -78,7 +89,18 @@ const Projects = () => {
                             icon={FolderKanban}
                             title="No projects yet"
                             description="Create your first project to organize tasks, track time, and collaborate with your team."
-                            action={<Button onClick={() => setShowCreate(true)}><Plus className="w-4 h-4 mr-1.5" />New Project</Button>}
+                            action={
+                                <div className="flex items-center gap-3 mt-4">
+                                    <button
+                                        onClick={() => setShowAIGenerate(true)}
+                                        className="flex items-center gap-2 px-4 py-2 font-medium bg-gradient-to-r from-indigo-500/10 to-fuchsia-500/10 hover:from-indigo-500/20 hover:to-fuchsia-500/20 text-indigo-700 dark:text-indigo-300 rounded-xl transition-all"
+                                    >
+                                        <Sparkles className="w-4 h-4 text-fuchsia-500" />
+                                        Gen-Create
+                                    </button>
+                                    <Button onClick={() => setShowCreate(true)}><Plus className="w-4 h-4 mr-1.5" />New Project</Button>
+                                </div>
+                            }
                         />
                     </div>
                 ) : (
@@ -89,6 +111,8 @@ const Projects = () => {
                     </div>
                 )}
             </div>
+
+            <AIGenerateModal isOpen={showAIGenerate} onClose={() => setShowAIGenerate(false)} />
 
             <Modal isOpen={showCreate} onClose={() => setShowCreate(false)} title="New Project">
                 <div className="space-y-4">

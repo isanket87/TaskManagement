@@ -12,4 +12,5 @@ export const projectService = {
     getActivity: (id) => api.get(`/projects/${id}/activity`),
     getAnalytics: (id) => api.get(`/projects/${id}/analytics`),
     searchUsers: (q) => api.get(`/users/search?q=${q}`),
+    generateProject: (slug, prompt) => api.post(`/workspaces/${slug}/projects/ai/generate`, { prompt }),
 };

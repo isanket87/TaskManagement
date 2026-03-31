@@ -135,3 +135,99 @@ export const summarizeComments = async (req, res, next) => {
         return errorResponse(res, 'Failed to summarize comments', 500);
     }
 };
+
+/**
+ * Generates a full project and tasks from a text description.
+ * POST /api/workspaces/:slug/projects/ai/generate
+ */
+export const generateProjectFromPrompt = async (req, res, next) => {
+    try {
+        const { prompt: userPrompt } = req.body;
+        const workspaceId = req.workspace.id; // from requireWorkspace middleware
+        const userId = req.user.id;
+
+        if (!userPrompt) return errorResponse(res, 'Prompt is required', 400);
+
+        const model = genAI.getGenerativeModel({ 
+            model: "gemini-flash-latest",
+            generationConfig: {
+                responseMimeType: "application/json",
+            }
+        });
+
+        const systemPrompt = `
+            You are an expert Agile Project Manager. The user will give you a project idea.
+            Your job is to generate a JSON response representing a new project board and a backlog of 5 to 8 specific, actionable tasks.
+            
+            Strictly return a valid JSON object matching this schema:
+            {
+                "name": "A short, punchy title for the project",
+                "description": "A 1-2 sentence description",
+                "color": "A hex color code representing the theme (e.g. #3b82f6)",
+                "tasks": [
+                    {
+                        "title": "Clear task title",
+                        "description": "Detailed acceptance criteria or context",
+                        "priority": "low" | "medium" | "high" | "urgent",
+                        "status": "todo" | "in_progress" | "done"
+                    }
+                ]
+            }
+
+            Rule 1: Distribute the tasks meaningfully. Do NOT put everything in 'todo'. Put some in 'in_progress' and maybe 1 or 2 in 'done' to make the board look active, simulating a project in motion.
+            Rule 2: Provide technical or substantive details in the task descriptions.
+            
+            User Idea: "${userPrompt}"
+        `;
+
+        const result = await model.generateContent(systemPrompt);
+        const responseData = result.response.text();
+        
+        let parsedData;
+        try {
+            parsedData = JSON.parse(responseData);
+        } catch (e) {
+            console.error("Failed to parse AI JSON output:", responseData);
+            return errorResponse(res, 'Failed to generate project structure', 500);
+        }
+
+        // Run in a transaction to ensure both project and tasks are created
+        const newProject = await prisma.$transaction(async (tx) => {
+            const project = await tx.project.create({
+                data: {
+                    name: parsedData.name,
+                    description: parsedData.description,
+                    color: parsedData.color || '#6366f1',
+                    workspaceId,
+                    ownerId: userId,
+                    members: {
+                        create: [{ userId, role: 'owner' }]
+                    }
+                }
+            });
+
+            if (parsedData.tasks && parsedData.tasks.length > 0) {
+                const tasksToCreate = parsedData.tasks.map((t, index) => ({
+                    projectId: project.id,
+                    title: t.title,
+                    description: t.description || '',
+                    priority: ['low', 'medium', 'high', 'urgent'].includes(t.priority) ? t.priority : 'medium',
+                    status: ['todo', 'in_progress', 'done', 'in_review'].includes(t.status) ? t.status : 'todo',
+                    createdById: userId,
+                    position: index + 1
+                }));
+
+                await tx.task.createMany({
+                    data: tasksToCreate
+                });
+            }
+
+            return project;
+        });
+
+        return successResponse(res, newProject, 'Project generated successfully', 201);
+    } catch (err) {
+        console.error('AI Generate Project Error:', err);
+        return errorResponse(res, 'Failed to generate project', 500);
+    }
+};
