@@ -54,6 +54,7 @@ echo "# Auto-generated during deploy" > .env.production
 
 # 1. Pull VITE_ variables from the server's .env.production (if exists)
 if [ -f "$APP_DIR/server/.env.production" ]; then
+  echo "📄 Extracting VITE_ variables from server/.env.production..."
   grep '^VITE_' "$APP_DIR/server/.env.production" >> .env.production || true
 fi
 
@@ -63,12 +64,12 @@ if [ -f "$APP_DIR/.env.shared" ]; then
   cat "$APP_DIR/.env.shared" >> .env.production || true
 fi
 
-# 3. Pull from GitHub environment variables (ONLY if not empty)
+# 3. Pull from system environment (GitHub/Shell) - ONLY if not already in .env.production
 if [ ! -z "$VITE_GA_TRACKING_ID" ]; then
-  # Remove any existing GA ID to avoid duplicates before appending the GitHub one
-  sed -i '/VITE_GA_TRACKING_ID/d' .env.production
-  echo "VITE_GA_TRACKING_ID=$VITE_GA_TRACKING_ID" >> .env.production
-  echo "📄 Injected VITE_GA_TRACKING_ID from GitHub."
+  if ! grep -q "VITE_GA_TRACKING_ID" .env.production; then
+    echo "VITE_GA_TRACKING_ID=$VITE_GA_TRACKING_ID" >> .env.production
+    echo "📄 Injected VITE_GA_TRACKING_ID from system environment."
+  fi
 fi
 
 # Clean up any potential Windows line endings
