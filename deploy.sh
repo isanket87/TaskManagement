@@ -48,14 +48,34 @@ cd "$APP_DIR/client"
 rm -rf dist
 npm install
 
-# Create a clean .env.production for the Vite build
-echo "📝 Generating .env.production for Vite..."
-echo "# Auto-generated during deploy" > .env.production
+# Create a temporary .env.production for the Vite build if needed, 
+# but since we now track client/.env.production in Git, we should build upon it.
+echo "📝 Preparing .env.production for Vite build..."
+
+# If .env.production doesn't exist (e.g. first run), create it
+if [ ! -f ".env.production" ]; then
+  touch .env.production
+fi
 
 # 1. Pull VITE_ variables from the server's .env.production (if exists)
+# We use a temporary file to avoid polluting the tracked .env.production too much,
+# or we just append and let git reset handle the cleanup later.
 if [ -f "$APP_DIR/server/.env.production" ]; then
-  echo "📄 Extracting VITE_ variables from server/.env.production..."
-  grep '^VITE_' "$APP_DIR/server/.env.production" >> .env.production || true
+  echo "📄 Merging VITE_ overrides from server/.env.production..."
+  # Only append variables that aren't already in the file with a real value
+  while IFS= read -r line; do
+    if [[ $line =~ ^VITE_ ]]; then
+      key=$(echo $line | cut -d'=' -f1)
+      value=$(echo $line | cut -d'=' -f2-)
+      # If the value is "CHANGE_ME" or empty, skip it to prefer the one in Git
+      if [[ "$value" == "\"CHANGE_ME\"" ]] || [[ "$value" == "CHANGE_ME" ]] || [[ -z "$value" ]]; then
+        continue
+      fi
+      # Remove existing entry if it exists and append new one
+      sed -i "/^$key=/d" .env.production
+      echo "$line" >> .env.production
+    fi
+  done < "$APP_DIR/server/.env.production"
 fi
 
 # 2. Pull from a PERSISTENT shared file (REQUIRED for your manual keys)
@@ -64,12 +84,11 @@ if [ -f "$APP_DIR/.env.shared" ]; then
   cat "$APP_DIR/.env.shared" >> .env.production || true
 fi
 
-# 3. Pull from system environment (GitHub/Shell) - ONLY if not already in .env.production
+# 3. Pull from system environment (GitHub/Shell)
 if [ ! -z "$VITE_GA_TRACKING_ID" ]; then
-  if ! grep -q "VITE_GA_TRACKING_ID" .env.production; then
-    echo "VITE_GA_TRACKING_ID=$VITE_GA_TRACKING_ID" >> .env.production
-    echo "📄 Injected VITE_GA_TRACKING_ID from system environment."
-  fi
+  sed -i '/VITE_GA_TRACKING_ID/d' .env.production
+  echo "VITE_GA_TRACKING_ID=$VITE_GA_TRACKING_ID" >> .env.production
+  echo "📄 Injected VITE_GA_TRACKING_ID from system environment."
 fi
 
 # Clean up any potential Windows line endings
@@ -79,7 +98,8 @@ echo "✅ .env.production ready for build."
 # Build the client
 echo "🏗️  Building client..."
 npm run build -- --mode production
-rm .env.production
+# DO NOT rm .env.production here because it is now a tracked file!
+# The 'git reset --hard' at the start of the next deploy will clean up any temporary injections.
 
 # ----- Sync Client Build -----
 echo "📂 Updating public assets..."
