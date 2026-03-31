@@ -11,6 +11,7 @@ import GlobalTimerBar from './components/time/GlobalTimerBar';
 import AnalyticsTracker from './components/shared/AnalyticsTracker';
 import EmailVerificationBanner from './components/shared/EmailVerificationBanner';
 import NotificationInitializer from './components/shared/NotificationInitializer';
+import FocusModeOverlay from './components/focus/FocusModeOverlay';
 
 // ── Lazy-loaded pages (each becomes its own async chunk) ─────────────────────
 const Login = lazy(() => import('./pages/Login'));
@@ -162,6 +163,7 @@ function App() {
     return (
         <QueryClientProvider client={queryClient}>
             <NotificationInitializer />
+            <FocusModeOverlay />
             <BrowserRouter>
                 <AnalyticsTracker />
                 {/* Email verification banner — softly prompt unverified users at top */}

@@ -5,7 +5,7 @@ import {
     X, MoreHorizontal, ArrowLeft,
     MessageSquare, Clock, AlignLeft,
     CheckCircle2, AlertCircle, PlayCircle, RefreshCw,
-    Flag, User, Calendar, Plus, Tag, CircleDashed, Layout, AlertTriangle, Paperclip, Sparkles, Wand2
+    Flag, User, Calendar, Plus, Tag, CircleDashed, Layout, AlertTriangle, Paperclip, Sparkles, Wand2, Target
 } from 'lucide-react';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -14,6 +14,7 @@ import { taskService } from '../../services/taskService';
 import { projectService } from '../../services/projectService';
 import { getAttachments } from '../../services/attachmentService';
 import useWorkspaceStore from '../../store/workspaceStore';
+import useFocusStore from '../../store/focusStore';
 import api from '../../services/api';
 import Avatar from '../ui/Avatar';
 import DueDateBadge from '../due-date/DueDateBadge';
@@ -376,6 +377,16 @@ const TaskDetailPanel = ({ task, projectId, onClose, onTaskSelect }) => {
                                     { label: 'Delete task', danger: true, onClick: () => { } }
                                 ]}
                             />
+                            <button
+                                onClick={() => {
+                                    useFocusStore.getState().enterFocusMode(detailedTask);
+                                    onClose();
+                                }}
+                                className="p-1.5 rounded-lg text-indigo-500 hover:text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:text-indigo-300 dark:hover:bg-indigo-900/30 transition-colors"
+                                title="Enter Focus Mode"
+                            >
+                                <Target className="w-5 h-5" />
+                            </button>
                             <button
                                 onClick={onClose}
                                 className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 dark:hover:text-slate-300 dark:hover:bg-slate-800 transition-colors"
