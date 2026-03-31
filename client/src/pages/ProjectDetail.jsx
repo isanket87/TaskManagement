@@ -36,6 +36,7 @@ import Papa from 'papaparse';
 const WorkloadView = lazy(() => import('../components/views/WorkloadView'));
 const SwimlaneView = lazy(() => import('../components/views/SwimlaneView'));
 const TimelineView = lazy(() => import('../components/views/TimelineView'));
+const CanvasView = lazy(() => import('../components/views/CanvasView'));
 const ProjectStatsView = lazy(() => import('../components/projects/ProjectStatsView'));
 const TaskDetailPanel = lazy(() => import('../components/shared/TaskDetailPanel'));
 const ImportCsvModal = lazy(() => import('../components/shared/ImportCsvModal'));
@@ -809,6 +810,7 @@ const ProjectDetail = () => {
                                 { id: 'swimlane', icon: <AlignLeft className="w-3.5 h-3.5" />, label: 'Swimlane' },
                                 { id: 'workload', icon: <BarChart2 className="w-3.5 h-3.5" />, label: 'Workload' },
                                 { id: 'timeline', icon: <Calendar className="w-3.5 h-3.5" />, label: 'Timeline' },
+                                { id: 'canvas', icon: <Sparkles className="w-3.5 h-3.5" />, label: 'Canvas' },
                                 { id: 'stats', icon: <BarChart3 className="w-4 h-4" />, label: 'Stats' },
                             ].map(({ id, icon, label }) => (
                                 <button
@@ -897,6 +899,12 @@ const ProjectDetail = () => {
                         ) : viewMode === 'timeline' ? (
                             <TimelineView
                                 tasks={filteredTasks}
+                                onFocusChange={setActiveTask}
+                            />
+                        ) : viewMode === 'canvas' ? (
+                            <CanvasView
+                                tasks={filteredTasks}
+                                projectId={projectId}
                                 onFocusChange={setActiveTask}
                             />
                         ) : viewMode === 'stats' ? (

@@ -42,7 +42,9 @@ const taskSelect = {
     assignee: { select: { id: true, name: true, avatarUrl: true } },
     createdBy: { select: { id: true, name: true, avatarUrl: true } },
     parentTaskId: true,
-    _count: { select: { comments: true } }
+    _count: { select: { comments: true, subtasks: true } },
+    blockedBy: { select: { blockingTaskId: true } },
+    blocks: { select: { blockedTaskId: true } }
 }
 
 const createTaskSchema = z.object({
