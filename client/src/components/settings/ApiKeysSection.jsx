@@ -69,7 +69,7 @@ const ApiKeysSection = () => {
     };
 
     return (
-        <div className="card p-6 border-indigo-200 dark:border-indigo-900/50">
+        <div className="p-8 rounded-[24px] backdrop-blur-2xl bg-white/70 dark:bg-slate-900/60 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] border border-white/60 dark:border-indigo-500/20">
             <div className="flex items-center gap-3 mb-6">
                 <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
                     <Terminal className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />

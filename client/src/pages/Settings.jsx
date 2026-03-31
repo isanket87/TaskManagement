@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { User, Lock, Save, Camera, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import PageWrapper from '../components/layout/PageWrapper';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
@@ -126,12 +127,32 @@ const Settings = () => {
         }
     };
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+    };
+    
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+    };
+
     return (
         <PageWrapper title="Settings">
-            <div className="p-6 max-w-2xl mx-auto space-y-6">
+            <div className="relative min-h-[calc(100vh-4rem)] p-4 sm:p-8">
+                {/* Ambient Blurred Orbs fixed to screen */}
+                <div className="fixed top-[10%] left-[10%] w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[140px] pointer-events-none -z-0" />
+                <div className="fixed bottom-[10%] right-[10%] w-[600px] h-[600px] bg-violet-500/10 dark:bg-violet-500/20 rounded-full blur-[160px] pointer-events-none -z-0" />
+                
+                <motion.div 
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="show"
+                    className="relative z-10 max-w-3xl mx-auto space-y-6 pt-6 pb-24"
+                >
 
                 {/* ── Profile Section ── */}
-                <div className="card p-6">
+                <motion.div variants={itemVariants} className="p-8 rounded-[24px] backdrop-blur-2xl bg-white/70 dark:bg-slate-900/60 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] border border-white/60 dark:border-white/5">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center">
                             <User className="w-4 h-4 text-primary-600" />
@@ -185,10 +206,10 @@ const Settings = () => {
                             Save Profile
                         </Button>
                     </form>
-                </div>
+                </motion.div>
 
                 {/* ── Password Section ── */}
-                <div className="card p-6">
+                <motion.div variants={itemVariants} className="p-8 rounded-[24px] backdrop-blur-2xl bg-white/70 dark:bg-slate-900/60 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] border border-white/60 dark:border-white/5">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
                             <Lock className="w-4 h-4 text-orange-600" />
@@ -204,13 +225,19 @@ const Settings = () => {
                             Change Password
                         </Button>
                     </form>
-                </div>
+                </motion.div>
 
                 {/* ── API Keys ── */}
-                <ApiKeysSection />
+                <motion.div variants={itemVariants}>
+                    <ApiKeysSection />
+                </motion.div>
 
                 {/* ── Danger Zone ── */}
-                <div className="card p-6 border-red-200 dark:border-red-900/50">
+                <motion.div variants={itemVariants} className="relative p-8 rounded-[24px] backdrop-blur-2xl bg-white/70 dark:bg-slate-900/60 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] border border-red-200 dark:border-red-900/50 overflow-hidden">
+                    {/* Immersive Danger Glow */}
+                    <div className="absolute inset-0 bg-red-500/5 pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-red-500/10 blur-[80px] rounded-full pointer-events-none" />
+                    <div className="relative z-10">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
                             <Trash2 className="w-4 h-4 text-red-600" />
@@ -263,8 +290,10 @@ const Settings = () => {
                             </div>
                         </div>
                     )}
-                </div>
+                    </div>
+                </motion.div>
 
+                </motion.div>
             </div>
         </PageWrapper>
     );

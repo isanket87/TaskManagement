@@ -5,6 +5,7 @@ import useAuthStore from '../../store/authStore';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import { Save, AlertTriangle, Loader2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const WorkspaceSettings = () => {
     const { slug } = useParams();
@@ -72,33 +73,58 @@ const WorkspaceSettings = () => {
 
     if (!isAdmin()) {
         return (
-            <div className="flex justify-center p-8">
-                <div className="bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 p-4 w-full max-w-3xl">
-                    <div className="flex items-center">
-                        <AlertTriangle className="h-5 w-5 text-yellow-400" />
-                        <p className="ml-3 text-sm text-yellow-700 dark:text-yellow-500">
-                            Only workspace administrators can access settings.
-                        </p>
+            <div className="flex justify-center flex-1 p-8 items-center h-full">
+                <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-400 p-6 rounded-[24px] backdrop-blur-xl w-full max-w-3xl shadow-lg">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-yellow-100 dark:bg-yellow-800/50 rounded-xl">
+                            <AlertTriangle className="h-6 w-6 text-yellow-500" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-yellow-800 dark:text-yellow-400">Access Denied</h3>
+                            <p className="mt-1 text-sm text-yellow-700 dark:text-yellow-500 text-balance">
+                                Only workspace administrators can access these settings. Please contact your administrator if you need configuration changes.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
         );
     }
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+    };
+    
+    const itemVariants = {
+        hidden: { opacity: 0, y: 20 },
+        show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+    };
+
     return (
-        <div className="max-w-4xl mx-auto space-y-8 pb-12">
-            <div>
+        <div className="relative min-h-[calc(100vh-4rem)] p-4 sm:p-8">
+            {/* Ambient Blurred Orbs fixed to screen */}
+            <div className="fixed top-[15%] right-[5%] w-[500px] h-[500px] bg-indigo-500/10 dark:bg-indigo-500/20 rounded-full blur-[140px] pointer-events-none -z-0" />
+            <div className="fixed bottom-[10%] left-[10%] w-[600px] h-[600px] bg-sky-500/10 dark:bg-sky-500/20 rounded-full blur-[160px] pointer-events-none -z-0" />
+
+            <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="show"
+                className="relative z-10 max-w-3xl mx-auto space-y-8 pt-6 pb-24"
+            >
+                <motion.div variants={itemVariants}>
                 <h2 className="text-2xl font-bold leading-7 text-slate-900 dark:text-white sm:truncate sm:text-3xl sm:tracking-tight">
                     Workspace Settings
                 </h2>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     Manage your workspace details and preferences
                 </p>
-            </div>
+                </motion.div>
 
             {/* General Settings */}
-            <div className="bg-white dark:bg-slate-800 shadow sm:rounded-lg border border-slate-200 dark:border-slate-700">
-                <div className="px-4 py-5 sm:p-6">
+            <motion.div variants={itemVariants} className="p-8 rounded-[24px] backdrop-blur-2xl bg-white/70 dark:bg-slate-900/60 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] border border-white/60 dark:border-white/5">
+                <div className="px-4 py-5 sm:p-0">
                     <h3 className="text-lg font-medium leading-6 text-slate-900 dark:text-white mb-4">
                         General Profile
                     </h3>
@@ -136,7 +162,7 @@ const WorkspaceSettings = () => {
                                         id="slug"
                                         disabled
                                         value={workspace?.slug || ''}
-                                        className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 text-slate-500 sm:text-sm cursor-not-allowed"
+                                        className="flex-1 min-w-0 block w-full px-4 py-2 rounded-none rounded-r-md border border-slate-300 dark:border-slate-600 bg-white/50 dark:bg-slate-800/80 text-slate-500 sm:text-sm cursor-not-allowed"
                                         title="Workspace URLs cannot be changed after creation."
                                     />
                                 </div>
@@ -175,14 +201,17 @@ const WorkspaceSettings = () => {
                         </div>
                     </form>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Danger Zone */}
             {isOwner() && (
-                <div className="bg-red-50 dark:bg-red-900/10 shadow sm:rounded-lg border border-red-200 dark:border-red-900/50 mt-10">
-                    <div className="px-4 py-5 sm:p-6">
-                        <h3 className="text-lg font-medium leading-6 text-red-800 dark:text-red-400 flex items-center">
-                            <AlertTriangle className="mr-2 h-5 w-5" /> Danger Zone
+                <motion.div variants={itemVariants} className="relative p-8 rounded-[24px] backdrop-blur-2xl bg-white/70 dark:bg-slate-900/60 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.1)] border border-red-200 dark:border-red-900/50 overflow-hidden mt-10">
+                    {/* Immersive Danger Glow */}
+                    <div className="absolute inset-0 bg-red-500/5 pointer-events-none" />
+                    <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-red-500/10 blur-[80px] rounded-full pointer-events-none" />
+                    <div className="relative z-10 px-4 py-5 sm:p-0">
+                        <h3 className="text-xl font-bold leading-6 text-red-800 dark:text-red-400 flex items-center mb-4">
+                            <AlertTriangle className="mr-3 h-6 w-6" /> Danger Zone
                         </h3>
                         <div className="mt-2 max-w-xl text-sm text-red-700 dark:text-red-300 mb-5">
                             <p>
@@ -214,8 +243,9 @@ const WorkspaceSettings = () => {
                             </button>
                         </div>
                     </div>
-                </div>
+                </motion.div>
             )}
+            </motion.div>
         </div>
     );
 };
