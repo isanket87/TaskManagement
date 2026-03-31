@@ -93,13 +93,12 @@ fi
 
 # Clean up any potential Windows line endings
 sed -i 's/\r//' .env.production
-echo "✅ .env.production ready for build."
+echo "✅ .env.production ready for build. Contents (VITE_ only):"
+grep '^VITE_' .env.production || echo "None found"
 
 # Build the client
 echo "🏗️  Building client..."
 npm run build -- --mode production
-# DO NOT rm .env.production here because it is now a tracked file!
-# The 'git reset --hard' at the start of the next deploy will clean up any temporary injections.
 
 # ----- Sync Client Build -----
 echo "📂 Updating public assets..."
@@ -131,9 +130,5 @@ fi
 
 # Save PM2 state
 pm2 save
-
-# Clean up build-time env file
-cd "$APP_DIR/client"
-rm -f .env.production
 
 echo "✅ Deployment finished successfully!"
