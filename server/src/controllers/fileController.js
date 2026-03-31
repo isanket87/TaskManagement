@@ -96,7 +96,10 @@ const servePreview = async (req, res, next) => {
 // DELETE /api/files/:id
 const deleteFile = async (req, res, next) => {
     try {
-        const file = await prisma.file.findUnique({ where: { id: req.params.id } })
+        const file = await prisma.file.findUnique({ 
+            where: { id: req.params.id },
+            include: { versions: true }
+        })
         if (!file || file.deletedAt) return errorResponse(res, 'Not found', 404)
         if (file.uploadedById !== req.user.id && req.user.role !== 'admin') {
             return errorResponse(res, 'Not allowed', 403)
@@ -106,7 +109,20 @@ const deleteFile = async (req, res, next) => {
 
         // Async cleanup from R2
         setImmediate(async () => {
-            try { await r2Service.deleteFile(file.storageKey) } catch (e) { }
+            try { 
+                await r2Service.deleteFile(file.storageKey) 
+                
+                // Cleanup all associated versions to prevent orphaned cloud objects
+                if (file.versions?.length > 0) {
+                    for (const v of file.versions) {
+                        if (v.storageKey && v.storageKey !== file.storageKey) {
+                            await r2Service.deleteFile(v.storageKey).catch(() => {})
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to cleanup R2 assets:', e)
+            }
         })
 
         return successResponse(res, null, 'File deleted')

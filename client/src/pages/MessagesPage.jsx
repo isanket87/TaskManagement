@@ -201,11 +201,15 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, onCreateTa
     };
 
     return (
-        <div className={cn(
-            "group/msg relative flex gap-3 px-4 sm:px-6 py-1 transition-all duration-200",
-            isOwn ? "flex-row-reverse" : "flex-row",
-            showAvatar ? "mt-4" : "mt-0.5"
-        )}
+        <motion.div 
+            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+            className={cn(
+                "group/msg relative flex gap-3 px-4 sm:px-6 py-1 transition-all duration-200",
+                isOwn ? "flex-row-reverse" : "flex-row",
+                showAvatar ? "mt-4" : "mt-0.5"
+            )}
             onMouseEnter={() => setShowActions(true)} onMouseLeave={() => setShowActions(false)}>
             
             {!isOwn && (
@@ -310,7 +314,7 @@ const MessageBubble = ({ message, onReply, onReact, onEdit, onDelete, onCreateTa
                     )}
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 };
 
@@ -768,6 +772,15 @@ const MessagesPage = () => {
     const activeChannel = channels.find(c => c.id === activeChannelId);
     const directOther = activeChannel?.type === 'direct' ? activeChannel.members?.find(m => m.userId !== user.id)?.user : null;
 
+    // Gather unique online members for dock
+    const allKnownMembers = new Map();
+    channels.forEach(ch => {
+        ch.members?.forEach(m => {
+            if (m.userId !== user.id && m.user) allKnownMembers.set(m.userId, m.user);
+        });
+    });
+    const onlineDockUsers = Array.from(allKnownMembers.values()).filter(u => onlineUsers[u.id] === 'online');
+
     return (
         <PageWrapper title="Messages">
             <div className="h-full flex bg-[#f1f5f9] dark:bg-gray-950 overflow-hidden font-sans p-0 sm:p-2 gap-0 sm:gap-2">
@@ -799,6 +812,25 @@ const MessagesPage = () => {
                                 <input placeholder="Search..." className="w-full bg-slate-100/50 dark:bg-white/5 border-none rounded-xl pl-10 pr-4 py-2 text-sm text-slate-600 dark:text-slate-300 focus:ring-2 focus:ring-indigo-500/20 transition-all font-bold" />
                             </div>
                         </div>
+
+                        {onlineDockUsers.length > 0 && (
+                            <div className="px-1 hidden sm:block">
+                                <div className="flex items-center justify-between px-6 mb-3">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Active Now</span>
+                                </div>
+                                <div className="flex gap-4 px-6 overflow-x-auto no-scrollbar pb-2">
+                                    {onlineDockUsers.map(u => (
+                                        <div key={u.id} className="relative flex flex-col items-center gap-1 cursor-pointer group shrink-0" onClick={() => startDirectMessage(u.id)}>
+                                            <div className="relative">
+                                                <Avatar user={u} size="md" className="rounded-[16px] shadow-sm border-2 border-transparent group-hover:border-indigo-400 dark:group-hover:border-indigo-500 transition-all group-hover:scale-105" />
+                                                <PresenceDot status="online" className="absolute -bottom-1 -right-1 border-2 border-white dark:border-slate-900" />
+                                            </div>
+                                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 truncate w-12 text-center group-hover:text-indigo-600 transition-colors">{u.name.split(' ')[0]}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="px-3">
                             <div className="flex items-center justify-between px-4 mb-3">
@@ -856,7 +888,7 @@ const MessagesPage = () => {
                 </div>
 
                 {/* ── Pane 2: Chat Area ─────────────────── */}
-                <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-slate-900 sm:rounded-[24px] border border-white/20 dark:border-white/5 shadow-2xl relative overflow-hidden">
+                <div className="flex-1 flex flex-col min-w-0 bg-white/60 dark:bg-slate-900/40 backdrop-blur-3xl sm:rounded-[24px] border border-white/20 dark:border-white/10 shadow-[0_4px_40px_-5px_rgba(0,0,0,0.1)] relative overflow-hidden">
                     {activeChannelId ? (
                         <>
                             <div className="h-16 flex items-center gap-4 px-6 border-b border-slate-100 dark:border-white/5 shrink-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md z-20">
@@ -891,10 +923,10 @@ const MessagesPage = () => {
                                 </div>
                             </div>
 
-                            <div className="flex-1 relative overflow-hidden flex flex-col bg-slate-50/30 dark:bg-transparent">
-                                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.05] dark:opacity-[0.08]">
-                                    <div className="absolute top-[10%] left-[10%] w-96 h-96 bg-indigo-500 rounded-full blur-[120px]" />
-                                    <div className="absolute bottom-[10%] right-[10%] w-[500px] h-[500px] bg-violet-500 rounded-full blur-[150px]" />
+                            <div className="flex-1 relative overflow-hidden flex flex-col bg-slate-50/10 dark:bg-transparent">
+                                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-[0.4] dark:opacity-[0.15]">
+                                    <motion.div animate={{ scale: [1, 1.05, 1], opacity: [0.3, 0.4, 0.3] }} transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[0%] left-[10%] w-[500px] h-[500px] bg-indigo-500 rounded-full blur-[150px]" />
+                                    <motion.div animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 1 }} className="absolute bottom-[0%] right-[10%] w-[600px] h-[600px] bg-violet-500 rounded-full blur-[180px]" />
                                 </div>
 
                                 <div ref={feedRef} className="flex-1 overflow-y-auto px-4 sm:px-10 pt-8 pb-4 flex flex-col gap-1 no-scrollbar scroll-smooth z-10">
@@ -947,7 +979,7 @@ const MessagesPage = () => {
                                 </div>
                             </div>
 
-                            <div className="px-6 py-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-white/5 z-20 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
+                            <div className="px-6 py-6 bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl border-t border-slate-200/50 dark:border-white/10 z-20 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
                                 <TypingIndicator typingUsers={typingUsers[activeChannelId]} />
                                 
                                 {attachments.length > 0 && (
@@ -979,7 +1011,7 @@ const MessagesPage = () => {
                                         multiple 
                                         className="hidden" 
                                     />
-                                    <div className="group bg-slate-50 dark:bg-gray-950 rounded-[24px] border-2 border-transparent focus-within:border-indigo-500/30 focus-within:bg-white dark:focus-within:bg-gray-950 shadow-sm transition-all duration-500">
+                                    <div className="group bg-white/80 dark:bg-slate-950/80 backdrop-blur-md rounded-[24px] border-2 border-white/50 dark:border-white/5 focus-within:border-indigo-500/50 focus-within:bg-white dark:focus-within:bg-gray-950 shadow-lg shadow-indigo-500/5 transition-all duration-500">
                                         <textarea value={newMessage} onChange={handleTyping} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(e); } }} placeholder={`Message ${activeChannel?.type === 'direct' ? directOther?.name : '#' + activeChannel?.name}...`} className="w-full bg-transparent text-sm text-slate-900 dark:text-white placeholder-slate-400 outline-none p-5 resize-none max-h-40 font-bold leading-relaxed" rows={1} />
                                         <div className="px-4 py-3 flex items-center justify-between border-t border-slate-100 dark:border-white/5">
                                             <div className="flex items-center gap-1">
