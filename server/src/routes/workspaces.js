@@ -234,6 +234,26 @@ router.get('/:slug/analytics', requireWorkspace, getWorkspaceAnalytics)
  */
 router.get('/:slug/search', requireWorkspace, workspaceController.searchWorkspace)
 
+/**
+ * @swagger
+ * /api/workspaces/{slug}/activities:
+ *   get:
+ *     summary: Get live activity stream for a workspace
+ *     tags: [Workspaces]
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Workspace activity log entries
+ */
+router.get('/:slug/activities', requireWorkspace, workspaceController.getWorkspaceActivities)
+
 // Mount sub-resources scoped to this workspace
 router.use('/:slug/projects', requireWorkspace, projectRoutes)
 router.use('/:slug/projects/:id/tasks', requireWorkspace, taskRoutes)

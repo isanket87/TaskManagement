@@ -12,6 +12,7 @@ import AnalyticsTracker from './components/shared/AnalyticsTracker';
 import EmailVerificationBanner from './components/shared/EmailVerificationBanner';
 import NotificationInitializer from './components/shared/NotificationInitializer';
 import FocusModeOverlay from './components/focus/FocusModeOverlay';
+import PulseStream from './components/workspace/PulseStream';
 
 // ── Lazy-loaded pages (each becomes its own async chunk) ─────────────────────
 const Login = lazy(() => import('./pages/Login'));
@@ -216,6 +217,9 @@ function App() {
                 </ErrorBoundary>
                 {/* Global persistent timer bar — only for authenticated users */}
                 {isAuthenticated && <GlobalTimerBar />}
+                
+                {/* Global Pulse Stream — Live workspace activities */}
+                {isAuthenticated && <PulseStream />}
 
             </BrowserRouter>
             <Toaster

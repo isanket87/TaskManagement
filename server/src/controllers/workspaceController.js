@@ -569,6 +569,40 @@ const acceptInvite = async (req, res) => {
     }
 }
 
+const getWorkspaceActivities = async (req, res) => {
+    try {
+        const workspaceId = req.workspace.id
+        
+        const activities = await prisma.activityLog.findMany({
+            where: {
+                project: {
+                    workspaceId
+                }
+            },
+            include: {
+                user: {
+                    select: { id: true, name: true, avatarUrl: true }
+                },
+                project: {
+                    select: { id: true, name: true, color: true }
+                },
+                task: {
+                    select: { id: true, title: true }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            },
+            take: 30
+        })
+
+        res.json({ status: 'success', data: { activities } })
+    } catch (error) {
+        console.error('Get workspace activities error:', error)
+        res.status(500).json({ status: 'error', message: 'Failed to fetch workspace activities' })
+    }
+}
+
 const searchWorkspace = async (req, res) => {
     try {
         const { q } = req.query
@@ -798,6 +832,7 @@ export {
     updateWorkspace,
     deleteWorkspace,
     setActiveWorkspace,
+    getWorkspaceActivities,
     checkSlugAvailability,
     getMembers,
     updateMemberRole,
