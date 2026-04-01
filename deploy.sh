@@ -101,12 +101,10 @@ echo "✅ .env.production cleaned and ready."
 # 🏗️  Building client
 echo "🏗️  Preparing Atomic Local Injection for build..."
 if sudo [ -f "$APP_DIR/.env.production" ]; then
-  # 🔐 PRIVILEGED EXTRACTION: Use sudo to read the root-owned file
-  VITE_GA_TRACKING_ID=$(sudo grep 'VITE_GA_TRACKING_ID' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '\r' | xargs)
-  
-  # 🚀 ATOMIC INJECTION: Create ephemeral .local file (Highest priority in Vite)
-  echo "VITE_GA_TRACKING_ID=$VITE_GA_TRACKING_ID" > "$APP_DIR/client/.env.production.local"
-  echo "✅ Ephemeral .env.production.local created for build."
+  # 🔐 PRIVILEGED EXTRACTION: Multi-variable extraction
+  # Extract ALL variables starting with VITE_ and create the .local file
+  sudo grep '^VITE_' "$APP_DIR/.env.production" | tr -d '\r' > "$APP_DIR/client/.env.production.local"
+  echo "✅ Ephemeral .env.production.local created with ALL VITE_ variables."
 else
   echo "⚠️  WARNING: .env.production not found or inaccessible."
 fi
@@ -123,11 +121,18 @@ cd "$APP_DIR/client" && npm run build -- --mode production && cd "$APP_DIR"
 rm -f "$APP_DIR/client/.env.production.local"
 
 # 🛡️  Post-Build Bundle Integrity Check
-echo "🛡️  Checking if Tracking ID was successfully bundled..."
-if grep -q "$VITE_GA_TRACKING_ID" "$APP_DIR/client/dist/assets/index-*.js"; then
-  echo "✅ INTEGRITY SUCCESS: Tracking ID found in the new build bundle."
+echo "🛡️  Checking if Production IDs were successfully bundled..."
+# Extract values the same way Vite does to verify the bundle
+GA_ID=$(sudo grep 'VITE_GA_TRACKING_ID' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
+GOOGLE_ID=$(sudo grep 'VITE_GOOGLE_CLIENT_ID' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
+
+echo "🔍 Verifying GA_ID: $GA_ID"
+echo "🔍 Verifying GOOGLE_ID: $GOOGLE_ID"
+
+if grep -q "$GA_ID" "$APP_DIR/client/dist/assets/index-*.js" && grep -q "$GOOGLE_ID" "$APP_DIR/client/dist/assets/index-*.js"; then
+  echo "✅ INTEGRITY SUCCESS: All Production IDs found in the new build bundle."
 else
-  echo "❌ INTEGRITY FAILURE: Tracking ID is STILL MISSING from the bundle after build!"
+  echo "❌ INTEGRITY FAILURE: Critical IDs are MISSING from the bundle after build!"
   exit 1
 fi
 
