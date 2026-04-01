@@ -99,47 +99,37 @@ sed -i 's/\r//' .env.production
 echo "✅ .env.production cleaned and ready."
 
 # 🏗️  Building client
-echo "🏗️  Preparing Scalable Environment Pipeline for build..."
+echo "🏗️  Preparing Robust Environment Pipeline for build..."
 if [ -f ".env.production" ]; then
-  echo "📄 Sourcing variables from .env.production..."
-  # Export all VITE_ variables to the shell environment
-  set -a
-  source .env.production
-  set +a
-  echo "✅ Environment variables sourced successfully."
+  echo "📄 Injecting variables from .env.production..."
+  # Clean line endings and export all non-commented variables
+  export $(grep -v '^#' .env.production | sed 's/\r$//' | xargs -d '\n')
+  echo "✅ Environment variables exported successfully."
 else
-  echo "⚠️  WARNING: .env.production not found. Vite will use defaults."
+  echo "⚠️  WARNING: .env.production not found."
 fi
 
-# 🔍 Final Validation for Build
+# 🔍 Final Pre-build Validation
 echo "🔍 Validating environment for client build..."
-env_count=$(env | grep '^VITE_' | wc -l)
-echo "📊 Found $env_count VITE_ variables in the current environment."
-if env | grep -q "VITE_GA_TRACKING_ID=G-"; then
-  echo "✅ VITE_GA_TRACKING_ID is valid and injected."
+if [[ "$VITE_GA_TRACKING_ID" =~ ^G- ]]; then
+  echo "✅ VITE_GA_TRACKING_ID is active and valid ($VITE_GA_TRACKING_ID)"
 else
   echo "❌ ERROR: VITE_GA_TRACKING_ID is missing or invalid in the environment."
-  echo "Build aborted to prevent production issues."
   exit 1
 fi
 
+# Clean previous build artifacts
+rm -rf dist
+
 # Build the client
 echo "🏗️  Building client..."
-# We explicitly pass the variables to ensure they are available even if the shell is sub-processed
 npm run build -- --mode production
 
-# ----- Sync Client Build -----
-echo "📂 Updating public assets..."
-# Delete and recreate to be 100% sure no old files remain
-sudo rm -rf "$APP_DIR/server/public/assets"
-sudo mkdir -p "$APP_DIR/server/public/assets"
-sudo rm -f "$APP_DIR/server/public/index.html"
-sudo rm -f "$APP_DIR/server/public/registerSW.js"
-sudo rm -f "$APP_DIR/server/public/sw.js"
-sudo rm -f "$APP_DIR/server/public/manifest.webmanifest"
-
-# Copy new files
-sudo cp -r "$APP_DIR/client/dist/"* "$APP_DIR/server/public/"
+# ----- Sync Client Build (Mirror Sync) -----
+echo "🔄 Mirroring client build to server public folder..."
+# Use rsync --delete to ensure the public folder is a perfect, clean replica of dist
+sudo rsync -avz --delete "$APP_DIR/client/dist/" "$APP_DIR/server/public/"
+echo "✅ Client build mirrored successfully."
 sudo chown -R $USER:$USER "$APP_DIR/server/public"
 
 # ----- Clean Port 5000 (Prevent EADDRINUSE) -----
