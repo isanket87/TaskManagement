@@ -131,20 +131,19 @@ if [ -f "$APP_DIR/.env.production" ]; then
   echo "🔍 Verifying GOOGLE_ID: $GOOGLE_ID"
   echo "🔍 Verifying API_URL: $API_URL"
 
-  # Build a verify timestamp to ensure we are looking at NEW files
-  date > "$APP_DIR/client/dist/build_timestamp.txt"
-
   # Search ALL .js files in the assets folder
-  # We use sudo for grep because the files are created by sudo build
-  if [ -n "$GA_ID" ] && sudo grep -rq "$GA_ID" "$APP_DIR/client/dist/assets/"; then
-    echo "✅ GA_ID FOUND."
+  # We use -- to ensure grep doesn't treat IDs starting with - as flags
+  # We use -l to just find the file first for debugging
+  if [ -n "$GA_ID" ] && sudo grep -rl -- "$GA_ID" "$APP_DIR/client/dist/assets/" > /dev/null; then
+    echo "✅ GA_ID FOUND in bundle."
   else
     echo "❌ GA_ID MISSING!"
-    exit 1
+    # Only exit if it's explicitly set but not found
+    if [ -n "$GA_ID" ]; then exit 1; fi
   fi
 
-  if [ -n "$API_URL" ] && sudo grep -rq "$API_URL" "$APP_DIR/client/dist/assets/"; then
-    echo "✅ API_URL FOUND."
+  if [ -n "$API_URL" ] && sudo grep -rl -- "$API_URL" "$APP_DIR/client/dist/assets/" > /dev/null; then
+    echo "✅ API_URL FOUND in bundle."
   else
     echo "❌ API_URL MISSING!"
     exit 1
