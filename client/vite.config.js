@@ -45,5 +45,10 @@ export default defineConfig(({ mode }) => ({
                 }
             }
         }
+    },
+    define: {
+        // Force-inject the GA Tracking ID at build time. 
+        // This is the most reliable way to ensure it's picked up by the client-side code.
+        'import.meta.env.VITE_GA_TRACKING_ID': JSON.stringify(process.env.VITE_GA_TRACKING_ID || 'G-P5NHCX77XB')
     }
 }))

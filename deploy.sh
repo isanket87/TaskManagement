@@ -99,32 +99,38 @@ sed -i 's/\r//' .env.production
 echo "✅ .env.production cleaned and ready."
 
 # 🏗️  Building client
-echo "🏗️  Preparing Robust Environment Pipeline for build..."
+echo "🏗️  Performing Total Encoding Reset on environment..."
 if [ -f ".env.production" ]; then
-  echo "📄 Injecting variables from .env.production..."
-  # Clean line endings and export all non-commented variables
-  export $(grep -v '^#' .env.production | sed 's/\r$//' | xargs -d '\n')
-  echo "✅ Environment variables exported successfully."
+  echo "📄 Forcing .env.production to clean UTF-8..."
+  cp .env.production .env.production.tmp
+  tr -cd '\11\12\15\40-\176' < .env.production.tmp > .env.production
+  rm .env.production.tmp
+  
+  # Extract sanitized ID
+  VITE_GA_TRACKING_ID=$(grep 'VITE_GA_TRACKING_ID' .env.production | cut -d'=' -f2 | xargs)
+  export VITE_GA_TRACKING_ID
+  echo "✅ VITE_GA_TRACKING_ID sanitized and exported: $VITE_GA_TRACKING_ID"
 else
   echo "⚠️  WARNING: .env.production not found."
 fi
 
-# 🔍 Final Pre-build Validation
-echo "🔍 Validating environment for client build..."
-if [[ "$VITE_GA_TRACKING_ID" =~ ^G- ]]; then
-  echo "✅ VITE_GA_TRACKING_ID is active and valid ($VITE_GA_TRACKING_ID)"
+# Clean previous build and cache
+rm -rf dist
+rm -rf node_modules/.vite
+
+# Build the client with FORCE INJECTION and Vite Define
+echo "🏗️  Building client..."
+VITE_GA_TRACKING_ID="$VITE_GA_TRACKING_ID" npm run build -- --mode production
+
+# 🛡️  Post-Build Bundle Integrity Check
+echo "🛡️  Checking if Tracking ID was successfully bundled..."
+if grep -q "$VITE_GA_TRACKING_ID" dist/assets/index-*.js; then
+  echo "✅ INTEGRITY SUCCESS: Tracking ID found in the new build bundle."
 else
-  echo "❌ ERROR: VITE_GA_TRACKING_ID is missing or invalid in the environment."
+  echo "❌ INTEGRITY FAILURE: Tracking ID is STILL MISSING from the bundle after build!"
+  echo "Deployment ABORTED."
   exit 1
 fi
-
-# Clean previous build artifacts
-rm -rf dist
-
-# Build the client with FORCE INJECTION
-echo "🏗️  Building client with Force Injection..."
-# We pass the variable directly to the npm command to bypass any .env loading issues
-VITE_GA_TRACKING_ID="$VITE_GA_TRACKING_ID" npm run build -- --mode production
 
 # 🛡️  Bundle Integrity Check
 echo "🛡️  Performing Bundle Integrity Check..."
