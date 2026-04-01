@@ -59,8 +59,8 @@ fi
 
 # 📄 Function to safely update/add variables to .env
 update_env() {
-  local key=$1
-  local value=$2
+  local key=$(echo "$1" | tr -d '\r' | xargs)
+  local value=$(echo "$2" | tr -d '\r' | xargs)
   if [[ -z "$value" ]] || [[ "$value" == "null" ]] || [[ "$value" == "CHANGE_ME" ]]; then
     return
   fi
