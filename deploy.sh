@@ -99,36 +99,35 @@ sed -i 's/\r//' .env.production
 echo "✅ .env.production cleaned and ready."
 
 # 🏗️  Building client
-echo "🏗️  Performing Total Encoding Reset on environment..."
-if [ -f ".env.production" ]; then
-  echo "📄 Forcing .env.production to clean UTF-8..."
-  cp .env.production .env.production.tmp
-  tr -cd '\11\12\15\40-\176' < .env.production.tmp > .env.production
-  rm .env.production.tmp
+echo "🏗️  Preparing Atomic Local Injection for build..."
+if sudo [ -f "$APP_DIR/.env.production" ]; then
+  # 🔐 PRIVILEGED EXTRACTION: Use sudo to read the root-owned file
+  VITE_GA_TRACKING_ID=$(sudo grep 'VITE_GA_TRACKING_ID' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '\r' | xargs)
   
-  # Extract sanitized ID
-  VITE_GA_TRACKING_ID=$(grep 'VITE_GA_TRACKING_ID' .env.production | cut -d'=' -f2 | xargs)
-  export VITE_GA_TRACKING_ID
-  echo "✅ VITE_GA_TRACKING_ID sanitized and exported: $VITE_GA_TRACKING_ID"
+  # 🚀 ATOMIC INJECTION: Create ephemeral .local file (Highest priority in Vite)
+  echo "VITE_GA_TRACKING_ID=$VITE_GA_TRACKING_ID" > "$APP_DIR/client/.env.production.local"
+  echo "✅ Ephemeral .env.production.local created for build."
 else
-  echo "⚠️  WARNING: .env.production not found."
+  echo "⚠️  WARNING: .env.production not found or inaccessible."
 fi
 
-# Clean previous build and cache
-rm -rf dist
-rm -rf node_modules/.vite
+# Deep Cache and Artifact Cleanup
+rm -rf "$APP_DIR/client/dist"
+rm -rf "$APP_DIR/client/node_modules/.vite"
 
-# Build the client with FORCE INJECTION and Vite Define
+# Build the client
 echo "🏗️  Building client..."
-VITE_GA_TRACKING_ID="$VITE_GA_TRACKING_ID" npm run build -- --mode production
+cd "$APP_DIR/client" && npm run build -- --mode production && cd "$APP_DIR"
+
+# Remove epoxy env file after build
+rm -f "$APP_DIR/client/.env.production.local"
 
 # 🛡️  Post-Build Bundle Integrity Check
 echo "🛡️  Checking if Tracking ID was successfully bundled..."
-if grep -q "$VITE_GA_TRACKING_ID" dist/assets/index-*.js; then
+if grep -q "$VITE_GA_TRACKING_ID" "$APP_DIR/client/dist/assets/index-*.js"; then
   echo "✅ INTEGRITY SUCCESS: Tracking ID found in the new build bundle."
 else
   echo "❌ INTEGRITY FAILURE: Tracking ID is STILL MISSING from the bundle after build!"
-  echo "Deployment ABORTED."
   exit 1
 fi
 
