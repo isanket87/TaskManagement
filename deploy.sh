@@ -84,8 +84,8 @@ if [ -f "$APP_DIR/.env.shared" ]; then
   cat "$APP_DIR/.env.shared" >> .env.production || true
 fi
 
-# 3. Pull from system environment (GitHub/Shell) - ONLY IF NOT EMPTY
-if [ ! -z "$VITE_GA_TRACKING_ID" ] && [ "$VITE_GA_TRACKING_ID" != "null" ]; then
+# 3. Pull from system environment (GitHub/Shell) - ONLY IF VALID (starts with G-)
+if [[ $VITE_GA_TRACKING_ID =~ ^G- ]]; then
   sed -i '/VITE_GA_TRACKING_ID/d' .env.production
   echo "VITE_GA_TRACKING_ID=$VITE_GA_TRACKING_ID" >> .env.production
   echo "📄 Injected VITE_GA_TRACKING_ID from system environment."
