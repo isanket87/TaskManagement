@@ -107,44 +107,43 @@ sudo rm -f "$APP_DIR/client/.env"
 
 if sudo [ -f "$APP_DIR/.env.production" ]; then
   # 🔐 PRIVILEGED EXTRACTION: Multi-variable extraction
-  # Extract ALL variables starting with VITE_ and create the .local file
-  # We use sudo to read and sudo cat to write to ensure permissions are handled
-  sudo grep '^VITE_' "$APP_DIR/.env.production" | tr -d '\r' | sudo tee "$APP_DIR/client/.env.production.local" > /dev/null
-  sudo chown ubuntu:ubuntu "$APP_DIR/client/.env.production.local"
-  echo "✅ Ephemeral .env.production.local created with ALL VITE_ variables."
+  # Extract variables into shell scope for direct injection
+  GA_ID=$(sudo grep 'VITE_GA_TRACKING_ID' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
+  GOOGLE_ID=$(sudo grep 'VITE_GOOGLE_CLIENT_ID' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
+  API_URL=$(sudo grep 'VITE_API_URL' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
+
+  echo "🏗️  Running npm run build with direct injection..."
+  cd "$APP_DIR/client"
+
+  # 🛡️ DEFENSE: Clear any possible stale artifacts
+  sudo rm -rf node_modules/.vite dist
+
+  # 🚀 ATOMIC INJECTION: Pass variables directly to the build process
+  # This is MORE reliable than ephemeral files during sudo builds
+  sudo VITE_GA_TRACKING_ID="$GA_ID" \
+       VITE_GOOGLE_CLIENT_ID="$GOOGLE_ID" \
+       VITE_API_URL="$API_URL" \
+       npm run build -- --mode production
+
+  # 🛡️  Post-Build Bundle Integrity Check
+  echo "🛡️  Checking if Production IDs were successfully bundled..."
+  echo "🔍 Verifying GA_ID: $GA_ID"
+  echo "🔍 Verifying GOOGLE_ID: $GOOGLE_ID"
+  echo "🔍 Verifying API_URL: $API_URL"
+
+  # Search ALL .js files in the assets folder as Vite 5+ can split indices or name them differently
+  if [ -n "$GA_ID" ] && grep -rq "$GA_ID" "$APP_DIR/client/dist/assets/"*.js && \
+     [ -n "$GOOGLE_ID" ] && grep -rq "$GOOGLE_ID" "$APP_DIR/client/dist/assets/"*.js && \
+     [ -n "$API_URL" ] && grep -rq "$API_URL" "$APP_DIR/client/dist/assets/"*.js; then
+    echo "✅ INTEGRITY SUCCESS: All Production IDs and URLs found in the new build bundle."
+  else
+    echo "❌ INTEGRITY FAILURE: Critical IDs/URLs are MISSING or empty!"
+    # List files found for debugging
+    ls -la "$APP_DIR/client/dist/assets/" | head -n 20
+    exit 1
+  fi
 else
   echo "❌ ERROR: .env.production not found! Migration failed."
-  exit 1
-fi
-
-echo "🏗️  Running npm run build -- --mode production..."
-cd "$APP_DIR/client"
-# Clear vite cache to ensure no stale env vars
-sudo rm -rf node_modules/.vite
-sudo npm run build -- --mode production
-
-# 🚀 Clean up ephemeral local file after build
-sudo rm -f "$APP_DIR/client/.env.production.local"
-
-# 🛡️  Post-Build Bundle Integrity Check
-echo "🛡️  Checking if Production IDs were successfully bundled..."
-# Extract values for verification
-GA_ID=$(sudo grep 'VITE_GA_TRACKING_ID' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
-GOOGLE_ID=$(sudo grep 'VITE_GOOGLE_CLIENT_ID' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
-API_URL=$(sudo grep 'VITE_API_URL' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
-
-echo "🔍 Verifying GA_ID: $GA_ID"
-echo "🔍 Verifying GOOGLE_ID: $GOOGLE_ID"
-echo "🔍 Verifying API_URL: $API_URL"
-
-# Search ALL .js files in the assets folder as Vite 5+ can split indices or name them differently
-# We use sudo for grep because the files are created by sudo build
-if [ -n "$GA_ID" ] && sudo grep -rq "$GA_ID" "$APP_DIR/client/dist/assets/"*.js && \
-   [ -n "$GOOGLE_ID" ] && sudo grep -rq "$GOOGLE_ID" "$APP_DIR/client/dist/assets/"*.js && \
-   [ -n "$API_URL" ] && sudo grep -rq "$API_URL" "$APP_DIR/client/dist/assets/"*.js; then
-  echo "✅ INTEGRITY SUCCESS: All Production IDs and URLs found in the new build bundle."
-else
-  echo "❌ INTEGRITY FAILURE: Critical IDs/URLs are MISSING or empty!"
   exit 1
 fi
 
