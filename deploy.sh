@@ -108,7 +108,9 @@ sudo rm -f "$APP_DIR/client/.env"
 if sudo [ -f "$APP_DIR/.env.production" ]; then
   # 🔐 PRIVILEGED EXTRACTION: Multi-variable extraction
   # Extract ALL variables starting with VITE_ and create the .local file
-  sudo grep '^VITE_' "$APP_DIR/.env.production" | tr -d '\r' > "$APP_DIR/client/.env.production.local"
+  # We use sudo to read and sudo cat to write to ensure permissions are handled
+  sudo grep '^VITE_' "$APP_DIR/.env.production" | tr -d '\r' | sudo tee "$APP_DIR/client/.env.production.local" > /dev/null
+  sudo chown ubuntu:ubuntu "$APP_DIR/client/.env.production.local"
   echo "✅ Ephemeral .env.production.local created with ALL VITE_ variables."
 else
   echo "❌ ERROR: .env.production not found! Migration failed."
