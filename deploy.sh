@@ -135,9 +135,11 @@ echo "🔍 Verifying GA_ID: $GA_ID"
 echo "🔍 Verifying GOOGLE_ID: $GOOGLE_ID"
 echo "🔍 Verifying API_URL: $API_URL"
 
-if [ -n "$GA_ID" ] && grep -q "$GA_ID" "$APP_DIR/client/dist/assets/index-*.js" && \
-   [ -n "$GOOGLE_ID" ] && grep -q "$GOOGLE_ID" "$APP_DIR/client/dist/assets/index-*.js" && \
-   [ -n "$API_URL" ] && grep -q "$API_URL" "$APP_DIR/client/dist/assets/index-*.js"; then
+# Search ALL .js files in the assets folder as Vite 5+ can split indices or name them differently
+# We use sudo for grep because the files are created by sudo build
+if [ -n "$GA_ID" ] && sudo grep -rq "$GA_ID" "$APP_DIR/client/dist/assets/"*.js && \
+   [ -n "$GOOGLE_ID" ] && sudo grep -rq "$GOOGLE_ID" "$APP_DIR/client/dist/assets/"*.js && \
+   [ -n "$API_URL" ] && sudo grep -rq "$API_URL" "$APP_DIR/client/dist/assets/"*.js; then
   echo "✅ INTEGRITY SUCCESS: All Production IDs and URLs found in the new build bundle."
 else
   echo "❌ INTEGRITY FAILURE: Critical IDs/URLs are MISSING or empty!"
