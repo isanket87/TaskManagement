@@ -131,6 +131,9 @@ if [ -f "$APP_DIR/.env.production" ]; then
   echo "🔍 Verifying GOOGLE_ID: $GOOGLE_ID"
   echo "🔍 Verifying API_URL: $API_URL"
 
+  # Fix ownership immediately after the sudo build so we don't have permission issues
+  sudo chown -R ubuntu:ubuntu "$APP_DIR/client/dist"
+
   # Search ALL .js files in the assets folder
   # We use -- to ensure grep doesn't treat IDs starting with - as flags
   # We use -l to just find the file first for debugging
