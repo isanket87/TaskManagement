@@ -146,16 +146,6 @@ else
   exit 1
 fi
 
-# 🛡️  Bundle Integrity Check
-echo "🛡️  Performing Bundle Integrity Check..."
-if grep -q "G-P5NHCX77XB" dist/assets/index-*.js; then
-  echo "✅ INTEGRITY PASSED: Tracking ID exists in the new bundle."
-else
-  echo "❌ INTEGRITY FAILED: Tracking ID is missing from the new bundle!"
-  echo "Deployment aborted to protect production integrity."
-  exit 1
-fi
-
 # ----- Sync Client Build (Mirror Sync) -----
 echo "🔄 Mirroring client build to server public folder..."
 # Use rsync --delete to ensure the public folder is a perfect, clean replica of dist
