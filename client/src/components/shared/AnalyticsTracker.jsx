@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import ReactGA from 'react-ga4';
 
-const trackingId = 'G-P5NHCX77XB'; // Hardcoded fallback for production
+const trackingId = import.meta.env.VITE_GA_TRACKING_ID;
 
 const AnalyticsTracker = () => {
     const location = useLocation();

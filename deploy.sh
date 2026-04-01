@@ -98,6 +98,16 @@ fi
 sed -i 's/\r//' .env.production
 echo "✅ .env.production cleaned and ready."
 
+# 🔍 Final Validation for Build
+echo "🔍 Validating environment for client build..."
+if grep -q "VITE_GA_TRACKING_ID=G-" .env.production; then
+  echo "✅ .env.production is valid for build (Tracking ID present)."
+else
+  echo "❌ ERROR: VITE_GA_TRACKING_ID is missing or invalid in .env.production."
+  echo "Build aborted to prevent production issues."
+  exit 1
+fi
+
 # Build the client
 echo "🏗️  Building client..."
 npm run build -- --mode production
