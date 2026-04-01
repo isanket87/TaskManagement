@@ -98,18 +98,34 @@ fi
 sed -i 's/\r//' .env.production
 echo "✅ .env.production cleaned and ready."
 
+# 🏗️  Building client
+echo "🏗️  Preparing Scalable Environment Pipeline for build..."
+if [ -f ".env.production" ]; then
+  echo "📄 Sourcing variables from .env.production..."
+  # Export all VITE_ variables to the shell environment
+  set -a
+  source .env.production
+  set +a
+  echo "✅ Environment variables sourced successfully."
+else
+  echo "⚠️  WARNING: .env.production not found. Vite will use defaults."
+fi
+
 # 🔍 Final Validation for Build
 echo "🔍 Validating environment for client build..."
-if grep -q "VITE_GA_TRACKING_ID=G-" .env.production; then
-  echo "✅ .env.production is valid for build (Tracking ID present)."
+env_count=$(env | grep '^VITE_' | wc -l)
+echo "📊 Found $env_count VITE_ variables in the current environment."
+if env | grep -q "VITE_GA_TRACKING_ID=G-"; then
+  echo "✅ VITE_GA_TRACKING_ID is valid and injected."
 else
-  echo "❌ ERROR: VITE_GA_TRACKING_ID is missing or invalid in .env.production."
+  echo "❌ ERROR: VITE_GA_TRACKING_ID is missing or invalid in the environment."
   echo "Build aborted to prevent production issues."
   exit 1
 fi
 
 # Build the client
 echo "🏗️  Building client..."
+# We explicitly pass the variables to ensure they are available even if the shell is sub-processed
 npm run build -- --mode production
 
 # ----- Sync Client Build -----
