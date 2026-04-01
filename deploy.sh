@@ -105,25 +105,27 @@ echo "🏗️  Preparing Atomic Local Injection for build..."
 sudo rm -f "$APP_DIR/client/.env.production"
 sudo rm -f "$APP_DIR/client/.env"
 
-if sudo [ -f "$APP_DIR/.env.production" ]; then
+if [ -f "$APP_DIR/.env.production" ]; then
   # 🔐 PRIVILEGED EXTRACTION: Multi-variable extraction
-  # Extract variables into shell scope for direct injection
-  GA_ID=$(sudo grep 'VITE_GA_TRACKING_ID' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
-  GOOGLE_ID=$(sudo grep 'VITE_GOOGLE_CLIENT_ID' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
-  API_URL=$(sudo grep 'VITE_API_URL' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
+  # Extract variables into local shell scope.
+  # We use sudo to read the root-owned file, then export them for the non-sudo build.
+  export GA_ID=$(sudo grep 'VITE_GA_TRACKING_ID' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
+  export GOOGLE_ID=$(sudo grep 'VITE_GOOGLE_CLIENT_ID' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
+  export API_URL=$(sudo grep 'VITE_API_URL' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
 
-  echo "🏗️  Running npm run build with direct injection..."
+  echo "🏗️  Running npm run build with direct SH exports..."
   cd "$APP_DIR/client"
 
   # 🛡️ DEFENSE: Clear any possible stale artifacts
+  # We use sudo for rm just in case there are lingering root files
   sudo rm -rf node_modules/.vite dist
 
-  # 🚀 ATOMIC INJECTION: Pass variables directly to the build process
-  # This is MORE reliable than ephemeral files during sudo builds
-  sudo VITE_GA_TRACKING_ID="$GA_ID" \
-       VITE_GOOGLE_CLIENT_ID="$GOOGLE_ID" \
-       VITE_API_URL="$API_URL" \
-       npm run build -- --mode production
+  # 🚀 ATOMIC INJECTION: Pass variables directly to the build process AS UBUNTU
+  # We DO NOT use sudo for the build itself to prevent environment scrubbing
+  VITE_GA_TRACKING_ID="$GA_ID" \
+  VITE_GOOGLE_CLIENT_ID="$GOOGLE_ID" \
+  VITE_API_URL="$API_URL" \
+  npm run build -- --mode production
 
   # 🛡️  Post-Build Bundle Integrity Check
   echo "🛡️  Checking if Production IDs were successfully bundled..."
@@ -131,15 +133,18 @@ if sudo [ -f "$APP_DIR/.env.production" ]; then
   echo "🔍 Verifying GOOGLE_ID: $GOOGLE_ID"
   echo "🔍 Verifying API_URL: $API_URL"
 
-  # Search ALL .js files in the assets folder as Vite 5+ can split indices or name them differently
-  if [ -n "$GA_ID" ] && grep -rq "$GA_ID" "$APP_DIR/client/dist/assets/"*.js && \
-     [ -n "$GOOGLE_ID" ] && grep -rq "$GOOGLE_ID" "$APP_DIR/client/dist/assets/"*.js && \
-     [ -n "$API_URL" ] && grep -rq "$API_URL" "$APP_DIR/client/dist/assets/"*.js; then
+  # Search ALL .js files in the assets folder
+  # We use sudo for grep just in case dist was somehow created with root perms
+  if [ -n "$GA_ID" ] && sudo grep -rq "$GA_ID" "$APP_DIR/client/dist/assets/" && \
+     [ -n "$GOOGLE_ID" ] && sudo grep -rq "$GOOGLE_ID" "$APP_DIR/client/dist/assets/" && \
+     [ -n "$API_URL" ] && sudo grep -rq "$API_URL" "$APP_DIR/client/dist/assets/"; then
     echo "✅ INTEGRITY SUCCESS: All Production IDs and URLs found in the new build bundle."
   else
-    echo "❌ INTEGRITY FAILURE: Critical IDs/URLs are MISSING or empty!"
-    # List files found for debugging
-    ls -la "$APP_DIR/client/dist/assets/" | head -n 20
+    echo "❌ INTEGRITY FAILURE: Critical IDs/URLs are MISSING or empty in dist/assets/!"
+    # Emergency fallback check for placeholders
+    if sudo grep -rq "your_server_ip" "$APP_DIR/client/dist/assets/"; then
+      echo "⚠️  CAUTION: The placeholder 'your_server_ip' is STILL present in bundles."
+    fi
     exit 1
   fi
 else
