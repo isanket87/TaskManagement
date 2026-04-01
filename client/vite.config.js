@@ -1,17 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { VitePWA } from 'vite-plugin-pwa'
 
+// https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
     plugins: [
         react(),
-        // VitePWA plugin disabled to fix preload/caching issues
-        /*
-        VitePWA({
-            registerType: 'autoUpdate',
-            ...
-        })
-        */
     ],
     test: {
         globals: true,
@@ -47,8 +40,11 @@ export default defineConfig(({ mode }) => ({
         }
     },
     define: {
-        // Force-inject the GA Tracking ID at build time. 
-        // This is the most reliable way to ensure it's picked up by the client-side code.
-        'import.meta.env.VITE_GA_TRACKING_ID': JSON.stringify(process.env.VITE_GA_TRACKING_ID || 'G-P5NHCX77XB')
+        // Force-inject critical IDs and URLs at build time. 
+        // This is the most reliable way to ensure they are picked up by the client-side code
+        // and bypasses potential .env loading issues on the VPS.
+        'import.meta.env.VITE_GA_TRACKING_ID': JSON.stringify(process.env.VITE_GA_TRACKING_ID || 'G-P5NHCX77XB'),
+        'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(process.env.VITE_GOOGLE_CLIENT_ID || '120937748446-lk6idvcr4p87ht89idvk89idv.apps.googleusercontent.com'),
+        'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'https://brioright.online/api')
     }
 }))
