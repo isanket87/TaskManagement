@@ -100,39 +100,47 @@ echo "✅ .env.production cleaned and ready."
 
 # 🏗️  Building client
 echo "🏗️  Preparing Atomic Local Injection for build..."
+
+# 🛡️  DEFENSIVE STEP: Remove any existing client/.env.production which might have placeholders
+sudo rm -f "$APP_DIR/client/.env.production"
+sudo rm -f "$APP_DIR/client/.env"
+
 if sudo [ -f "$APP_DIR/.env.production" ]; then
   # 🔐 PRIVILEGED EXTRACTION: Multi-variable extraction
   # Extract ALL variables starting with VITE_ and create the .local file
   sudo grep '^VITE_' "$APP_DIR/.env.production" | tr -d '\r' > "$APP_DIR/client/.env.production.local"
   echo "✅ Ephemeral .env.production.local created with ALL VITE_ variables."
 else
-  echo "⚠️  WARNING: .env.production not found or inaccessible."
+  echo "❌ ERROR: .env.production not found! Migration failed."
+  exit 1
 fi
 
-# Deep Cache and Artifact Cleanup
-rm -rf "$APP_DIR/client/dist"
-rm -rf "$APP_DIR/client/node_modules/.vite"
+echo "🏗️  Running npm run build -- --mode production..."
+cd "$APP_DIR/client"
+# Clear vite cache to ensure no stale env vars
+sudo rm -rf node_modules/.vite
+sudo npm run build -- --mode production
 
-# Build the client
-echo "🏗️  Building client..."
-cd "$APP_DIR/client" && npm run build -- --mode production && cd "$APP_DIR"
-
-# Remove epoxy env file after build
-rm -f "$APP_DIR/client/.env.production.local"
+# 🚀 Clean up ephemeral local file after build
+sudo rm -f "$APP_DIR/client/.env.production.local"
 
 # 🛡️  Post-Build Bundle Integrity Check
 echo "🛡️  Checking if Production IDs were successfully bundled..."
-# Extract values the same way Vite does to verify the bundle
+# Extract values for verification
 GA_ID=$(sudo grep 'VITE_GA_TRACKING_ID' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
 GOOGLE_ID=$(sudo grep 'VITE_GOOGLE_CLIENT_ID' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
+API_URL=$(sudo grep 'VITE_API_URL' "$APP_DIR/.env.production" | cut -d'=' -f2 | tr -d '"\r' | xargs)
 
 echo "🔍 Verifying GA_ID: $GA_ID"
 echo "🔍 Verifying GOOGLE_ID: $GOOGLE_ID"
+echo "🔍 Verifying API_URL: $API_URL"
 
-if grep -q "$GA_ID" "$APP_DIR/client/dist/assets/index-*.js" && grep -q "$GOOGLE_ID" "$APP_DIR/client/dist/assets/index-*.js"; then
-  echo "✅ INTEGRITY SUCCESS: All Production IDs found in the new build bundle."
+if [ -n "$GA_ID" ] && grep -q "$GA_ID" "$APP_DIR/client/dist/assets/index-*.js" && \
+   [ -n "$GOOGLE_ID" ] && grep -q "$GOOGLE_ID" "$APP_DIR/client/dist/assets/index-*.js" && \
+   [ -n "$API_URL" ] && grep -q "$API_URL" "$APP_DIR/client/dist/assets/index-*.js"; then
+  echo "✅ INTEGRITY SUCCESS: All Production IDs and URLs found in the new build bundle."
 else
-  echo "❌ INTEGRITY FAILURE: Critical IDs are MISSING from the bundle after build!"
+  echo "❌ INTEGRITY FAILURE: Critical IDs/URLs are MISSING or empty!"
   exit 1
 fi
 
