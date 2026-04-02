@@ -1,23 +1,34 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ProjectStatsView from './ProjectStatsView';
 import { projectService } from '../../services/projectService';
+import { taskService } from '../../services/taskService';
 
-// Mock projectService
+// Mock recharts because it fails in jsdom
+vi.mock('recharts', () => ({
+    ResponsiveContainer: ({ children }) => <div style={{width: 500, height: 500}}>{children}</div>,
+    AreaChart: ({ children }) => <div>{children}</div>,
+    Area: () => <div>Area</div>,
+    XAxis: () => <div>XAxis</div>,
+    YAxis: () => <div>YAxis</div>,
+    CartesianGrid: () => <div>CartesianGrid</div>,
+    Tooltip: () => <div>Tooltip</div>
+}));
+
+// Mock services
 vi.mock('../../services/projectService', () => ({
     projectService: {
         getAnalytics: vi.fn(),
+        getMembers: vi.fn(),
     },
 }));
 
-const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            retry: false,
-        },
+vi.mock('../../services/taskService', () => ({
+    taskService: {
+        getAll: vi.fn(),
     },
-});
+}));
 
 const mockAnalytics = {
     total: 10,
@@ -28,6 +39,14 @@ const mockAnalytics = {
     dailyCompletion: { '2026-03-20': 1, '2026-03-21': 2 }
 };
 
+const mockMembers = [
+    { _id: '1', userName: 'Test User', role: 'Owner' }
+];
+
+const mockTasks = [
+    { _id: 't1', title: 'Critical Task', priority: 'urgent', status: 'in_progress' }
+];
+
 describe('ProjectStatsView', () => {
     let queryClient;
 
@@ -37,28 +56,64 @@ describe('ProjectStatsView', () => {
                 queries: {
                     retry: false,
                     staleTime: 0,
-                    cacheTime: 0,
                 },
             },
         });
         vi.clearAllMocks();
+        
+        // Default successful mocks
+        projectService.getAnalytics.mockResolvedValue({
+            data: { success: true, data: { analytics: mockAnalytics } }
+        });
+        projectService.getMembers.mockResolvedValue({
+            data: { success: true, data: { members: mockMembers } }
+        });
+        taskService.getAll.mockResolvedValue({
+            data: { success: true, data: { tasks: mockTasks } }
+        });
     });
 
     it('renders loading state initially', () => {
-        projectService.getAnalytics.mockReturnValue(new Promise(() => {})); // Never resolves
+        // Mock a pending promise
+        projectService.getAnalytics.mockReturnValue(new Promise(() => {}));
+        
         render(
             <QueryClientProvider client={queryClient}>
                 <ProjectStatsView projectId="1" />
             </QueryClientProvider>
         );
-        // Expect pulse loaders (skeletons)
-        const pulse = document.querySelector('.animate-pulse');
-        expect(pulse).toBeDefined();
+        
+        // Should show the atmospheric sync message
+        expect(screen.getByText(/Syncing Atmosphere/i)).toBeInTheDocument();
     });
 
-    it('renders analytics data correctly', async () => {
-        projectService.getAnalytics.mockResolvedValue({
-            data: { success: true, data: { analytics: mockAnalytics } }
+    it('renders analytics data with new premium terminology', async () => {
+        render(
+            <QueryClientProvider client={queryClient}>
+                <ProjectStatsView projectId="1" />
+            </QueryClientProvider>
+        );
+
+        // Header Check
+        const header = await screen.findByText('PROJECT OVERVIEW');
+        expect(header).toBeInTheDocument();
+
+        // New terms check
+        expect(screen.getByText('Operational Volume')).toBeInTheDocument();
+        expect(screen.getByText('Efficiency Index')).toBeInTheDocument();
+        
+        // Value checks
+        expect(await screen.findByText('10')).toBeInTheDocument();
+        expect(await screen.findByText('60%')).toBeInTheDocument();
+
+        // Content check
+        expect(screen.getByText('Critical Task')).toBeInTheDocument();
+        expect(screen.getByText('Test User')).toBeInTheDocument();
+    });
+
+    it('displays ghost data when no priorities are found', async () => {
+        taskService.getAll.mockResolvedValue({
+            data: { success: true, data: { tasks: [] } }
         });
 
         render(
@@ -67,18 +122,10 @@ describe('ProjectStatsView', () => {
             </QueryClientProvider>
         );
 
-        // Wait for the total count to appear - this confirms loading is done
-        const totalCounts = await screen.findAllByText('10', {}, { timeout: 3000 });
-        expect(totalCounts[0]).toBeInTheDocument();
+        // Ghost header check
+        expect(await screen.findByText(/Sample Insights active/i)).toBeInTheDocument();
         
-        expect(screen.getByText('Total Tasks')).toBeInTheDocument();
-        const completionRates = screen.getAllByText('60%');
-        expect(completionRates[0]).toBeInTheDocument();
-        expect(screen.getByText('Completion Rate')).toBeInTheDocument();
-
-        // Check Status breakdown labels
-        expect(screen.getByText(/todo/i)).toBeInTheDocument();
-        expect(screen.getByText(/in progress/i)).toBeInTheDocument();
-        expect(screen.getByText(/done/i)).toBeInTheDocument();
+        // Ghost content check
+        expect(screen.getByText('Refine Project Strategic Roadmap')).toBeInTheDocument();
     });
 });
