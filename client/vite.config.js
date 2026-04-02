@@ -45,6 +45,6 @@ export default defineConfig(({ mode }) => ({
         // and bypasses potential .env loading issues on the VPS.
         'import.meta.env.VITE_GA_TRACKING_ID': JSON.stringify(process.env.VITE_GA_TRACKING_ID || 'G-P5NHCX77XB'),
         'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify(process.env.VITE_GOOGLE_CLIENT_ID || '120937748446-lk6idvcr4p87ht89idvk89idv.apps.googleusercontent.com'),
-        'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'https://brioright.online/api')
+        'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || (mode === 'production' ? 'https://brioright.online/api' : ''))
     }
 }))

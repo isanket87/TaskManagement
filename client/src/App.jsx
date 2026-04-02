@@ -13,6 +13,7 @@ import EmailVerificationBanner from './components/shared/EmailVerificationBanner
 import NotificationInitializer from './components/shared/NotificationInitializer';
 import FocusModeOverlay from './components/focus/FocusModeOverlay';
 import PulseStream from './components/workspace/PulseStream';
+import AmbientBackground from './components/ui/AmbientBackground';
 
 // ── Lazy-loaded pages (each becomes its own async chunk) ─────────────────────
 const Login = lazy(() => import('./pages/Login'));
@@ -163,6 +164,7 @@ function App() {
 
     return (
         <QueryClientProvider client={queryClient}>
+            <AmbientBackground />
             <NotificationInitializer />
             <FocusModeOverlay />
             <BrowserRouter>

@@ -8,7 +8,7 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag, BarChart2, BarChart3, LayoutGrid, AlignLeft, Sparkles, Check, Loader2, RefreshCw } from 'lucide-react';
+import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag, BarChart2, BarChart3, LayoutGrid, AlignLeft, Sparkles, Check, Loader2, RefreshCw, Clock } from 'lucide-react';
 import BoardFilterBar from '../components/shared/BoardFilterBar';
 import BoardSortGroup from '../components/shared/BoardSortGroup';
 import PageWrapper from '../components/layout/PageWrapper';
@@ -38,6 +38,7 @@ const SwimlaneView = lazy(() => import('../components/views/SwimlaneView'));
 const TimelineView = lazy(() => import('../components/views/TimelineView'));
 const CanvasView = lazy(() => import('../components/views/CanvasView'));
 const ProjectStatsView = lazy(() => import('../components/projects/ProjectStatsView'));
+const ProjectActivityView = lazy(() => import('../components/views/ProjectActivityView'));
 const TaskDetailPanel = lazy(() => import('../components/shared/TaskDetailPanel'));
 const ImportCsvModal = lazy(() => import('../components/shared/ImportCsvModal'));
 
@@ -804,27 +805,37 @@ const ProjectDetail = () => {
                     {/* Filter / Sort / Actions Toolbar inside a frosted pill */}
                     <div className="relative flex flex-wrap items-center gap-3 p-2 bg-white/70 dark:bg-slate-900/60 backdrop-blur-2xl border border-white/60 dark:border-slate-700/50 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)]">
                         {/* View toggle */}
-                        <div className="flex items-center gap-0.5 p-1 bg-slate-100/80 dark:bg-slate-800/80 rounded-xl border border-slate-200/50 dark:border-slate-700/50 shrink-0">
+                        <div className="flex items-center gap-1 p-1 bg-slate-100/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-200/40 dark:border-white/5 shrink-0 relative overflow-hidden">
                             {[
                                 { id: 'kanban', icon: <LayoutGrid className="w-3.5 h-3.5" />, label: 'Kanban' },
                                 { id: 'swimlane', icon: <AlignLeft className="w-3.5 h-3.5" />, label: 'Swimlane' },
                                 { id: 'workload', icon: <BarChart2 className="w-3.5 h-3.5" />, label: 'Workload' },
                                 { id: 'timeline', icon: <Calendar className="w-3.5 h-3.5" />, label: 'Timeline' },
                                 { id: 'canvas', icon: <Sparkles className="w-3.5 h-3.5" />, label: 'Canvas' },
+                                { id: 'activity', icon: <Clock className="w-3.5 h-3.5" />, label: 'Activity' },
                                 { id: 'stats', icon: <BarChart3 className="w-4 h-4" />, label: 'Stats' },
                             ].map(({ id, icon, label }) => (
                                 <button
                                     key={id}
                                     onClick={() => setViewMode(id)}
                                     className={cn(
-                                        'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap',
+                                        'relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap z-10',
                                         viewMode === id
-                                            ? 'bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 shadow-sm'
-                                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+                                            ? 'text-indigo-600 dark:text-white'
+                                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                                     )}
                                 >
-                                    {icon}
-                                    {label}
+                                    {viewMode === id && (
+                                        <motion.div
+                                            layoutId="activeTab"
+                                            className="absolute inset-0 bg-white dark:bg-white/10 shadow-[0_4px_12px_rgba(0,0,0,0.05)] dark:shadow-none rounded-xl border border-slate-200/50 dark:border-white/10"
+                                            transition={{ type: "spring", bounce: 0.25, duration: 0.5 }}
+                                        />
+                                    )}
+                                    <span className="relative z-20 flex items-center gap-1.5">
+                                        {icon}
+                                        {label}
+                                    </span>
                                 </button>
                             ))}
                         </div>
@@ -877,7 +888,7 @@ const ProjectDetail = () => {
                 {/* Board / Workload / Swimlane area */}
                 <div className={cn(
                     "flex-1 min-h-0",
-                    viewMode === 'kanban' ? "overflow-x-auto overflow-y-hidden px-4 sm:px-6 pb-6 snap-x snap-mandatory hide-scrollbar" : "overflow-hidden"
+                    viewMode === 'kanban' ? "overflow-x-auto overflow-y-hidden px-4 sm:px-6 pb-6 snap-x snap-mandatory hide-scrollbar" : "overflow-y-auto overflow-x-hidden h-full custom-scrollbar"
                 )}>
                     <Suspense fallback={<ViewFallback />}>
                         {viewMode === 'workload' ? (
@@ -909,6 +920,8 @@ const ProjectDetail = () => {
                             />
                         ) : viewMode === 'stats' ? (
                             <ProjectStatsView projectId={projectId} />
+                        ) : viewMode === 'activity' ? (
+                            <ProjectActivityView projectId={projectId} />
                         ) : isLoading ? (
                             <div className="flex gap-6 h-full">
                                 {KANBAN_COLUMNS.map((col) => (

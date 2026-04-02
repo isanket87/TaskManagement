@@ -12,7 +12,6 @@ model User {
   name                   String
   email                  String                  @unique
   password               String?
-  avatarUrl              String?
   role                   String                  @default("user")
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
@@ -22,6 +21,7 @@ model User {
   emailVerified          Boolean                 @default(false)
   emailVerifyExpiry      DateTime?
   emailVerifyToken       String?
+  avatarUrl              String?
   activities             ActivityLog[]
   apiKeys                ApiKey[]
   attachments            Attachment[]
@@ -108,17 +108,17 @@ model Task {
   lastReminderSent DateTime?
   remindersSent    String[]         @default([])
   snoozedUntil     DateTime?
-  isRecurring      Boolean          @default(false)
-  recurrenceRule   String?          // daily, weekly, monthly, yearly
-  recurrenceConfig Json?            // e.g., { "interval": 1, "daysOfWeek": [1, 3] }
-  nextOccurrence   DateTime?
-  lastRecurrenceId String?          // ID of the task this was recreated from
   projectId        String
   assigneeId       String?
   createdById      String
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
   parentTaskId     String?
+  isRecurring      Boolean          @default(false)
+  lastRecurrenceId String?
+  nextOccurrence   DateTime?
+  recurrenceConfig Json?
+  recurrenceRule   String?
   activities       ActivityLog[]
   attachments      Attachment[]
   comments         Comment[]
