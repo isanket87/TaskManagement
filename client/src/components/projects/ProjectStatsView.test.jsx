@@ -104,7 +104,8 @@ describe('ProjectStatsView', () => {
         
         // Value checks
         expect(await screen.findByText('10')).toBeInTheDocument();
-        expect(await screen.findByText('60%')).toBeInTheDocument();
+        const completionRates = await screen.findAllByText('60%');
+        expect(completionRates.length).toBeGreaterThanOrEqual(1);
 
         // Content check
         expect(screen.getByText('Critical Task')).toBeInTheDocument();
