@@ -1,0 +1,47 @@
+{
+  "_comment": "Pre-cached Brioright IDs — avoids repeated list_workspaces/list_projects calls each session.",
+  "_lastUpdated": "2026-04-05",
+
+  "workspaces": {
+    "techworkspace": {
+      "id": "cc81a438-b439-4cde-8554-4a4c6205e6b6",
+      "slug": "techworkspace",
+      "name": "TechWorkspace"
+    },
+    "new-workspace": {
+      "id": "f2fe14d1-bb18-4ec1-ab97-60d451fc3c70",
+      "slug": "new-workspace",
+      "name": "new workspace"
+    }
+  },
+
+  "projects": {
+    "techworkspace": {
+      "task-management": {
+        "id": "7afd888f-0d75-470a-95f4-104319e5d09b",
+        "name": "Task Management",
+        "status": "active"
+      },
+      "lumi-mobile-app": {
+        "id": "9b152439-7049-4d43-9fc4-fb3091a30a73",
+        "name": "Lumi Mobile App",
+        "status": "active"
+      },
+      "my-first-project": {
+        "id": "b4a86384-db9d-439f-b77c-11a1193cc3f3",
+        "name": "My First Project",
+        "status": "active"
+      }
+    },
+    "new-workspace": {
+      "new-project": {
+        "id": "8066396c-0746-4ffa-b243-b0e4d8eadd62",
+        "name": "new project",
+        "status": "active"
+      }
+    }
+  },
+
+  "defaultWorkspace": "techworkspace",
+  "defaultProject": "task-management"
+}

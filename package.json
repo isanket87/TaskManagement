@@ -11,7 +11,9 @@
     "db:seed": "cd server && npx prisma db seed",
     "db:studio": "cd server && npx prisma studio",
     "build": "cd client && npm run build",
-    "install:all": "npm install && cd client && npm install && cd ../server && npm install"
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
+    "mcp:attach": "node scripts/mcp-attach.js",
+    "mcp:ids": "node -e \"console.log(JSON.stringify(require('./scripts/brioright-ids.json'), null, 2))\""
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
