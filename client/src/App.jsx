@@ -142,26 +142,37 @@ function App() {
     useEffect(() => {
         const jsVersion = import.meta.env.VITE_BUILD_TIME;
         const htmlVersion = document.getElementById('app-build-id')?.getAttribute('content');
-        const currentVersion = `${jsVersion}-${htmlVersion}`;
+        const localBuildId = `${jsVersion}-${htmlVersion}`;
         
-        const storedVersion = localStorage.getItem('app_version');
-        
-        if (storedVersion && currentVersion !== storedVersion) {
-            console.log('🚀 New version detected. Clearing cache and updating...');
-            localStorage.setItem('app_version', currentVersion);
-            
-            // Clear all caches
-            if ('caches' in window) {
-                caches.keys().then((names) => {
-                    for (let name of names) caches.delete(name);
-                });
+        const checkVersion = async () => {
+            try {
+                // We use a timestamp to bypass any potential proxy cache for this specific check
+                const res = await api.get(`/api/version?t=${Date.now()}`);
+                const serverVersion = res.data.version;
+                const storedVersion = localStorage.getItem('app_version_tag');
+
+                if (storedVersion && serverVersion !== storedVersion) {
+                    console.log('🚀 New version detected via API. Updating...');
+                    localStorage.setItem('app_version_tag', serverVersion);
+                    if ('caches' in window) {
+                        const names = await caches.keys();
+                        await Promise.all(names.map(name => caches.delete(name)));
+                    }
+                    window.location.href = window.location.pathname + '?refresh=' + Date.now();
+                } else if (serverVersion) {
+                    localStorage.setItem('app_version_tag', serverVersion);
+                }
+            } catch (err) {
+                // Silently fail, we'll try again next interval
             }
-            
-            // Force hard reload (cache-busting)
-            window.location.href = window.location.pathname + '?v=' + Date.now();
-        } else {
-            localStorage.setItem('app_version', currentVersion);
-        }
+        };
+
+        // Check once on load
+        checkVersion();
+
+        // Check every 5 minutes
+        const interval = setInterval(checkVersion, 5 * 60 * 1000);
+        return () => clearInterval(interval);
     }, []);
 
     // Run once on app start — check if user is already logged in

@@ -172,6 +172,13 @@ app.get('/api/ping', (req, res) => {
     })
 })
 
+app.get('/api/version', (req, res) => {
+    res.json({
+        version: '1.0.4',
+        buildTime: '2026-04-04T14:35:00Z'
+    })
+})
+
 // ── API ROUTES ──
 app.get('/api/users/search', auth, async (req, res, next) => {
     try {
