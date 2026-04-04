@@ -503,6 +503,204 @@ function buildServer() {
         }
     )
 
+    // ── get_project_analytics ────────────────────────────────────────────────
+    server.tool('get_project_analytics',
+        'Returns detailed analytics for a specific project including: task completion rate, task counts by status/priority, and daily completion trends. Use this when the user asks "how is this project doing?", "show me the project health", or "what is the completion rate for the Lumi project?".',
+        {
+            projectId: z.string().describe('ID of the project to fetch analytics for.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ projectId, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const data = await call('GET', `/workspaces/${ws}/projects/${projectId}/analytics`, null, apiKey)
+            return { content: [{ type: 'text', text: JSON.stringify(data.analytics || data, null, 2) }] }
+        }
+    )
+
+    // ── get_project_activity ──────────────────────────────────────────────────
+    server.tool('get_project_activity',
+        'Returns the recent activity log for a specific project. Use this when the user asks "what has happened recently in this project?" or "show me the history of the Lumi app project". Returns up to 50 recent actions.',
+        {
+            projectId: z.string().describe('ID of the project to fetch activity history for.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ projectId, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const data = await call('GET', `/workspaces/${ws}/projects/${projectId}/activity`, null, apiKey)
+            const activities = data.activities || data
+            return { content: [{ type: 'text', text: JSON.stringify(activities.map(a => ({ id: a.id, type: a.type, message: a.message, user: a.user?.name, createdAt: a.createdAt })), null, 2) }] }
+        }
+    )
+
+    // ── get_active_timers ─────────────────────────────────────────────────────
+    server.tool('get_active_timers',
+        'Returns all running (active) time trackers for the current user across all projects. Use this when the user asks "do I have a timer running?", "what am I working on right now?", or "show me my active timers".',
+        {
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const data = await call('GET', `/workspaces/${ws}/time-entries/active`, null, apiKey)
+            const active = data.active || data
+            return { content: [{ type: 'text', text: JSON.stringify(active, null, 2) }] }
+        }
+    )
+
+    // ── stop_timer ────────────────────────────────────────────────────────────
+    server.tool('stop_timer',
+        'Stops a running time tracker by its ID. Use this when the user says "stop my timer", "I am done with this task", or "clock me out". If you don\'t have the timer ID, call get_active_timers first.',
+        {
+            timerId: z.string().describe('The ID of the time entry to stop.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ timerId, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            await call('PATCH', `/workspaces/${ws}/time-entries/${timerId}/stop`, null, apiKey)
+            return { content: [{ type: 'text', text: `✅ Timer ${timerId} stopped successfully.` }] }
+        }
+    )
+
+    // ── get_time_summary ──────────────────────────────────────────────────────
+    server.tool('get_time_summary',
+        'Returns a statistical summary of time logged by the user, aggregated by day or project. Use this when the user asks "how much did I work this week?", "show me my time stats", or "how many hours have I logged today?".',
+        {
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const data = await call('GET', `/workspaces/${ws}/time-entries/summary`, null, apiKey)
+            return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] }
+        }
+    )
+
+    // ── get_time_entries ──────────────────────────────────────────────────────
+    server.tool('get_time_entries',
+        'Lists detailed time entry logs with optional filters for project or task. Use this when the user asks "show me my time logs for the Lumi project" or "when did I work on task X?".',
+        {
+            projectId: z.string().optional().describe('Filter by Project ID.'),
+            taskId: z.string().optional().describe('Filter by Task ID.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ projectId, taskId, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const params = new URLSearchParams()
+            if (projectId) params.set('projectId', projectId)
+            if (taskId) params.set('taskId', taskId)
+            const data = await call('GET', `/workspaces/${ws}/time-entries?${params}`, null, apiKey)
+            const entries = data.entries || data
+            return { content: [{ type: 'text', text: JSON.stringify(entries, null, 2) }] }
+        }
+    )
+
+    // ── get_task_dependencies ────────────────────────────────────────────────
+    server.tool('get_task_dependencies',
+        'Returns a list of all tasks that the specified task depends on (blockers) and tasks that depend on it. Use this when the user asks "what is blocking this task?" or "are there any dependencies for task X?". Useful for project scheduling and identifying bottlenecks.',
+        {
+            taskId: z.string().describe('ID of the task to fetch dependencies for.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ taskId, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const data = await call('GET', `/workspaces/${ws}/tasks/${taskId}/dependencies`, null, apiKey)
+            return { content: [{ type: 'text', text: JSON.stringify(data.dependencies || data, null, 2) }] }
+        }
+    )
+
+    // ── add_task_dependency ───────────────────────────────────────────────────
+    server.tool('add_task_dependency',
+        'Creates a dependency relationship between two tasks. Use this when the user says "task A depends on task B" or "task B blocks task A". In this case, task B is the blockingTaskId.',
+        {
+            taskId: z.string().describe('ID of the task that is being blocked.'),
+            blockingTaskId: z.string().describe('ID of the task that must be completed first.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ taskId, blockingTaskId, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const data = await call('POST', `/workspaces/${ws}/tasks/${taskId}/dependencies`, { blockingTaskId }, apiKey)
+            return { content: [{ type: 'text', text: `✅ Dependency added: Task ${taskId} is now blocked by Task ${blockingTaskId}.` }] }
+        }
+    )
+
+    // ── remove_task_dependency ────────────────────────────────────────────────
+    server.tool('remove_task_dependency',
+        'Removes an existing dependency between two tasks. Use this when a dependency is no longer valid or was added by mistake. Requires the dependency ID (depId), which can be found via get_task_dependencies.',
+        {
+            taskId: z.string().describe('ID of the task that was being blocked.'),
+            depId: z.string().describe('ID of the dependency relationship to remove.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ taskId, depId, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            await call('DELETE', `/workspaces/${ws}/tasks/${taskId}/dependencies/${depId}`, null, apiKey)
+            return { content: [{ type: 'text', text: `✅ Dependency ${depId} removed from Task ${taskId}.` }] }
+        }
+    )
+
+    // ── search_users ──────────────────────────────────────────────────────────
+    server.tool('search_users',
+        'Allows searching for users across the entire Brioright system by name or email. Use this when you need to find a user\'s ID for task assignment and they aren\'t in the current workspace member list, or when the user says "assign this to John" and you need to find which John.',
+        {
+            query: z.string().describe('Search keyword (name or email). Minimum 2 characters.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ query, apiKey }) => {
+            if (!query || query.trim().length < 2) throw new Error('Search query must be at least 2 characters')
+            const data = await call('GET', `/users/search?q=${encodeURIComponent(query.trim())}`, null, apiKey)
+            const users = data.users || data
+            return { content: [{ type: 'text', text: JSON.stringify(users, null, 2) }] }
+        }
+    )
+
+    // ── get_notifications ─────────────────────────────────────────────────────
+    server.tool('get_notifications',
+        'Fetches the latest unread notifications for the current user. Use this when the user asks "what are my notifications?", "has anyone replied to my comment?", or "are there any updates for me?".',
+        {
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ apiKey }) => {
+            const data = await call('GET', '/notifications', null, apiKey)
+            const notifications = data.notifications || data
+            return { content: [{ type: 'text', text: JSON.stringify(notifications, null, 2) }] }
+        }
+    )
+
+    // ── mark_notification_read ────────────────────────────────────────────────
+    server.tool('mark_notification_read',
+        'Marks one or all notifications as read. Use this when the user says "clear my notifications" or "mark notification X as read".',
+        {
+            notificationId: z.string().optional().describe('ID of the specific notification to mark as read. If omitted, and "all" is true, marks all read.'),
+            all: z.boolean().optional().describe('If true, marks all notifications in the workspace as read.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ notificationId, all, apiKey }) => {
+            if (all) {
+                await call('PATCH', '/notifications/read-all', null, apiKey)
+                return { content: [{ type: 'text', text: '✅ All notifications marked as read.' }] }
+            }
+            if (!notificationId) throw new Error('Either notificationId or all=true must be provided')
+            await call('PATCH', `/notifications/${notificationId}/read`, null, apiKey)
+            return { content: [{ type: 'text', text: `✅ Notification ${notificationId} marked as read.` }] }
+        }
+    )
+
     return server
 
 }
