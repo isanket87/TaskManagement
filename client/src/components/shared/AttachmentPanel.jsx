@@ -143,26 +143,26 @@ const AttachmentPanel = ({ taskId, attachments = [], onAttachmentsChange }) => {
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700 bg-white dark:bg-gray-900 group"
+                            className="flex items-center gap-3 p-2 rounded-xl border border-slate-100 dark:border-white/5 hover:border-indigo-200 dark:hover:border-indigo-900/50 bg-white dark:bg-white/[0.02] group transition-all"
                         >
-                            <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0">
-                                <Icon className="w-4 h-4 text-gray-500" />
+                            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
+                                <Icon className="w-4 h-4 text-slate-500" />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <a
                                     href={att.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-xs font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 truncate block"
+                                    className="text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-indigo-600 truncate block transition-colors"
                                 >
                                     {att.name}
                                 </a>
-                                <p className="text-xs text-gray-400">{att.type?.split('/')[1]?.toUpperCase()}</p>
+                                <p className="text-[10px] text-slate-400 font-medium">{att.type?.split('/')[1]?.toUpperCase() || 'FILE'}</p>
                             </div>
                             <button
                                 onClick={() => handleDelete(att)}
                                 disabled={deleting === att.id}
-                                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-500 transition-all"
+                                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 transition-all"
                             >
                                 {deleting === att.id
                                     ? <Loader2 className="w-3.5 h-3.5 animate-spin" />

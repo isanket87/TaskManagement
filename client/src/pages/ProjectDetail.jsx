@@ -1,6 +1,6 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useRef, useCallback, lazy, Suspense } from 'react';
+import { useState, useRef, useCallback, lazy, Suspense, useEffect } from 'react';
 import {
     DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
     closestCorners, useDroppable,
@@ -8,7 +8,7 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, Flag, BarChart2, BarChart3, LayoutGrid, AlignLeft, Sparkles, Check, Loader2, RefreshCw, Clock } from 'lucide-react';
+import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, CalendarRange, Flag, BarChart2, BarChart3, LayoutGrid, AlignLeft, Sparkles, Check, Loader2, RefreshCw, Clock } from 'lucide-react';
 import BoardFilterBar from '../components/shared/BoardFilterBar';
 import BoardSortGroup from '../components/shared/BoardSortGroup';
 import PageWrapper from '../components/layout/PageWrapper';
@@ -36,11 +36,13 @@ import Papa from 'papaparse';
 const WorkloadView = lazy(() => import('../components/views/WorkloadView'));
 const SwimlaneView = lazy(() => import('../components/views/SwimlaneView'));
 const TimelineView = lazy(() => import('../components/views/TimelineView'));
+const CalendarView = lazy(() => import('../components/views/CalendarView'));
 const CanvasView = lazy(() => import('../components/views/CanvasView'));
 const ProjectStatsView = lazy(() => import('../components/projects/ProjectStatsView'));
 const ProjectActivityView = lazy(() => import('../components/views/ProjectActivityView'));
 const TaskDetailPanel = lazy(() => import('../components/shared/TaskDetailPanel'));
 const ImportCsvModal = lazy(() => import('../components/shared/ImportCsvModal'));
+
 
 const ViewFallback = () => (
     <div className="flex items-center justify-center h-full w-full py-24">
@@ -161,9 +163,9 @@ const TaskCard = ({ task, projectId, onDueDateUpdate, onDelete, onSelect, isOver
 
                 {/* Tags */}
                 {task.tags?.length > 0 && (
-                    <div className="flex gap-1.5 flex-wrap mb-3">
+                    <div className="flex gap-1 flex-wrap mb-2">
                         {task.tags.map((tag) => (
-                            <span key={tag} className="px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider rounded bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                            <span key={tag} className="tag-premium">
                                 {tag}
                             </span>
                         ))}
@@ -439,6 +441,8 @@ const ProjectDetail = () => {
     const [sortDir, setSortDir] = useState('asc');         // 'asc' | 'desc'
     const [groupBy, setGroupBy] = useState('status');       // 'status' | 'priority' | 'assignee' | 'dueDate'
 
+    const [searchParams, setSearchParams] = useSearchParams();
+
     const toggleFocus = (memberId) => setFocusedMemberId(prev => prev === memberId ? null : memberId);
     const clearFocus = () => setFocusedMemberId(null);
 
@@ -481,6 +485,37 @@ const ProjectDetail = () => {
     const project = projectData?.data?.data?.project;
     const tasks = tasksData?.data?.data?.tasks || [];
     const members = project?.members || [];
+
+    // Load attachments when a task is selected
+    const handleSelectTask = async (task) => {
+        setSelectedTask(task);
+        try {
+            const res = await getAttachments(task.id);
+            const raw = res.data?.data?.attachments || [];
+            setTaskAttachments(raw.map(a => ({ ...a, name: a.name.split('||')[0] })));
+        } catch {
+            setTaskAttachments([]);
+        }
+    };
+
+    // Auto-select task from URL parameter (?task=ID)
+    useEffect(() => {
+        const taskId = searchParams.get('task');
+        if (taskId && tasks.length > 0) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                // Clear the parameter FIRST to prevent re-triggering
+                const newParams = new URLSearchParams(searchParams);
+                newParams.delete('task');
+                setSearchParams(newParams, { replace: true });
+                
+                // Then select the task if not already selected
+                if (!selectedTask || selectedTask.id !== task.id) {
+                    handleSelectTask(task);
+                }
+            }
+        }
+    }, [searchParams, tasks, selectedTask]); // Re-added selectedTask to deps for precise check
 
     // Swimlane/Workload: also include workspace members who have tasks assigned
     // but weren't explicitly added to the project's member list
@@ -603,16 +638,8 @@ const ProjectDetail = () => {
         link.click();
     };
 
-    // Load attachments when a task is selected
-    const handleSelectTask = async (task) => {
-        setSelectedTask(task);
-        try {
-            const res = await getAttachments(task.id);
-            const raw = res.data?.data?.attachments || [];
-            setTaskAttachments(raw.map(a => ({ ...a, name: a.name.split('||')[0] })));
-        } catch {
-            setTaskAttachments([]);
-        }
+    const handleDueDateUpdate = (taskId, date, hasTime) => {
+        updateDueDateMutation.mutate({ taskId, dueDate: date, hasDueTime: hasTime });
     };
 
     // ── Sort filteredTasks ─────────────────────────────────────────────────────
@@ -702,12 +729,6 @@ const ProjectDetail = () => {
     };
     const groupColumns = buildGroupColumns();
 
-    // Legacy tasksByStatus (for DnD — only used in status grouping)
-    const tasksByStatus = KANBAN_COLUMNS.reduce((acc, col) => {
-        acc[col.id] = sortedFilteredTasks.filter((t) => t.status === col.id);
-        return acc;
-    }, {});
-
     const handleDragStart = ({ active }) => {
         const task = tasks.find((t) => t.id === active.id);
         setActiveTask(task);
@@ -726,24 +747,6 @@ const ProjectDetail = () => {
             queryClient.invalidateQueries(['tasks', projectId]);
         } catch {
             toast.error('Failed to move task');
-        }
-    };
-
-    const DUE_FILTERS = [
-        { label: 'All', value: '' },
-        { label: 'Overdue', value: 'overdue' },
-        { label: 'Today', value: 'today' },
-        { label: 'This Week', value: 'this_week' },
-        { label: 'No Date', value: 'no_date' },
-    ];
-
-    const getFilterColor = (value) => {
-        switch (value) {
-            case 'overdue': return 'bg-red-500';
-            case 'today': return 'bg-blue-500';
-            case 'this_week': return 'bg-yellow-500';
-            case 'no_date': return 'bg-slate-300';
-            default: return null;
         }
     };
 
@@ -789,14 +792,14 @@ const ProjectDetail = () => {
                        </div>
 
                        <div className="flex -space-x-2.5 items-center">
-                            {effectiveMembers.slice(0, 5).map((m, i) => (
+                            {members.slice(0, 5).map((m, i) => (
                                 <motion.div whileHover={{ y: -4, scale: 1.15, zIndex: 20 }} key={m.user.id} className="relative w-10 h-10 rounded-full ring-4 ring-slate-50 dark:ring-gray-950 shadow-md flex items-center justify-center bg-indigo-500 text-white font-bold text-xs cursor-help" style={{ zIndex: 10 - i }} title={m.user.name}>
                                     {m.user.avatarUrl ? <img src={m.user.avatarUrl} className="w-full h-full rounded-full object-cover" /> : m.user.name[0].toUpperCase()}
                                 </motion.div>
                             ))}
-                            {effectiveMembers.length > 5 && (
+                            {members.length > 5 && (
                                 <div className="relative w-10 h-10 rounded-full ring-4 ring-slate-50 dark:ring-gray-950 shadow-md flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs" style={{ zIndex: 0 }}>
-                                    +{effectiveMembers.length - 5}
+                                    +{members.length - 5}
                                 </div>
                             )}
                        </div>
@@ -809,8 +812,9 @@ const ProjectDetail = () => {
                             {[
                                 { id: 'kanban', icon: <LayoutGrid className="w-3.5 h-3.5" />, label: 'Kanban' },
                                 { id: 'swimlane', icon: <AlignLeft className="w-3.5 h-3.5" />, label: 'Swimlane' },
+                                { id: 'calendar', icon: <Calendar className="w-3.5 h-3.5" />, label: 'Calendar' },
+                                { id: 'timeline', icon: <CalendarRange className="w-3.5 h-3.5" />, label: 'Timeline' },
                                 { id: 'workload', icon: <BarChart2 className="w-3.5 h-3.5" />, label: 'Workload' },
-                                { id: 'timeline', icon: <Calendar className="w-3.5 h-3.5" />, label: 'Timeline' },
                                 { id: 'canvas', icon: <Sparkles className="w-3.5 h-3.5" />, label: 'Canvas' },
                                 { id: 'activity', icon: <Clock className="w-3.5 h-3.5" />, label: 'Activity' },
                                 { id: 'stats', icon: <BarChart3 className="w-4 h-4" />, label: 'Stats' },
@@ -906,6 +910,11 @@ const ProjectDetail = () => {
                                 projectId={projectId}
                                 focusedMemberId={null}
                                 onFocusChange={() => {}}
+                            />
+                        ) : viewMode === 'calendar' ? (
+                            <CalendarView
+                                tasks={filteredTasks}
+                                onDueDateUpdate={handleDueDateUpdate}
                             />
                         ) : viewMode === 'timeline' ? (
                             <TimelineView
@@ -1024,16 +1033,17 @@ const ProjectDetail = () => {
             <BulkActionBar projectId={projectId} onComplete={() => queryClient.invalidateQueries(['tasks', projectId])} />
 
             {/* Task Detail Side Panel */}
-            <Suspense fallback={null}>
-                {selectedTask && (
+            {selectedTask && (
+                <Suspense fallback={null}>
                     <TaskDetailPanel
+                        key={selectedTask.id}
                         task={selectedTask}
                         projectId={projectId}
                         onClose={() => setSelectedTask(null)}
                         onTaskSelect={setSelectedTask}
                     />
-                )}
-            </Suspense>
+                </Suspense>
+            )}
 
             {/* Import CSV Modal */}
             <Suspense fallback={null}>

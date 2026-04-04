@@ -6,10 +6,10 @@ export const PRIORITY_OPTIONS = [
 ];
 
 export const STATUS_OPTIONS = [
-    { value: 'todo', label: 'To Do' },
-    { value: 'in_progress', label: 'In Progress' },
-    { value: 'in_review', label: 'In Review' },
-    { value: 'done', label: 'Done' },
+    { value: 'todo', label: 'To Do', color: '#6b7280' },
+    { value: 'in_progress', label: 'In Progress', color: '#3b82f6' },
+    { value: 'in_review', label: 'In Review', color: '#8b5cf6' },
+    { value: 'done', label: 'Done', color: '#10b981' },
 ];
 
 export const KANBAN_COLUMNS = [

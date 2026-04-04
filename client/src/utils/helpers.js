@@ -19,7 +19,7 @@ export const getPriorityColor = (priority) => {
         medium: 'text-yellow-500 dark:text-yellow-400',
         low: 'text-green-500 dark:text-green-400',
     };
-    return map[priority] || map.medium;
+    return map[priority] || 'text-yellow-500 dark:text-yellow-400';
 };
 
 export const getPriorityBadgeClass = (priority) => {
@@ -29,5 +29,5 @@ export const getPriorityBadgeClass = (priority) => {
         medium: 'priority-medium',
         low: 'priority-low',
     };
-    return map[priority] || map.medium;
+    return map[priority] || 'priority-medium';
 };

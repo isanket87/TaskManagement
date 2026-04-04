@@ -57,8 +57,8 @@ const DateTimePicker = ({ referenceRef, value, hasDueTime: initialHasDueTime = f
     const picker = (
         <div
             ref={refs.setFloating}
-            style={{ ...floatingStyles, zIndex: 9999 }}
-            className="card shadow-2xl w-72 p-4"
+            style={{ ...floatingStyles, zIndex: 999999 }}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl w-72 p-4 overflow-hidden"
         >
             {/* Quick options */}
             <div className="mb-3">

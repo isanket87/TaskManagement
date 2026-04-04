@@ -74,8 +74,9 @@ const Register = () => {
 
     return (
         <AuthLayout>
-            <div className="card p-8">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-6">Create your account</h2>
+            <div className="card p-8 sm:p-10">
+                <h1 className="text-2xl font-black mb-1 hero-gradient-text">Create Account</h1>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-8">Join Brioright to start organizing your work</p>
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                         <Input label="Full Name" placeholder="Alex Johnson" required={true} error={errors.name?.message} {...register('name')} />
                         <Input label="Email" type="email" placeholder="you@example.com" required={true} error={errors.email?.message} {...register('email')} />
@@ -145,10 +146,9 @@ const Register = () => {
                         </Button>
                     </form>
 
-                    {/* Divider */}
-                    <div className="relative my-5">
-                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200 dark:border-gray-700" /></div>
-                        <div className="relative flex justify-center text-xs"><span className="px-2 bg-white dark:bg-gray-900 text-gray-400">or continue with</span></div>
+                    <div className="relative my-7">
+                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-white/5" /></div>
+                        <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest text-slate-400"><span className="px-3 bg-white dark:bg-slate-900 rounded-full">or continue with</span></div>
                     </div>
 
                     {/* Google Button */}

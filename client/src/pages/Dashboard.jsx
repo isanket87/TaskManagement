@@ -280,7 +280,7 @@ const Dashboard = () => {
                                     <motion.button 
                                         variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
                                         key={task.id} 
-                                        onClick={() => navigate(`/workspace/${workspace?.slug}/projects/${task.projectId}`)}
+                                        onClick={() => navigate(`/workspace/${workspace?.slug}/projects/${task.projectId}?task=${task.id}`)}
                                         className="w-full p-4 hover:bg-white/50 dark:hover:bg-slate-800/50 transition-all flex items-center justify-between group text-left relative overflow-hidden"
                                     >
                                         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-50/50 dark:via-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 -translate-x-full group-hover:translate-x-full transition-all duration-1000 ease-in-out pointer-events-none" />

@@ -83,6 +83,53 @@
   .glass-card-hover {
     @apply hover:bg-white/50 dark:hover:bg-white/10 transition-all duration-300 cursor-pointer;
   }
+
+  /* Badge System */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border transition-all duration-300;
+  }
+  .priority-urgent, .priority-critical { 
+    @apply bg-red-500/10 text-red-600 border-red-500/20 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30; 
+  }
+  .priority-high { 
+    @apply bg-orange-500/10 text-orange-600 border-orange-500/20 dark:bg-orange-500/20 dark:text-orange-400 dark:border-orange-500/30; 
+  }
+  .priority-medium { 
+    @apply bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30; 
+  }
+  .priority-low { 
+    @apply bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30; 
+  }
+
+  .tag-premium {
+    @apply bg-indigo-500/5 text-indigo-500/80 border border-indigo-500/10 rounded-lg px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider backdrop-blur-md hover:bg-indigo-500/10 transition-colors;
+  }
+
+  /* Core UI Components */
+  .card {
+    @apply bg-white/80 dark:bg-slate-950/40 backdrop-blur-2xl rounded-3xl border border-slate-200/50 dark:border-white/5 shadow-ultra transition-all duration-300;
+  }
+
+  .input {
+    @apply w-full px-4 py-2.5 bg-slate-500/5 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all duration-200 shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)] dark:shadow-[inset_0_1px_2px_rgba(255,255,255,0.02)];
+  }
+
+  .label {
+    @apply block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-1.5 ml-1 transition-colors group-focus-within:text-indigo-500;
+  }
+
+  /* Button System Additions */
+  .btn-danger {
+    @apply bg-rose-600 hover:bg-rose-700 text-white focus:ring-rose-500 shadow-rose-200 dark:shadow-none;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs rounded-lg;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-base rounded-xl;
+  }
 }
 
 @layer utilities {
@@ -100,3 +147,32 @@
     100% { transform: translateX(100%); }
   }
 }
+
+/* ─── Immersive Cinema System ─────────────────────────────────────────── */
+.glass-immersive {
+  @apply bg-white/95 dark:bg-slate-900/80 backdrop-blur-[40px] border border-white/40 dark:border-white/10 shadow-ultra;
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-immersive::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(255,255,255,0.4), transparent 70%);
+  pointer-events: none;
+}
+
+.hero-gradient-text {
+  @apply bg-clip-text text-transparent bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-700 dark:from-white dark:via-indigo-200 dark:to-slate-400 font-black tracking-tight;
+}
+
+.cinema-glow-todo { box-shadow: 0 0 40px -10px rgba(148, 163, 184, 0.3); }
+.cinema-glow-in_progress { box-shadow: 0 0 40px -10px rgba(59, 130, 246, 0.4); }
+.cinema-glow-in_review { box-shadow: 0 0 40px -10px rgba(168, 85, 247, 0.4); }
+.cinema-glow-done { box-shadow: 0 0 40px -10px rgba(16, 185, 129, 0.4); }
+
+.inner-border-premium {
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+}
+/* ────────────────────────────────────────────────────────────────────────── */

@@ -43,6 +43,17 @@ const taskSelect = {
     createdBy: { select: { id: true, name: true, avatarUrl: true } },
     parentTaskId: true,
     _count: { select: { comments: true, subtasks: true } },
+    attachments: {
+        select: {
+            id: true,
+            name: true,
+            url: true,
+            type: true,
+            size: true,
+            createdAt: true
+        },
+        orderBy: { createdAt: 'desc' }
+    },
     blockedBy: { select: { blockingTaskId: true } },
     blocks: { select: { blockedTaskId: true } }
 }
@@ -211,10 +222,23 @@ const getTask = async (req, res, next) => {
                         _count: { select: { subtasks: true } }
                     },
                     orderBy: { createdAt: 'asc' }
+                },
+                timeEntries: {
+                    select: {
+                        duration: true
+                    }
                 }
             }
         })
         if (!task) return errorResponse(res, 'Task not found', 404)
+
+        // Calculate total time tracked
+        const timeTracked = task.timeEntries.reduce((sum, entry) => sum + (entry.duration || 0), 0)
+        
+        // Remove timeEntries from the object to keep response clean
+        delete task.timeEntries
+        task.timeTracked = timeTracked
+
         return successResponse(res, { task })
     } catch (err) {
         next(err)
