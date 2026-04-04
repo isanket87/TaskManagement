@@ -140,10 +140,13 @@ function App() {
 
     // ── Version Check (Force Update) ──
     useEffect(() => {
-        const currentVersion = import.meta.env.VITE_BUILD_TIME;
+        const jsVersion = import.meta.env.VITE_BUILD_TIME;
+        const htmlVersion = document.getElementById('app-build-id')?.getAttribute('content');
+        const currentVersion = `${jsVersion}-${htmlVersion}`;
+        
         const storedVersion = localStorage.getItem('app_version');
         
-        if (currentVersion && storedVersion && currentVersion !== storedVersion) {
+        if (storedVersion && currentVersion !== storedVersion) {
             console.log('🚀 New version detected. Clearing cache and updating...');
             localStorage.setItem('app_version', currentVersion);
             
@@ -154,9 +157,9 @@ function App() {
                 });
             }
             
-            // Force hard reload
-            window.location.reload(true);
-        } else if (currentVersion) {
+            // Force hard reload (cache-busting)
+            window.location.href = window.location.pathname + '?v=' + Date.now();
+        } else {
             localStorage.setItem('app_version', currentVersion);
         }
     }, []);
