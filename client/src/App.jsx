@@ -138,6 +138,29 @@ function App() {
     const { fetchMe, isAuthenticated } = useAuthStore();
     const { workspace, fetchWorkspaces } = useWorkspaceStore();
 
+    // ── Version Check (Force Update) ──
+    useEffect(() => {
+        const currentVersion = import.meta.env.VITE_BUILD_TIME;
+        const storedVersion = localStorage.getItem('app_version');
+        
+        if (currentVersion && storedVersion && currentVersion !== storedVersion) {
+            console.log('🚀 New version detected. Clearing cache and updating...');
+            localStorage.setItem('app_version', currentVersion);
+            
+            // Clear all caches
+            if ('caches' in window) {
+                caches.keys().then((names) => {
+                    for (let name of names) caches.delete(name);
+                });
+            }
+            
+            // Force hard reload
+            window.location.reload(true);
+        } else if (currentVersion) {
+            localStorage.setItem('app_version', currentVersion);
+        }
+    }, []);
+
     // Run once on app start — check if user is already logged in
     useEffect(() => {
         fetchMe();
