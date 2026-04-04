@@ -701,6 +701,147 @@ function buildServer() {
         }
     )
 
+    // ── start_work ─────────────────────────────────────────────────────────────
+    server.tool('start_work',
+        'Signals that AI has STARTED working on a task. Creates a task with status=in_progress and returns its ID. Call this at the BEGINNING of any significant work session (feature, bug fix, refactor, UI change, etc.) so the work is tracked from the start. Returns a taskId — pass it to finish_work when the work is complete. Pair: start_work → finish_work.',
+        {
+            projectId: z.string().describe('Project ID to log the work against — use list_projects if unknown.'),
+            title: z.string().describe('Clear title for the work being started, e.g. "Refactor login page UI" or "Fix avatar upload bug".'),
+            description: z.string().optional().describe('Optional: what will be done, the approach, and which files/areas will be affected.'),
+            priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().default('medium').describe('Priority of the work. Use urgent for blockers.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ projectId, title, description, priority, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+            const startedAt = new Date().toLocaleString()
+            const data = await call('POST', `/workspaces/${ws}/projects/${projectId}/tasks`, {
+                title,
+                description: description
+                    ? `${description}\n\n---\n_🤖 Work started by AI agent at ${startedAt}_`
+                    : `🤖 Work started by AI agent at ${startedAt}.\n\n_Call \`finish_work\` with this task ID when the work is complete._`,
+                status: 'in_progress',
+                priority: priority || 'medium',
+            }, apiKey)
+            const task = data.task || data
+            return { content: [{ type: 'text', text: `🚀 Work started and logged!\n\nTask ID: **${task.id}**\nTitle: ${task.title}\nStatus: in_progress\n\n👉 Remember to call \`finish_work\` with taskId="${task.id}" when done.` }] }
+        }
+    )
+
+    // ── finish_work ─────────────────────────────────────────────────────────────
+    server.tool('finish_work',
+        'Signals that AI has COMPLETED a piece of work. Marks the task as done and posts a structured markdown completion summary as a comment (what changed, files modified, key decisions). Use this to close a task that was opened with start_work. If you did not call start_work, use track_work instead for a one-shot retroactive log.',
+        {
+            taskId: z.string().describe('Task ID returned by start_work. This is the task to mark as done.'),
+            summary: z.string().describe('What was accomplished — be specific. Describe what changed, why, and any important decisions. Markdown is supported.'),
+            filesChanged: z.array(z.string()).optional().describe('List of files that were created or modified, e.g. ["src/components/Login.jsx", "src/styles/auth.css"]. Will be shown in the completion comment.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ taskId, summary, filesChanged, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+
+            // Mark task as done
+            await call('PATCH', `/workspaces/${ws}/tasks/${taskId}`, { status: 'done' }, apiKey)
+
+            // Build a clean structured completion comment
+            const fileSection = filesChanged?.length
+                ? `\n\n### 📁 Files Changed\n${filesChanged.map(f => `- \`${f}\``).join('\n')}`
+                : ''
+            const comment = [
+                `## ✅ Work Completed`,
+                ``,
+                summary,
+                fileSection,
+                ``,
+                `---`,
+                `_🤖 Completed by AI agent at ${new Date().toLocaleString()}_`
+            ].join('\n')
+
+            await call('POST', `/workspaces/${ws}/tasks/${taskId}/comments`, { text: comment }, apiKey)
+
+            return { content: [{ type: 'text', text: `✅ Work finished and logged!\n\nTask ${taskId} → done\nCompletion summary posted as a comment on the task.` }] }
+        }
+    )
+
+    // ── track_work ─────────────────────────────────────────────────────────────
+    server.tool('track_work',
+        'Smart one-shot work tracker. Call this AFTER completing any work session to automatically: (1) search for an existing matching task in the project, (2) reuse it or create a fresh one if not found, (3) mark it done, and (4) post a structured completion comment. This is the preferred tool when you did not call start_work at the beginning — it handles the full lifecycle in a single call. Ideal for retroactively logging completed work.',
+        {
+            projectId: z.string().describe('Project ID to log work against — use list_projects if unknown.'),
+            title: z.string().describe('Title of the work done. Used first to search for an existing task — be specific enough to match if one exists.'),
+            summary: z.string().describe('Detailed description of what was accomplished. Supports markdown. Include: what changed, why, key decisions, and caveats.'),
+            priority: z.enum(['low', 'medium', 'high', 'urgent']).optional().default('medium').describe('Priority for the task if a new one must be created.'),
+            filesChanged: z.array(z.string()).optional().describe('List of files created or modified. Shown in the completion comment for traceability.'),
+            workspaceId: z.string().optional().describe('Workspace slug. Defaults to BRIORIGHT_WORKSPACE_ID.'),
+            apiKey: z.string().optional().describe('Brioright API key.')
+        },
+        async ({ projectId, title, summary, priority, filesChanged, workspaceId, apiKey }) => {
+            const ws = workspaceId || DEFAULT_WORKSPACE
+            if (!ws) throw new Error('workspaceId is required')
+
+            let taskId = null
+            let action = 'created'
+
+            // Step 1: Search for an existing open task with a similar title
+            try {
+                const searchQuery = title.substring(0, 60).trim()
+                const searchData = await call('GET', `/workspaces/${ws}/search?q=${encodeURIComponent(searchQuery)}`, null, apiKey)
+                const { tasks = [] } = searchData
+                // Find a task in the same project that isn't already closed
+                const match = tasks.find(t =>
+                    t.projectId === projectId &&
+                    !['done', 'cancelled'].includes(t.status)
+                )
+                if (match) {
+                    taskId = match.id
+                    action = 'found_existing'
+                }
+            } catch {
+                // Search failed — proceed to create a new task
+            }
+
+            // Step 2: Create task if no match was found
+            if (!taskId) {
+                const data = await call('POST', `/workspaces/${ws}/projects/${projectId}/tasks`, {
+                    title,
+                    description: summary,
+                    status: 'done',
+                    priority: priority || 'medium',
+                }, apiKey)
+                const task = data.task || data
+                taskId = task.id
+            } else {
+                // Mark the found task as done
+                await call('PATCH', `/workspaces/${ws}/tasks/${taskId}`, { status: 'done' }, apiKey)
+            }
+
+            // Step 3: Post structured completion comment
+            const fileSection = filesChanged?.length
+                ? `\n\n### 📁 Files Changed\n${filesChanged.map(f => `- \`${f}\``).join('\n')}`
+                : ''
+            const comment = [
+                `## ✅ Work Completed`,
+                ``,
+                summary,
+                fileSection,
+                ``,
+                `---`,
+                `_🤖 Auto-tracked by AI agent via \`track_work\` at ${new Date().toLocaleString()}_`
+            ].join('\n')
+
+            await call('POST', `/workspaces/${ws}/tasks/${taskId}/comments`, { text: comment }, apiKey)
+
+            const actionLabel = action === 'found_existing'
+                ? `♻️  Found existing open task — marked it done`
+                : `🆕 No matching task found — created a new one`
+
+            return { content: [{ type: 'text', text: `✅ Work tracked!\n\n${actionLabel}\nTask ID: ${taskId}\nCompletion summary posted as a comment.` }] }
+        }
+    )
+
     return server
 
 }

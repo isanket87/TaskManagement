@@ -1,6 +1,6 @@
 {
     "name": "brioright-mcp",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "description": "MCP server for Brioright — lets AI assistants (Claude, Cursor, ChatGPT) create, search, analyse and manage tasks via natural language",
     "type": "module",
 

@@ -8,7 +8,7 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, CalendarRange, Flag, BarChart2, BarChart3, LayoutGrid, AlignLeft, Sparkles, Check, Loader2, RefreshCw, Clock } from 'lucide-react';
+import { Plus, GripVertical, MessageCircle, MoreVertical, Trash2, X, Calendar, CalendarRange, Flag, BarChart2, BarChart3, LayoutGrid, AlignLeft, Sparkles, Check, Loader2, RefreshCw, Clock, ChevronDown, Upload, Download } from 'lucide-react';
 import BoardFilterBar from '../components/shared/BoardFilterBar';
 import BoardSortGroup from '../components/shared/BoardSortGroup';
 import PageWrapper from '../components/layout/PageWrapper';
@@ -97,14 +97,14 @@ const TaskCard = ({ task, projectId, onDueDateUpdate, onDelete, onSelect, isOver
             style={style}
             onClick={() => onSelect(task)}
             className={cn(
-                "group relative bg-white dark:bg-slate-800 rounded-xl p-3 cursor-pointer transition-all border border-slate-200 dark:border-slate-700 hover:shadow-xl hover:border-indigo-300 dark:hover:border-indigo-900/50 flex hover:z-[40] active:z-[40]",
-                isSelected && "ring-2 ring-indigo-500 border-transparent z-[30]",
-                isOverdue && !isSelected && "border-red-300 dark:border-red-900/50",
+                "group relative glass-premium border-holographic rounded-2xl p-3 cursor-pointer transition-all duration-300 flex hover:shadow-xl hover:shadow-indigo-500/10 hover:scale-[1.01] hover:z-[40] active:z-[40]",
+                isSelected && "ring-2 ring-indigo-500/70 z-[30] shadow-[0_0_25px_rgba(99,102,241,0.25)]",
+                isOverdue && !isSelected && "!border-red-400/30",
                 isOverlay && "shadow-2xl ring-1 ring-indigo-500/50 rotate-2 opacity-90 z-[100]"
             )}
         >
             {/* Priority Left Border Indicator */}
-            <div className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-xl", getPriorityColor(task.priority))} />
+            <div className={cn("absolute left-0 top-0 bottom-0 w-[3px] rounded-l-2xl opacity-90", getPriorityColor(task.priority))} />
 
             {/* Checkbox Overlay (Hover/Selected) */}
             <div
@@ -288,16 +288,33 @@ const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onA
         }
     };
 
+    const getColumnBgTint = () => {
+        const tints = {
+            todo:        'rgba(148,163,184,0.04)',
+            in_progress: 'rgba(59,130,246,0.06)',
+            in_review:   'rgba(168,85,247,0.06)',
+            done:        'rgba(16,185,129,0.05)',
+        };
+        return tints[column.id] || 'transparent';
+    };
+
     return (
-        <div className={cn(
-            "flex flex-col w-[300px] sm:w-[320px] shrink-0 bg-slate-50 dark:bg-slate-900/50 rounded-2xl h-full max-h-full snap-center md:snap-align-none border-2 transition-colors",
-            isOver ? "border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-900/10" : "border-transparent"
-        )}>
+        <div
+            className={cn(
+                "flex flex-col w-[300px] sm:w-[320px] shrink-0 glass-premium rounded-2xl h-full max-h-full snap-center md:snap-align-none border transition-all duration-300",
+                `cinema-glow-${column.id}`,
+                isOver ? "border-indigo-500/40 scale-[1.005]" : "border-white/20 dark:border-white/5"
+            )}
+            style={{ backgroundColor: getColumnBgTint() }}
+        >
             <div className="flex items-center justify-between p-4 pb-2">
                 <div className="flex items-center gap-2.5">
-                    <div className="w-2.5 h-2.5 rounded-full shadow-sm" style={{ backgroundColor: column.color }} />
-                    <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200">{column.title}</h3>
-                    <span className="text-xs font-semibold text-slate-500 bg-slate-200/50 dark:bg-slate-800 rounded-full px-2 py-0.5">
+                    <div
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: column.color, boxShadow: `0 0 8px ${column.color}90` }}
+                    />
+                    <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 tracking-tight">{column.title}</h3>
+                    <span className="text-xs font-black text-slate-400 dark:text-slate-500 bg-white/60 dark:bg-white/5 px-2.5 py-0.5 rounded-full border border-white/40 dark:border-white/10 shadow-sm">
                         {tasks.length}
                     </span>
                 </div>
@@ -342,9 +359,14 @@ const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onA
                 </SortableContext>
                 
                 {tasks.length === 0 && !isQuickAdding && (
-                    <div className="h-20 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-center">
-                        <span className="text-xs font-medium text-slate-400">No tasks yet</span>
-                    </div>
+                    <motion.div
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="h-24 rounded-2xl border border-dashed border-slate-200/50 dark:border-slate-700/30 flex flex-col items-center justify-center gap-1.5"
+                    >
+                        <Sparkles className="w-4 h-4 text-slate-300 dark:text-slate-600 animate-pulse" />
+                        <span className="text-xs font-semibold text-slate-300 dark:text-slate-600">No tasks yet</span>
+                    </motion.div>
                 )}
             </div>
 
@@ -396,6 +418,133 @@ const KanbanColumn = ({ column, tasks, projectId, onDueDateUpdate, onDelete, onA
                     </button>
                 ) : null}
             </div>
+        </div>
+    );
+};
+
+// ── MoreTabsMenu: collapsible dropdown for extra view tabs ──────────────────
+const MoreTabsMenu = ({ viewMode, setViewMode, moreTabs, projectColor }) => {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, []);
+    const activeMore = moreTabs.some(t => t.id === viewMode);
+    return (
+        <div ref={ref} className="relative">
+            <button
+                onClick={() => setOpen(o => !o)}
+                className={cn(
+                    'relative flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap',
+                    activeMore
+                        ? 'text-indigo-600 dark:text-white'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                )}
+            >
+                {activeMore && (
+                    <motion.div
+                        layoutId="activeTab"
+                        className="absolute inset-0 rounded-md border"
+                        style={{
+                            background: 'linear-gradient(135deg, white 0%, rgba(238,240,255,0.95) 100%)',
+                            borderColor: `${projectColor || '#6366f1'}20`,
+                            boxShadow: `0 2px 8px ${projectColor || '#6366f1'}15, inset 0 1px 1px rgba(255,255,255,1)`
+                        }}
+                        transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
+                    />
+                )}
+                <span className="relative z-20 flex items-center gap-1">
+                    {activeMore ? moreTabs.find(t => t.id === viewMode)?.label ?? 'More' : 'More'}
+                    <ChevronDown className={cn('w-3 h-3 transition-transform', open && 'rotate-180')} />
+                </span>
+            </button>
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -4, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                        transition={{ duration: 0.12 }}
+                        className="absolute top-full mt-1.5 left-0 z-50 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 min-w-[140px] overflow-hidden p-1"
+                    >
+                        {moreTabs.map(({ id, icon, label }) => (
+                            <button
+                                key={id}
+                                onClick={() => { setViewMode(id); setOpen(false); }}
+                                className={cn(
+                                    'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all text-left',
+                                    viewMode === id
+                                        ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300'
+                                        : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                )}
+                            >
+                                {icon}
+                                {label}
+                            </button>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};
+
+// ── OverflowMenu: ⋯ button for rare actions (Import/Export) ──────────────────
+const OverflowMenu = ({ onImport, onExport }) => {
+    const [open, setOpen] = useState(false);
+    const ref = useRef(null);
+    useEffect(() => {
+        const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, []);
+    return (
+        <div ref={ref} className="relative shrink-0">
+            <button
+                onClick={() => setOpen(o => !o)}
+                className={cn(
+                    'w-7 h-7 flex items-center justify-center rounded-lg transition-all border',
+                    open
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-600'
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 border-transparent hover:border-slate-200 dark:hover:border-slate-700'
+                )}
+                title="More actions"
+            >
+                <MoreVertical className="w-3.5 h-3.5" />
+            </button>
+            <AnimatePresence>
+                {open && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -4, scale: 0.97 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -4, scale: 0.97 }}
+                        transition={{ duration: 0.12 }}
+                        className="absolute top-full mt-1.5 right-0 z-50 bg-white dark:bg-slate-900 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 min-w-[160px] overflow-hidden"
+                    >
+                        <div className="px-3 pt-2.5 pb-1">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Data</p>
+                        </div>
+                        <div className="p-1">
+                            <button
+                                onClick={() => { onImport(); setOpen(false); }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
+                            >
+                                <Upload className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                Import CSV
+                            </button>
+                            <button
+                                onClick={() => { onExport(); setOpen(false); }}
+                                className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left"
+                            >
+                                <Download className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                Export CSV
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
@@ -754,97 +903,144 @@ const ProjectDetail = () => {
         <PageWrapper title={project?.name || 'Project Board'}>
             <div className="h-full flex flex-col relative w-full overflow-hidden bg-slate-50 dark:bg-gray-950">
                 
-                {/* ── Atmospheric Hero Header ─────────────────────────────── */}
-                <div className="relative pt-6 pb-5 px-4 sm:px-6 shrink-0 border-b border-white/20 dark:border-slate-800/50 shadow-[0_4px_30px_-5px_rgba(0,0,0,0.05)] z-10 transition-colors duration-700"
-                     style={{ 
-                         backgroundColor: `${project?.color || '#6366f1'}06`, 
-                         backgroundImage: `linear-gradient(to bottom, ${project?.color || '#6366f1'}15, transparent)` 
+                {/* ── Compact 2-Row Header ──────────────────────────── */}
+                <div className="relative px-4 sm:px-6 pt-2.5 pb-2 shrink-0 border-b border-slate-200/60 dark:border-slate-800/60 z-10 transition-colors duration-700"
+                     style={{
+                         backgroundColor: `${project?.color || '#6366f1'}08`,
+                         backgroundImage: `linear-gradient(to bottom, ${project?.color || '#6366f1'}18, transparent)`
                      }}>
-                    
-                    {/* Background floating glows */}
+
+                    {/* Subtle bg glow */}
                     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                        <div className="absolute top-0 right-1/4 w-[500px] h-[500px] rounded-full blur-[100px] opacity-20 mix-blend-screen transition-colors duration-1000" style={{ backgroundColor: project?.color || '#6366f1' }} />
-                        <div className="absolute -top-20 -left-20 w-[400px] h-[400px] rounded-full blur-[80px] opacity-10 mix-blend-screen transition-colors duration-1000 delay-150" style={{ backgroundColor: project?.color || '#6366f1' }} />
+                        <div className="absolute -top-10 right-1/3 w-[300px] h-[150px] rounded-full blur-[60px] opacity-20 mix-blend-multiply dark:mix-blend-screen" style={{ backgroundColor: project?.color || '#6366f1' }} />
                     </div>
 
-                    <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
-                       <div className="flex items-center gap-4">
-                           <motion.div 
-                                whileHover={{ rotate: 5, scale: 1.05 }}
-                                className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-lg border border-white/40 dark:border-white/5 backdrop-blur-md"
-                                style={{ backgroundColor: `${project?.color || '#6366f1'}30`, color: project?.color || '#6366f1' }}>
-                                <LayoutGrid className="w-7 h-7 drop-shadow-sm" />
-                           </motion.div>
-                           <div>
-                               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight break-words drop-shadow-sm">
-                                    {project?.name || 'Project Name'}
-                               </h1>
-                               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                   <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 bg-white/50 dark:bg-slate-800/50 px-2 py-0.5 rounded-md border border-slate-200/50 dark:border-slate-700/50 backdrop-blur-sm shadow-sm">
-                                       {project?._count?.tasks || 0} total tasks
-                                   </span>
-                                   <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600" />
-                                   <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 bg-indigo-50/50 dark:bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-100 dark:border-indigo-500/20 backdrop-blur-sm shadow-sm">
-                                       {filteredTasks.length} visible
-                                   </span>
-                               </div>
-                           </div>
-                       </div>
+                    {/* ── Row 1: Identity + Members + New Task ── */}
+                    <div className="relative flex items-center gap-2.5 mb-2">
+                        {/* Project icon */}
+                        <motion.div
+                            whileHover={{ scale: 1.1, rotate: 5 }}
+                            transition={{ type: 'spring', bounce: 0.4 }}
+                            className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border border-white/50 dark:border-white/10 relative overflow-hidden"
+                            style={{
+                                background: `linear-gradient(135deg, ${project?.color || '#6366f1'}40, ${project?.color || '#6366f1'}15)`,
+                                color: project?.color || '#6366f1',
+                                boxShadow: `0 4px 10px ${project?.color || '#6366f1'}25, inset 0 1px 1px rgba(255,255,255,0.3)`
+                            }}>
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent" />
+                            <LayoutGrid className="w-4 h-4 relative z-10" />
+                        </motion.div>
 
-                       <div className="flex -space-x-2.5 items-center">
-                            {members.slice(0, 5).map((m, i) => (
-                                <motion.div whileHover={{ y: -4, scale: 1.15, zIndex: 20 }} key={m.user.id} className="relative w-10 h-10 rounded-full ring-4 ring-slate-50 dark:ring-gray-950 shadow-md flex items-center justify-center bg-indigo-500 text-white font-bold text-xs cursor-help" style={{ zIndex: 10 - i }} title={m.user.name}>
-                                    {m.user.avatarUrl ? <img src={m.user.avatarUrl} className="w-full h-full rounded-full object-cover" /> : m.user.name[0].toUpperCase()}
-                                </motion.div>
-                            ))}
-                            {members.length > 5 && (
-                                <div className="relative w-10 h-10 rounded-full ring-4 ring-slate-50 dark:ring-gray-950 shadow-md flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold text-xs" style={{ zIndex: 0 }}>
-                                    +{members.length - 5}
+                        {/* Title */}
+                        <h1 className="text-base sm:text-lg font-extrabold hero-gradient-text truncate max-w-[180px] sm:max-w-xs">
+                            {project?.name || 'Project Name'}
+                        </h1>
+
+                        {/* Task count badges */}
+                        <div className="hidden sm:flex items-center gap-1">
+                            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 bg-white/60 dark:bg-white/5 px-2 py-0.5 rounded-full border border-slate-200/60 dark:border-white/10">
+                                {project?._count?.tasks || 0} tasks
+                            </span>
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full border"
+                                style={{ color: project?.color || '#6366f1', backgroundColor: `${project?.color || '#6366f1'}12`, borderColor: `${project?.color || '#6366f1'}30` }}>
+                                {filteredTasks.length} visible
+                            </span>
+                        </div>
+
+                        {/* Spacer */}
+                        <div className="flex-1" />
+
+                        {/* Member avatars */}
+                        <div className="hidden sm:flex -space-x-1.5 items-center">
+                            {members.slice(0, 4).map((m, i) => {
+                                const avatarColors = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981'];
+                                const bg = avatarColors[i % avatarColors.length];
+                                return (
+                                    <motion.div
+                                        whileHover={{ y: -3, scale: 1.2, zIndex: 20 }}
+                                        key={m.user.id}
+                                        className="w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-[10px] cursor-help"
+                                        style={{ zIndex: 10 - i, backgroundColor: bg, boxShadow: `0 0 0 2px white, 0 2px 6px ${bg}40` }}
+                                        title={m.user.name}
+                                    >
+                                        {m.user.avatarUrl
+                                            ? <img src={m.user.avatarUrl} className="w-full h-full rounded-full object-cover" />
+                                            : m.user.name[0].toUpperCase()}
+                                    </motion.div>
+                                );
+                            })}
+                            {members.length > 4 && (
+                                <div className="w-7 h-7 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold text-[10px]" style={{ boxShadow: '0 0 0 2px white' }}>
+                                    +{members.length - 4}
                                 </div>
                             )}
-                       </div>
+                        </div>
+
+                        {/* New Task — row 1 for easy access */}
+                        <Button
+                            onClick={() => { setNewTaskStatus('todo'); setShowAddTask(true); }}
+                            className="shrink-0 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 shadow-md shadow-indigo-500/25 hover:shadow-lg hover:shadow-indigo-500/30 transition-all duration-300 text-xs py-1.5 px-3"
+                        >
+                            <Plus className="w-3.5 h-3.5 mr-1" />
+                            New Task
+                        </Button>
                     </div>
 
-                    {/* Filter / Sort / Actions Toolbar inside a frosted pill */}
-                    <div className="relative flex flex-wrap items-center gap-3 p-2 bg-white/70 dark:bg-slate-900/60 backdrop-blur-2xl border border-white/60 dark:border-slate-700/50 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)]">
-                        {/* View toggle */}
-                        <div className="flex items-center gap-1 p-1 bg-slate-100/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-2xl border border-slate-200/40 dark:border-white/5 shrink-0 relative overflow-hidden">
+                    {/* ── Row 2: View tabs + Filters + ⋯ overflow ── */}
+                    <div className="relative flex items-center gap-1.5 p-1.5 bg-white/80 dark:bg-slate-900/60 backdrop-blur-2xl border border-slate-200/70 dark:border-white/8 rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.05),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.1)]">
+
+                        {/* Primary 4 tabs + More ▾ */}
+                        <div className="flex items-center gap-0.5 p-0.5 bg-slate-100/60 dark:bg-slate-900/50 rounded-lg border border-slate-200/40 dark:border-white/5 shrink-0 relative">
                             {[
-                                { id: 'kanban', icon: <LayoutGrid className="w-3.5 h-3.5" />, label: 'Kanban' },
-                                { id: 'swimlane', icon: <AlignLeft className="w-3.5 h-3.5" />, label: 'Swimlane' },
-                                { id: 'calendar', icon: <Calendar className="w-3.5 h-3.5" />, label: 'Calendar' },
-                                { id: 'timeline', icon: <CalendarRange className="w-3.5 h-3.5" />, label: 'Timeline' },
-                                { id: 'workload', icon: <BarChart2 className="w-3.5 h-3.5" />, label: 'Workload' },
-                                { id: 'canvas', icon: <Sparkles className="w-3.5 h-3.5" />, label: 'Canvas' },
-                                { id: 'activity', icon: <Clock className="w-3.5 h-3.5" />, label: 'Activity' },
-                                { id: 'stats', icon: <BarChart3 className="w-4 h-4" />, label: 'Stats' },
+                                { id: 'kanban',   icon: <LayoutGrid className="w-3 h-3" />,    label: 'Kanban'   },
+                                { id: 'calendar', icon: <Calendar className="w-3 h-3" />,      label: 'Calendar' },
+                                { id: 'timeline', icon: <CalendarRange className="w-3 h-3" />, label: 'Timeline' },
+                                { id: 'stats',    icon: <BarChart3 className="w-3 h-3" />,     label: 'Stats'    },
                             ].map(({ id, icon, label }) => (
                                 <button
                                     key={id}
                                     onClick={() => setViewMode(id)}
                                     className={cn(
-                                        'relative flex items-center gap-1.5 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap z-10',
+                                        'relative flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap z-10',
                                         viewMode === id
                                             ? 'text-indigo-600 dark:text-white'
-                                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
                                     )}
                                 >
                                     {viewMode === id && (
                                         <motion.div
                                             layoutId="activeTab"
-                                            className="absolute inset-0 bg-white dark:bg-white/10 shadow-[0_4px_12px_rgba(0,0,0,0.05)] dark:shadow-none rounded-xl border border-slate-200/50 dark:border-white/10"
-                                            transition={{ type: "spring", bounce: 0.25, duration: 0.5 }}
+                                            className="absolute inset-0 rounded-md border"
+                                            style={{
+                                                background: 'linear-gradient(135deg, white 0%, rgba(238,240,255,0.95) 100%)',
+                                                borderColor: `${project?.color || '#6366f1'}20`,
+                                                boxShadow: `0 2px 8px ${project?.color || '#6366f1'}15, inset 0 1px 1px rgba(255,255,255,1)`
+                                            }}
+                                            transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
                                         />
                                     )}
-                                    <span className="relative z-20 flex items-center gap-1.5">
-                                        {icon}
-                                        {label}
-                                    </span>
+                                    <span className="relative z-20 flex items-center gap-1">{icon}{label}</span>
                                 </button>
                             ))}
+
+                            {/* More ▾ for Swimlane / Workload / Canvas / Activity */}
+                            <MoreTabsMenu
+                                viewMode={viewMode}
+                                setViewMode={setViewMode}
+                                projectColor={project?.color}
+                                moreTabs={[
+                                    { id: 'swimlane', icon: <AlignLeft className="w-3 h-3" />,  label: 'Swimlane' },
+                                    { id: 'workload', icon: <BarChart2 className="w-3 h-3" />,  label: 'Workload' },
+                                    { id: 'canvas',   icon: <Sparkles className="w-3 h-3" />,   label: 'Canvas'   },
+                                    { id: 'activity', icon: <Clock className="w-3 h-3" />,       label: 'Activity' },
+                                ]}
+                            />
                         </div>
 
-                        {/* Board Filter Bar */}
+                        {/* Divider */}
+                        <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
+
+                        {/* Unified search + filter button */}
                         <BoardFilterBar
                             searchQuery={searchQuery}
                             onSearchChange={setSearchQuery}
@@ -855,7 +1051,7 @@ const ProjectDetail = () => {
                             filteredCount={filteredTasks.length}
                         />
 
-                        {/* Sort & Group By controls */}
+                        {/* Sort & Group — kanban only */}
                         {viewMode === 'kanban' && (
                             <BoardSortGroup
                                 sortField={sortField}
@@ -866,24 +1062,13 @@ const ProjectDetail = () => {
                             />
                         )}
 
-                        {/* Spacer */}
-                        <div className="flex-1 hidden xl:block" />
+                        <div className="flex-1" />
 
-                        {/* Action Buttons */}
-                        {viewMode === 'kanban' && (
-                            <div className="flex w-full xl:w-auto xl:justify-end gap-2.5 shrink-0 items-center mt-2 xl:mt-0 ml-auto">
-                                <Button variant="secondary" onClick={() => setIsImportModalOpen(true)} className="hidden sm:inline-flex shadow-sm bg-white/50 hover:bg-white dark:bg-slate-800/50 text-xs py-1.5 border-white/50 border">
-                                    Import CSV
-                                </Button>
-                                <Button variant="secondary" onClick={handleExportCSV} className="hidden sm:inline-flex shadow-sm bg-white/50 hover:bg-white dark:bg-slate-800/50 text-xs py-1.5 border-white/50 border">
-                                    Export CSV
-                                </Button>
-                                <Button onClick={() => { setNewTaskStatus('todo'); setShowAddTask(true); }} className="w-full sm:w-auto shadow-md hover:shadow-lg transition-all">
-                                    <Plus className="w-4 h-4 mr-1.5" />
-                                    New Task
-                                </Button>
-                            </div>
-                        )}
+                        {/* ⋯ overflow: Import / Export (rare actions, hidden by default) */}
+                        <OverflowMenu
+                            onImport={() => setIsImportModalOpen(true)}
+                            onExport={handleExportCSV}
+                        />
                     </div>
                 </div>
 

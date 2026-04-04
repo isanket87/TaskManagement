@@ -56,18 +56,54 @@ The script prints the full Base64 string. Copy it.
 
 ---
 
-## 3. Standard Task Lifecycle
+## 3. Smart Work Tracking (Preferred)
 
-For any feature/fix work, follow this sequence:
+The MCP server now has **3 smart lifecycle tools** that handle task creation, status tracking, and completion comments automatically.
 
-1. **Check** `scripts/brioright-ids.json` for project ID
-2. **Create task** → `create_task` with `status: in_progress`
-3. **Attach plan** → run `node scripts/mcp-attach.js implementation_plan.md` → `add_task_attachment`
-4. **Implement** the feature
-5. **Add comment** → `add_comment` with implementation summary (markdown supported)
-6. **Complete** → `complete_task`
+### Option A: Full lifecycle (start → finish)
 
----
+Use when you know upfront that significant work is starting:
+
+```
+1. start_work  → Creates task as in_progress, returns taskId
+2. [do the work]
+3. finish_work → Marks done + posts structured completion comment
+```
+
+```json
+// start_work
+{ "projectId": "7afd888f...", "title": "Fix avatar upload bug", "priority": "high", "workspaceId": "techworkspace" }
+
+// finish_work
+{ "taskId": "<returned-id>", "summary": "Fixed S3 key prefix bug in uploadService.js", "filesChanged": ["server/services/uploadService.js"] }
+```
+
+### Option B: One-shot retroactive log (preferred for most cases)
+
+Use `track_work` AFTER completing any work. It automatically:
+1. Searches for an existing matching open task
+2. Creates a new one if none found
+3. Marks it `done`
+4. Posts a structured completion comment
+
+```json
+{
+  "projectId": "7afd888f...",
+  "workspaceId": "techworkspace",
+  "title": "Optimize Kanban Board Toolbar UX",
+  "summary": "Replaced 8 flat tabs with 4+More dropdown...",
+  "priority": "high",
+  "filesChanged": ["client/src/pages/ProjectDetail.jsx", "client/src/components/shared/BoardFilterBar.jsx"]
+}
+```
+
+> **Rule:** After any significant code change session, call `track_work` — never leave work unlogged.
+
+### Legacy Method (still works, but prefer track_work)
+
+1. `create_task` with `status: done`
+2. `add_comment` with summary
+
 
 ## 4. Attaching Screenshots / Recordings
 
