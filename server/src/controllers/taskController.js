@@ -2,7 +2,10 @@ import prisma from '../utils/prisma.js'
 import { successResponse, errorResponse } from '../utils/helpers.js'
 import { computeDueDateStatus } from '../utils/dueDateUtils.js'
 import { z } from 'zod'
-import { startOfDay, endOfDay, addDays, startOfMonth, endOfMonth } from 'date-fns'
+import { 
+    startOfDay, endOfDay, addDays, startOfMonth, endOfMonth, 
+    startOfWeek, endOfWeek 
+} from 'date-fns'
 import { logTaskActivity } from '../services/activityService.js'
 import { calculateNextOccurrence } from '../utils/recurrenceUtils.js'
 import cache, { TTL } from '../utils/cache.js'
