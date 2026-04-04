@@ -40,6 +40,13 @@ echo "💎 Running Prisma migrations..."
 npx prisma generate
 npx prisma migrate deploy
 
+# ----- MCP Server Setup -----
+echo "⚙️  Setting up MCP Server..."
+cd "$APP_DIR/mcp-server"
+
+# Install dependencies
+npm install --omit=dev
+
 # ----- Client Setup -----
 echo "📦 Setting up Client..."
 cd "$APP_DIR/client"

@@ -23,6 +23,22 @@ module.exports = {
             merge_logs: true,
             autorestart: true,
             restart_delay: 3000
+        },
+        {
+            name: 'brioright-mcp',
+            cwd: './mcp-server',
+            script: 'index.js',
+            interpreter: 'node',
+            env_production: {
+                NODE_ENV: 'production',
+                PORT: 3002
+            },
+            error_file: '/var/log/brioright/mcp-error.log',
+            out_file: '/var/log/brioright/mcp-out.log',
+            log_date_format: 'YYYY-MM-DD HH:mm:ss',
+            merge_logs: true,
+            autorestart: true,
+            restart_delay: 3000
         }
     ]
 }
