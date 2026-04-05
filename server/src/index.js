@@ -203,6 +203,7 @@ app.get('/api/users/search', auth, async (req, res, next) => {
 })
 
 app.use('/api/auth', authRoutes)
+app.get('/api/debug-env', (req, res) => res.json({ NODE_ENV: process.env.NODE_ENV, COOKIE_SECURE: process.env.COOKIE_SECURE }))
 app.use('/api/workspaces', workspaceRoutes)
 app.use('/api/ai', aiRoutes)
 

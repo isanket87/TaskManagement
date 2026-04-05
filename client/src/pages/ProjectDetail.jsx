@@ -987,88 +987,105 @@ const ProjectDetail = () => {
                     </div>
 
                     {/* ── Row 2: View tabs + Filters + ⋯ overflow ── */}
-                    <div className="relative flex items-center gap-1.5 p-1.5 bg-white/80 dark:bg-slate-900/60 backdrop-blur-2xl border border-slate-200/70 dark:border-white/8 rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.05),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.1)]">
+                    {/* Outer shell: scroll affordance + fade edges */}
+                    <div className="relative">
+                        {/* Fade-edge masks for horizontal scroll affordance */}
+                        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-5 z-10 bg-gradient-to-r from-white/90 dark:from-slate-900/80 to-transparent rounded-l-xl" />
+                        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-5 z-10 bg-gradient-to-l from-white/90 dark:from-slate-900/80 to-transparent rounded-r-xl" />
 
-                        {/* Primary 4 tabs + More ▾ */}
-                        <div className="flex items-center gap-0.5 p-0.5 bg-slate-100/60 dark:bg-slate-900/50 rounded-lg border border-slate-200/40 dark:border-white/5 shrink-0 relative">
-                            {[
-                                { id: 'kanban',   icon: <LayoutGrid className="w-3 h-3" />,    label: 'Kanban'   },
-                                { id: 'calendar', icon: <Calendar className="w-3 h-3" />,      label: 'Calendar' },
-                                { id: 'timeline', icon: <CalendarRange className="w-3 h-3" />, label: 'Timeline' },
-                                { id: 'stats',    icon: <BarChart3 className="w-3 h-3" />,     label: 'Stats'    },
-                            ].map(({ id, icon, label }) => (
-                                <button
-                                    key={id}
-                                    onClick={() => setViewMode(id)}
-                                    className={cn(
-                                        'relative flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap z-10',
-                                        viewMode === id
-                                            ? 'text-indigo-600 dark:text-white'
-                                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-                                    )}
-                                >
-                                    {viewMode === id && (
-                                        <motion.div
-                                            layoutId="activeTab"
-                                            className="absolute inset-0 rounded-md border"
-                                            style={{
-                                                background: 'linear-gradient(135deg, white 0%, rgba(238,240,255,0.95) 100%)',
-                                                borderColor: `${project?.color || '#6366f1'}20`,
-                                                boxShadow: `0 2px 8px ${project?.color || '#6366f1'}15, inset 0 1px 1px rgba(255,255,255,1)`
-                                            }}
-                                            transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
-                                        />
-                                    )}
-                                    <span className="relative z-20 flex items-center gap-1">{icon}{label}</span>
-                                </button>
-                            ))}
+                        {/* Scrollable inner row */}
+                        <div className="flex items-center gap-1.5 p-1.5 bg-white/80 dark:bg-slate-900/60 backdrop-blur-2xl border border-slate-200/70 dark:border-white/8 rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.05),inset_0_1px_1px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_20px_rgb(0,0,0,0.1)] overflow-x-auto scrollbar-hide">
 
-                            {/* More ▾ for Swimlane / Workload / Canvas / Activity */}
-                            <MoreTabsMenu
-                                viewMode={viewMode}
-                                setViewMode={setViewMode}
-                                projectColor={project?.color}
-                                moreTabs={[
-                                    { id: 'swimlane', icon: <AlignLeft className="w-3 h-3" />,  label: 'Swimlane' },
-                                    { id: 'workload', icon: <BarChart2 className="w-3 h-3" />,  label: 'Workload' },
-                                    { id: 'canvas',   icon: <Sparkles className="w-3 h-3" />,   label: 'Canvas'   },
-                                    { id: 'activity', icon: <Clock className="w-3 h-3" />,       label: 'Activity' },
-                                ]}
-                            />
+                            {/* Primary 4 tabs + More ▾ */}
+                            <div className="flex items-center gap-0.5 p-0.5 bg-slate-100/60 dark:bg-slate-900/50 rounded-lg border border-slate-200/40 dark:border-white/5 shrink-0 relative">
+                                {[
+                                    { id: 'kanban',   icon: <LayoutGrid className="w-3 h-3" />,    label: 'Kanban'   },
+                                    { id: 'calendar', icon: <Calendar className="w-3 h-3" />,      label: 'Calendar' },
+                                    { id: 'timeline', icon: <CalendarRange className="w-3 h-3" />, label: 'Timeline' },
+                                    { id: 'stats',    icon: <BarChart3 className="w-3 h-3" />,     label: 'Stats'    },
+                                ].map(({ id, icon, label }) => (
+                                    <motion.button
+                                        key={id}
+                                        onClick={() => setViewMode(id)}
+                                        whileHover={{ scale: 1.04 }}
+                                        whileTap={{ scale: 0.97 }}
+                                        transition={{ type: 'spring', bounce: 0.4, duration: 0.25 }}
+                                        className={cn(
+                                            'relative flex items-center gap-1 px-2.5 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-colors whitespace-nowrap z-10',
+                                            viewMode === id
+                                                ? 'text-indigo-600 dark:text-white'
+                                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
+                                        )}
+                                    >
+                                        {viewMode === id && (
+                                            <motion.div
+                                                layoutId="activeTab"
+                                                className="absolute inset-0 rounded-md border"
+                                                style={{
+                                                    background: 'linear-gradient(135deg, white 0%, rgba(238,240,255,0.95) 100%)',
+                                                    borderColor: `${project?.color || '#6366f1'}20`,
+                                                    boxShadow: `0 2px 8px ${project?.color || '#6366f1'}15, inset 0 1px 1px rgba(255,255,255,1)`
+                                                }}
+                                                transition={{ type: 'spring', bounce: 0.25, duration: 0.5 }}
+                                            />
+                                        )}
+                                        <span className="relative z-20 flex items-center gap-1">{icon}{label}</span>
+                                    </motion.button>
+                                ))}
+
+                                {/* More ▾ for Swimlane / Workload / Canvas / Activity */}
+                                <MoreTabsMenu
+                                    viewMode={viewMode}
+                                    setViewMode={setViewMode}
+                                    projectColor={project?.color}
+                                    moreTabs={[
+                                        { id: 'swimlane', icon: <AlignLeft className="w-3 h-3" />,  label: 'Swimlane' },
+                                        { id: 'workload', icon: <BarChart2 className="w-3 h-3" />,  label: 'Workload' },
+                                        { id: 'canvas',   icon: <Sparkles className="w-3 h-3" />,   label: 'Canvas'   },
+                                        { id: 'activity', icon: <Clock className="w-3 h-3" />,       label: 'Activity' },
+                                    ]}
+                                />
+                            </div>
+
+                            {/* Divider */}
+                            <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
+
+                            {/* Unified search + filter button */}
+                            <div className="shrink-0">
+                                <BoardFilterBar
+                                    searchQuery={searchQuery}
+                                    onSearchChange={setSearchQuery}
+                                    filters={boardFilters}
+                                    onFiltersChange={setBoardFilters}
+                                    members={effectiveMembers}
+                                    totalCount={tasksList.length}
+                                    filteredCount={filteredTasks.length}
+                                />
+                            </div>
+
+                            {/* Sort & Group — kanban only */}
+                            {viewMode === 'kanban' && (
+                                <div className="shrink-0">
+                                    <BoardSortGroup
+                                        sortField={sortField}
+                                        sortDir={sortDir}
+                                        onSortChange={(f, d) => { setSortField(f); setSortDir(d); }}
+                                        groupBy={groupBy}
+                                        onGroupByChange={setGroupBy}
+                                    />
+                                </div>
+                            )}
+
+                            <div className="flex-1 min-w-[8px]" />
+
+                            {/* ⋯ overflow: Import / Export (rare actions, hidden by default) */}
+                            <div className="shrink-0">
+                                <OverflowMenu
+                                    onImport={() => setIsImportModalOpen(true)}
+                                    onExport={handleExportCSV}
+                                />
+                            </div>
                         </div>
-
-                        {/* Divider */}
-                        <div className="h-5 w-px bg-slate-200 dark:bg-slate-700 shrink-0" />
-
-                        {/* Unified search + filter button */}
-                        <BoardFilterBar
-                            searchQuery={searchQuery}
-                            onSearchChange={setSearchQuery}
-                            filters={boardFilters}
-                            onFiltersChange={setBoardFilters}
-                            members={effectiveMembers}
-                            totalCount={tasksList.length}
-                            filteredCount={filteredTasks.length}
-                        />
-
-                        {/* Sort & Group — kanban only */}
-                        {viewMode === 'kanban' && (
-                            <BoardSortGroup
-                                sortField={sortField}
-                                sortDir={sortDir}
-                                onSortChange={(f, d) => { setSortField(f); setSortDir(d); }}
-                                groupBy={groupBy}
-                                onGroupByChange={setGroupBy}
-                            />
-                        )}
-
-                        <div className="flex-1" />
-
-                        {/* ⋯ overflow: Import / Export (rare actions, hidden by default) */}
-                        <OverflowMenu
-                            onImport={() => setIsImportModalOpen(true)}
-                            onExport={handleExportCSV}
-                        />
                     </div>
                 </div>
 

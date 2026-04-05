@@ -16,13 +16,14 @@ const getGoogleClient = () => new OAuth2Client(
     process.env.GOOGLE_CALLBACK_URL
 )
 
-const COOKIE_OPTIONS = {
+const getCookieOptions = () => ({
     httpOnly: true,
     // COOKIE_SECURE=true is set in .env.production (HTTPS is required)
     secure: process.env.COOKIE_SECURE === 'true',
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-    path: '/'
-}
+    sameSite: 'lax',
+    path: '/',
+    domain: process.env.NODE_ENV === 'production' ? '.brioright.online' : 'localhost'
+})
 
 const registerSchema = z.object({
     name: z.string().min(2),
@@ -67,8 +68,8 @@ const register = async (req, res, next) => {
         const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, name: user.name })
         const refreshToken = signRefreshToken({ id: user.id })
 
-        res.cookie('accessToken', accessToken, { ...COOKIE_OPTIONS, maxAge: 15 * 60 * 1000 })
-        res.cookie('refreshToken', refreshToken, { ...COOKIE_OPTIONS, maxAge: 7 * 24 * 60 * 60 * 1000 })
+        res.cookie('accessToken', accessToken, { ...getCookieOptions(), maxAge: 15 * 60 * 1000, expires: new Date(Date.now() + 15 * 60 * 1000) })
+        res.cookie('refreshToken', refreshToken, { ...getCookieOptions(), maxAge: 7 * 24 * 60 * 60 * 1000, expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) })
 
         return successResponse(res, { user }, 'Registered successfully', 201)
     } catch (err) {
@@ -89,8 +90,8 @@ const login = async (req, res, next) => {
         const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, name: user.name })
         const refreshToken = signRefreshToken({ id: user.id })
 
-        res.cookie('accessToken', accessToken, { ...COOKIE_OPTIONS, maxAge: 15 * 60 * 1000 })
-        res.cookie('refreshToken', refreshToken, { ...COOKIE_OPTIONS, maxAge: 7 * 24 * 60 * 60 * 1000 })
+        res.cookie('accessToken', accessToken, { ...getCookieOptions(), maxAge: 15 * 60 * 1000, expires: new Date(Date.now() + 15 * 60 * 1000) })
+        res.cookie('refreshToken', refreshToken, { ...getCookieOptions(), maxAge: 7 * 24 * 60 * 60 * 1000, expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) })
 
         const { password: _, ...userWithoutPassword } = user
         return successResponse(res, { user: userWithoutPassword }, 'Login successful')
@@ -100,8 +101,8 @@ const login = async (req, res, next) => {
 }
 
 const logout = (req, res) => {
-    res.clearCookie('accessToken', COOKIE_OPTIONS)
-    res.clearCookie('refreshToken', COOKIE_OPTIONS)
+    res.clearCookie('accessToken', getCookieOptions())
+    res.clearCookie('refreshToken', getCookieOptions())
     return successResponse(res, null, 'Logged out successfully')
 }
 
@@ -120,8 +121,8 @@ const refreshToken = async (req, res, next) => {
         const newAccessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, name: user.name })
         const newRefreshToken = signRefreshToken({ id: user.id })
 
-        res.cookie('accessToken', newAccessToken, { ...COOKIE_OPTIONS, maxAge: 15 * 60 * 1000 })
-        res.cookie('refreshToken', newRefreshToken, { ...COOKIE_OPTIONS, maxAge: 7 * 24 * 60 * 60 * 1000 })
+        res.cookie('accessToken', newAccessToken, { ...getCookieOptions(), maxAge: 15 * 60 * 1000 })
+        res.cookie('refreshToken', newRefreshToken, { ...getCookieOptions(), maxAge: 7 * 24 * 60 * 60 * 1000 })
 
         return successResponse(res, { message: 'Token refreshed' })
     } catch (err) {
@@ -182,8 +183,8 @@ const googleCallback = async (req, res, next) => {
         const accessToken = signAccessToken({ id: user.id, email: user.email, role: user.role, name: user.name })
         const refreshToken = signRefreshToken({ id: user.id })
 
-        res.cookie('accessToken', accessToken, { ...COOKIE_OPTIONS, maxAge: 15 * 60 * 1000 })
-        res.cookie('refreshToken', refreshToken, { ...COOKIE_OPTIONS, maxAge: 7 * 24 * 60 * 60 * 1000 })
+        res.cookie('accessToken', accessToken, { ...getCookieOptions(), maxAge: 15 * 60 * 1000, expires: new Date(Date.now() + 15 * 60 * 1000) })
+        res.cookie('refreshToken', refreshToken, { ...getCookieOptions(), maxAge: 7 * 24 * 60 * 60 * 1000, expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) })
 
         res.redirect(`${process.env.CLIENT_URL}/auth/callback?success=true`)
     } catch (err) {
@@ -304,8 +305,8 @@ const deleteAccount = async (req, res, next) => {
         await prisma.user.delete({ where: { id: req.user.id } })
 
         // Clear auth cookies
-        res.clearCookie('accessToken')
-        res.clearCookie('refreshToken')
+        res.clearCookie('accessToken', getCookieOptions())
+        res.clearCookie('refreshToken', getCookieOptions())
 
         return successResponse(res, null, 'Account deleted successfully')
     } catch (err) {

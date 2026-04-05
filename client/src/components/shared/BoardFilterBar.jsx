@@ -83,8 +83,11 @@ const UnifiedFiltersButton = ({ filters, onFiltersChange, members }) => {
 
     return (
         <div ref={ref} className="relative shrink-0">
-            <button
+            <motion.button
                 onClick={() => setOpen(o => !o)}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                transition={{ type: 'spring', bounce: 0.4, duration: 0.2 }}
                 className={cn(
                     'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all',
                     isActive
@@ -94,11 +97,23 @@ const UnifiedFiltersButton = ({ filters, onFiltersChange, members }) => {
             >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 <span>Filters</span>
-                {isActive
-                    ? <span className="bg-indigo-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold leading-none">{totalActive}</span>
-                    : <ChevronDown className={cn('w-3 h-3 transition-transform', open && 'rotate-180')} />
-                }
-            </button>
+                <AnimatePresence mode="wait">
+                    {isActive ? (
+                        <motion.span
+                            key="badge"
+                            initial={{ scale: 0.4, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.4, opacity: 0 }}
+                            transition={{ type: 'spring', bounce: 0.55, duration: 0.35 }}
+                            className="bg-indigo-500 text-white rounded-full w-4 h-4 flex items-center justify-center text-[9px] font-bold leading-none"
+                        >{totalActive}</motion.span>
+                    ) : (
+                        <motion.span key="chevron" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                            <ChevronDown className={cn('w-3 h-3 transition-transform', open && 'rotate-180')} />
+                        </motion.span>
+                    )}
+                </AnimatePresence>
+            </motion.button>
 
             <AnimatePresence>
                 {open && (
@@ -209,6 +224,7 @@ const BoardFilterBar = ({
     filteredCount = 0,
 }) => {
     const [localSearch, setLocalSearch] = useState(searchQuery || '');
+    const [searchFocused, setSearchFocused] = useState(false);
     const debounceRef = useRef(null);
 
     const handleSearchInput = useCallback((val) => {
@@ -227,20 +243,24 @@ const BoardFilterBar = ({
 
     return (
         <div className="flex items-center gap-2">
-            {/* Search */}
+            {/* Search — expands smoothly on focus */}
             <div className="relative flex items-center group shrink-0">
                 <Search className={cn(
-                    'w-3.5 h-3.5 absolute left-2.5 transition-colors pointer-events-none',
-                    localSearch ? 'text-indigo-500' : 'text-slate-400 group-hover:text-slate-500'
+                    'w-3.5 h-3.5 absolute left-2.5 transition-colors pointer-events-none z-10',
+                    localSearch || searchFocused ? 'text-indigo-500' : 'text-slate-400 group-hover:text-slate-500'
                 )} />
-                <input
+                <motion.input
                     type="text"
                     placeholder="Search tasks..."
                     value={localSearch}
                     onChange={(e) => handleSearchInput(e.target.value)}
+                    onFocus={() => setSearchFocused(true)}
+                    onBlur={() => setSearchFocused(false)}
+                    animate={{ width: searchFocused || localSearch ? 176 : 144 }}
+                    transition={{ type: 'spring', bounce: 0.2, duration: 0.35 }}
                     className={cn(
-                        'pl-7 pr-7 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 dark:focus:border-indigo-600 w-36 sm:w-44 transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200',
-                        localSearch && 'bg-white dark:bg-slate-700 shadow-sm border-slate-200 dark:border-slate-600'
+                        'pl-7 pr-7 py-1.5 text-xs bg-slate-100 dark:bg-slate-800 border border-transparent rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-300 dark:focus:border-indigo-600 transition-colors placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200',
+                        (localSearch || searchFocused) && 'bg-white dark:bg-slate-700 shadow-sm border-slate-200 dark:border-slate-600'
                     )}
                 />
                 {localSearch && (
